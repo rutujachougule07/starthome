@@ -484,14 +484,16 @@ function OrderUpdates() {
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
                   <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
                 </div>
-                <div className="data-card-footer" style={{ justifyContent: "flex-end", gap: "8px" }}>
-                  <button className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", fontSize: 11, border: "1px solid #E2E8F0" }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 Bill</button>
-                  <button className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", fontSize: 11, border: "1px solid #E2E8F0" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
+                <div className="data-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                    <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 Bill</button>
+                    <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
+                  </div>
 
                   {o.status === "Approved" ? (
                     <button
                       className="btn btn-success btn-sm"
-                      style={{ padding: "4px 8px", fontSize: 11 }}
+                      style={{ padding: "5px 12px", fontSize: 11, borderRadius: 8, background: "#10B981", color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 700 }}
                       onClick={() => {
                         if (confirm("Mark this order as delivered?")) {
                           setState((s) => ({
@@ -504,7 +506,7 @@ function OrderUpdates() {
                       🚚 Mark Delivered
                     </button>
                   ) : (
-                    <span style={{ fontSize: 11, color: "var(--success)", fontWeight: 600 }}>Completed</span>
+                    <span style={{ fontSize: 11, color: "#10B981", fontWeight: 700, background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "3px 10px", borderRadius: 999 }}>Completed</span>
                   )}
                 </div>
               </div>
@@ -566,9 +568,9 @@ function OrderUpdates() {
                   <div className="data-row"><span className="data-label">Assigned</span><span className="data-value">{o.assignedToName ?? "—"}</span></div>
                   <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
                 </div>
-                <div className="data-card-footer" style={{ justifyContent: "flex-end", gap: "8px", borderTop: "1px solid var(--border)", padding: "12px 16px", display: "flex" }}>
-                  <button className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", fontSize: 11, border: "1px solid #E2E8F0" }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 Bill</button>
-                  <button className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", fontSize: 11, border: "1px solid #E2E8F0" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
+                <div className="data-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px", borderTop: "1px solid #E2E8F0", padding: "12px 16px" }}>
+                  <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 Bill</button>
+                  <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
                 </div>
               </div>
             );
