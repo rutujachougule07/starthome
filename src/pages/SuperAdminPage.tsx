@@ -200,6 +200,18 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
         .btn-dismiss-pop:hover {
           background: rgba(255,255,255,0.2) !important;
         }
+        .btn-success {
+          background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%) !important;
+          box-shadow: 0 12px 26px -10px rgba(124, 58, 237, 0.6),
+            inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
+          color: #FFFFFF !important;
+          border: 1px solid rgba(255, 255, 255, 0.35) !important;
+        }
+        .btn-success:hover {
+          background: linear-gradient(135deg, #6D28D9 0%, #DB2777 100%) !important;
+          transform: scale(1.02) translateY(-2px) !important;
+          box-shadow: 0 12px 24px rgba(124, 58, 237, 0.5) !important;
+        }
       `}</style>
       {pendingApprovals > 0 && showNotification && (
         <div style={{
@@ -3610,15 +3622,15 @@ export function TaskAssignmentSection() {
           <button onClick={() => setActiveTab("employee")} style={{
             padding: "12px 24px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "15px",
             borderRadius: "20px",
-            background: activeTab === "employee" ? "#193828" : "#FFFFFF",
-            color: activeTab === "employee" ? "#FFFFFF" : "#2E3A31",
+            background: activeTab === "employee" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+            color: activeTab === "employee" ? "#FFFFFF" : "#1E293B",
             transition: "all 300ms ease",
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            boxShadow: activeTab === "employee" ? "0 8px 25px rgba(25, 56, 40, 0.25)" : "0 2px 8px rgba(0,0,0,0.04)"
+            boxShadow: activeTab === "employee" ? "0 8px 25px rgba(124, 58, 237, 0.3)" : "0 2px 8px rgba(0,0,0,0.04)"
           }}>
-            <span style={{ color: activeTab === "employee" ? "#FFFFFF" : "#2E3A31" }}>👤 Employees</span>
+            <span style={{ color: activeTab === "employee" ? "#FFFFFF" : "#1E293B" }}>👤 Employees</span>
             <span style={{
               display: "inline-flex",
               alignItems: "center",
@@ -3628,22 +3640,22 @@ export function TaskAssignmentSection() {
               borderRadius: "50%",
               fontSize: "12px",
               background: activeTab === "employee" ? "rgba(255, 255, 255, 0.2)" : "#F2F2F2",
-              color: activeTab === "employee" ? "#FFFFFF" : "#2E3A31",
+              color: activeTab === "employee" ? "#FFFFFF" : "#1E293B",
               fontWeight: 800,
             }}>{employeesWithTasks.length}</span>
           </button>
           <button onClick={() => setActiveTab("manager")} style={{
             padding: "12px 24px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "15px",
             borderRadius: "20px",
-            background: activeTab === "manager" ? "#193828" : "#FFFFFF",
-            color: activeTab === "manager" ? "#FFFFFF" : "#2E3A31",
+            background: activeTab === "manager" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+            color: activeTab === "manager" ? "#FFFFFF" : "#1E293B",
             transition: "all 300ms ease",
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            boxShadow: activeTab === "manager" ? "0 8px 25px rgba(25, 56, 40, 0.25)" : "0 2px 8px rgba(0,0,0,0.04)"
+            boxShadow: activeTab === "manager" ? "0 8px 25px rgba(124, 58, 237, 0.3)" : "0 2px 8px rgba(0,0,0,0.04)"
           }}>
-            <span style={{ color: activeTab === "manager" ? "#FFFFFF" : "#2E3A31" }}>👔 Managers</span>
+            <span style={{ color: activeTab === "manager" ? "#FFFFFF" : "#1E293B" }}>👔 Managers</span>
             <span style={{
               display: "inline-flex",
               alignItems: "center",
@@ -5211,7 +5223,7 @@ export function SuperAdminIncentiveSection() {
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "6px" }}><span style={{ color: "#6F767E", fontWeight: 500 }}>Category</span> <strong style={{ textAlign: "right", color: "#1E293B" }}>{viewingBatches.category || "—"}</strong></div>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "6px" }}><span style={{ color: "#6F767E", fontWeight: 500 }}>Warranty</span> <strong style={{ textAlign: "right", color: "#1E293B" }}>{viewingBatches.warranty || "—"}</strong></div>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: "6px" }}><span style={{ color: "#6F767E", fontWeight: 500 }}>Location</span> <strong style={{ textAlign: "right", color: "#1E293B" }}>{viewingBatches.location || "Unassigned"}</strong></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: "6px" }}><span style={{ color: "#6F767E", fontWeight: 500 }}>Total Stock</span> <strong style={{ textAlign: "right", fontSize: "15px", color: "#193828", fontWeight: 800 }}>{viewingBatches.qty ?? viewingBatches.stock ?? 0}</strong></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: "6px" }}><span style={{ color: "#6F767E", fontWeight: 500 }}>Total Stock</span> <strong style={{ textAlign: "right", fontSize: "15px", color: "#7C3AED", fontWeight: 800 }}>{viewingBatches.qty ?? viewingBatches.stock ?? 0}</strong></div>
                 </div>
               </div>
             </div>
@@ -5220,7 +5232,7 @@ export function SuperAdminIncentiveSection() {
             <div className="table-wrap">
               <table className="tbl">
                 <thead>
-                  <tr style={{ background: "#EEF4EC" }}>
+                  <tr style={{ background: "#F5F3FF" }}>
                     <th style={{ color: "#1E293B" }}>Date Added</th>
                     <th style={{ color: "#1E293B" }}>Quantity</th>
                     <th style={{ color: "#1E293B" }}>Unit Cost</th>
@@ -5234,17 +5246,17 @@ export function SuperAdminIncentiveSection() {
                     <tr key={b.id || idx}>
                       <td>
                         <div style={{ fontWeight: 600, color: "#1E293B" }}>{b.date ? new Date(b.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</div>
-                        {idx === batchList.length - 1 && <div style={{ fontSize: "10px", color: "#193828", marginTop: "2px", fontWeight: 700 }}>Latest Batch</div>}
+                        {idx === batchList.length - 1 && <div style={{ fontSize: "10px", color: "#7C3AED", marginTop: "2px", fontWeight: 700 }}>Latest Batch</div>}
                       </td>
                       <td style={{ fontWeight: 700, fontSize: "15px", color: "#1E293B" }}>{b.qty ?? b.stock ?? 0}</td>
                       <td style={{ color: "#1E293B" }}>₹{(b.cost || 0).toLocaleString()}</td>
                       <td style={{ color: "#1E293B" }}>{b.supplier || "—"}</td>
                       <td>
-                        <span className="pill" style={{ background: b.status === "Verified" ? "#dcfce7" : "#fef9c3", color: b.status === "Verified" ? "#166534" : "#854d0e", fontSize: "11px", padding: "4px 8px" }}>
+                        <span className="pill" style={{ background: b.status === "Verified" ? "#f3e8ff" : "#fef9c3", color: b.status === "Verified" ? "#7c3aed" : "#854d0e", fontSize: "11px", padding: "4px 8px" }}>
                           {b.status || "In Stock"}
                         </span>
                       </td>
-                      <td style={{ color: "#193828", fontWeight: 700 }}>₹{(b.incentive || 0).toLocaleString()}</td>
+                      <td style={{ color: "#7C3AED", fontWeight: 700 }}>₹{(b.incentive || 0).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -5252,7 +5264,7 @@ export function SuperAdminIncentiveSection() {
             </div>
 
             <div className="modal-actions" style={{ marginTop: "24px" }}>
-              <button className="btn btn-primary" style={{ background: "#193828", color: "#FFFFFF", borderRadius: "999px", padding: "10px 24px" }} onClick={() => setViewingBatches(null)}>Close</button>
+              <button className="btn btn-primary" style={{ color: "#FFFFFF", borderRadius: "999px", padding: "10px 24px" }} onClick={() => setViewingBatches(null)}>Close</button>
             </div>
           </Modal>
         );
@@ -6613,7 +6625,7 @@ export function SuperAdminReportsSection() {
             >
               📄 PDF
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => exportOrdersReport(orders)} style={{ flex: 1, justifyContent: "center", background: "#10b981" }}>
+            <button className="btn btn-primary btn-sm" onClick={() => exportOrdersReport(orders)} style={{ flex: 1, justifyContent: "center" }}>
               📥 CSV
             </button>
           </div>
