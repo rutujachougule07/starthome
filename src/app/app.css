@@ -909,6 +909,15 @@ button.nav-item:hover {
   box-shadow: 0 12px 24px rgba(18, 58, 34, 0.35) !important;
 }
 
+/* Fix: prevent gradient bleeding onto child text/icon elements */
+.btn *,
+.btn-primary *,
+.btn-logout *,
+button * {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .btn-secondary {
   background: #FFFFFF !important;
   color: #1E293B !important;
