@@ -1138,18 +1138,7 @@ function ProductsSection() {
         />
       </div>
 
-      {/* Category */}
-      <div className="category-row">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            className={categoryFilter === cat ? "active-category" : ""}
-            onClick={() => setCategoryFilter(cat)}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+
 
       {/* Stats */}
       <div className="stats">
@@ -5379,10 +5368,8 @@ export function SuperAdminIncentiveSection() {
 
               {/* 1. Select Employee / Manager */}
               <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "14px", fontWeight: 800, color: "#1E2937", marginBottom: "8px" }}>
-                  <span style={{ color: "#7C3AED", fontSize: "16px" }}>👤</span>
-                  <span>Select Employee / Manager</span>
-                  <span style={{ color: "#EF4444" }}>*</span>
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                  👤 SELECT EMPLOYEE / MANAGER <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <select
                   value={incentiveFormEmpId}
@@ -5418,10 +5405,8 @@ export function SuperAdminIncentiveSection() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px", marginBottom: "24px" }}>
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 800, color: "#1E2937" }}>
-                      <span style={{ color: "#7C3AED", fontSize: "16px" }}>📦</span>
-                      <span>Quantity</span>
-                      <span style={{ color: "#EF4444" }}>*</span>
+                    <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                      📦 QUANTITY <span style={{ color: "#EF4444" }}>*</span>
                     </label>
                     {selectedProductForIncentive && (
                       <span style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>
@@ -5456,10 +5441,8 @@ export function SuperAdminIncentiveSection() {
                 </div>
 
                 <div>
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "14px", fontWeight: 800, color: "#1E2937", marginBottom: "8px" }}>
-                    <span style={{ color: "#7C3AED", fontSize: "16px" }}>💰</span>
-                    <span>Incentive (%)</span>
-                    <span style={{ color: "#EF4444" }}>*</span>
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                    💰 INCENTIVE (%) <span style={{ color: "#EF4444" }}>*</span>
                   </label>
                   <div style={{ position: "relative" }}>
                     <input
@@ -5747,10 +5730,16 @@ export function SuperAdminGodownSection() {
               {activeProducts.length} Products | Total Qty: {activeTotalQty} | Value: ₹{activeTotalCost.toLocaleString()}
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, flexWrap: "nowrap" }}>
-            <button className="btn btn-ghost btn-sm" style={{ background: "#FFFFFF", border: "1px solid #EEF1F8", borderRadius: "999px", padding: "8px 16px", fontWeight: 700, color: "#1E293B", boxShadow: "0 2px 8px rgba(0,0,0,0.03)", fontSize: "13px", whiteSpace: "nowrap" }} onClick={() => handlePDFExport(activeTab)}>📄 PDF Report</button>
-            <button className="btn btn-ghost btn-sm" style={{ background: "#FFFFFF", border: "1px solid #EEF1F8", borderRadius: "999px", padding: "8px 16px", fontWeight: 700, color: "#1E293B", boxShadow: "0 2px 8px rgba(0,0,0,0.03)", fontSize: "13px", whiteSpace: "nowrap" }} onClick={() => exportGodownReport(products, activeTab)}>📥 CSV Report</button>
-          </div>
+          <DownloadDropdown
+            onPDF={() => handlePDFExport(activeTab)}
+            onCSV={() => {
+              const list = activeTab === "Godown 1" ? godown1Products : godown2Products;
+              const totalValuation = list.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
+              const headers = ["Sr. No.", "Product Name", "SKU", "Category", "Qty", "Unit Cost (₹)", "Total Cost (₹)"];
+              const rows = list.map((p, index) => [index + 1, p.name, p.sku || "—", p.category || "—", p.qty ?? p.stock ?? 0, p.cost || 0, (p.qty ?? p.stock ?? 0) * (p.cost || 0)]);
+              openPDFPreview(`${activeTab} Stock Inventory Report`, headers, rows, `Total Items: ${list.length} | Valuation: ₹${totalValuation.toLocaleString()}`, "csv");
+            }}
+          />
         </div>
         {renderTable(activeProducts)}
       </div>
