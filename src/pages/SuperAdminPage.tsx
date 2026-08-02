@@ -36,27 +36,48 @@ export function DownloadDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
 
   useEffect(() => {
+    if (!open) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (btnRef.current && !btnRef.current.closest('[data-download-dropdown]')?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        btnRef.current &&
+        !btnRef.current.contains(target) &&
+        menuRef.current &&
+        !menuRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [open]);
 
-  const handleToggle = () => {
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
       setDropPos({
-        top: rect.bottom + window.scrollY + 8,
+        top: rect.bottom + 8,
         right: window.innerWidth - rect.right,
       });
     }
     setOpen((prev) => !prev);
+  };
+
+  const handlePDFClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpen(false);
+    onPDF();
+  };
+
+  const handleCSVClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpen(false);
+    onCSV();
   };
 
   return (
@@ -88,9 +109,11 @@ export function DownloadDropdown({
 
       {open && createPortal(
         <div
+          ref={menuRef}
           data-download-dropdown
+          onMouseDown={(e) => e.stopPropagation()}
           style={{
-            position: "absolute",
+            position: "fixed",
             top: dropPos.top,
             right: dropPos.right,
             background: "#ffffff",
@@ -99,7 +122,7 @@ export function DownloadDropdown({
             boxShadow: "0 12px 30px rgba(109, 74, 255, 0.18)",
             padding: "8px",
             minWidth: "170px",
-            zIndex: 99999,
+            zIndex: 999999,
             display: "flex",
             flexDirection: "column",
             gap: "4px"
@@ -107,7 +130,7 @@ export function DownloadDropdown({
         >
           <button
             type="button"
-            onClick={() => { setOpen(false); onPDF(); }}
+            onClick={handlePDFClick}
             style={{
               display: "flex",
               alignItems: "center",
@@ -132,7 +155,7 @@ export function DownloadDropdown({
           </button>
           <button
             type="button"
-            onClick={() => { setOpen(false); onCSV(); }}
+            onClick={handleCSVClick}
             style={{
               display: "flex",
               alignItems: "center",
@@ -272,7 +295,6 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
         {active === "incentive" && <SuperAdminIncentiveSection />}
         {active === "notifications" && <NotificationsSection role="superadmin" />}
       </DashboardLayout>
-      <PDFPreviewContainer />
     </>
   );
 }
@@ -6045,6 +6067,14 @@ export function openPDFPreview(
     detail: { sectionTitle, tableHeaders, rows, summaryText, exportType }
   });
   window.dispatchEvent(event);
+
+  if (exportType === "pdf") {
+    downloadSectionPDF(sectionTitle, tableHeaders, rows, summaryText);
+  } else if (exportType === "csv") {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const fileName = `${sectionTitle.replace(/[^a-zA-Z0-9]/g, "_")}_${todayStr}.csv`;
+    exportToCSV(fileName, tableHeaders, rows);
+  }
 }
 
 export function PDFPreviewContainer() {
@@ -6129,7 +6159,7 @@ export function PDFPreviewContainer() {
               <thead>
                 <tr style={{ background: "#7C3AED", color: "#ffffff" }}>
                   {data.tableHeaders.map((h, idx) => (
-                    <th key={idx} style={{ padding: "10px 12px", fontWeight: 600, borderBottom: "2px solid #6D28D9", whiteSpace: "nowrap" }}>
+                    <th key={idx} style={{ padding: "12px 14px", fontWeight: 800, color: "#FFFFFF", backgroundColor: "#7C3AED", borderBottom: "2px solid #6D28D9", whiteSpace: "nowrap" }}>
                       {h}
                     </th>
                   ))}

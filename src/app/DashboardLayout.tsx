@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "@tanstack/react-router";
 import { useStore, Role } from "./store";
+import { PDFPreviewContainer } from "../pages/SuperAdminPage";
 
 export interface NavItem { key: string; label: string; icon: string; }
 
@@ -169,6 +170,7 @@ export function DashboardLayout({ role, title, nav, active, onNav, children }: P
           <div className="content" style={{ padding: "20px 28px 60px", flex: 1 }}>{children}</div>
         </div>
       </div>
+      <PDFPreviewContainer />
     </div>
   );
 }
