@@ -1560,9 +1560,12 @@ export function OrderDocumentModal({
   );
   const customer = customers.find((c) => c.id === order.customerId || c.name.toLowerCase() === order.customerName.toLowerCase());
 
-  const orderBasePrice = Math.round(order.total / (1 - ((order.discount || 0) / 100)));
-  const unitPrice = Math.round(orderBasePrice / order.qty);
-  const discountVal = orderBasePrice - order.total;
+  const isIncentiveOrder = order.isIncentive || order.customerId === "c_incentive" || order.customerName === "Incentive Sell Request";
+  const isCustomerDiscount = !isIncentiveOrder && !!(order.discount && order.discount > 0);
+
+  const orderBasePrice = isCustomerDiscount ? Math.round(order.total / (1 - ((order.discount || 0) / 100))) : order.total;
+  const unitPrice = Math.round(orderBasePrice / (order.qty || 1));
+  const discountVal = isCustomerDiscount ? (orderBasePrice - order.total) : 0;
   const isBill = type === "Bill";
 
   const handlePrint = () => {
@@ -1732,7 +1735,7 @@ export function OrderDocumentModal({
               <span>Subtotal:</span>
               <span>₹{orderBasePrice.toLocaleString()}</span>
             </div>
-            {order.discount && order.discount > 0 ? (
+            {isCustomerDiscount && discountVal > 0 ? (
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#dc2626" }}>
                 <span>Discount ({order.discount}%):</span>
                 <span>- ₹{discountVal.toLocaleString()}</span>
