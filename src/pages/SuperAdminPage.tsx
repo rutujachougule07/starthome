@@ -487,53 +487,177 @@ function ManagersSection() {
 }
 
 function UserForm({ title, initial, onSave, onClose }: { title: string; initial?: User; onSave: (d: Omit<User, "id" | "role">) => void; onClose: () => void }) {
+  const { users } = useStore();
+  const [managerId, setManagerId] = useState(initial?.employeeId || initial?.username || "");
   const [name, setName] = useState(initial?.name ?? "");
-  const [username, setUsername] = useState(initial?.username ?? "");
-  const [password, setPassword] = useState(initial?.password ?? "");
-  const [email, setEmail] = useState(initial?.email ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
+  const [password, setPassword] = useState(initial?.password ?? "");
+  const [address, setAddress] = useState(initial?.address ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
+  const [status, setStatus] = useState(initial?.status ?? "Verified");
+  const [isPasswordEdited, setIsPasswordEdited] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Auto-generate managerId (MGR00x) if it is a new manager
+  useEffect(() => {
+    if (!initial && !managerId) {
+      const managers = users.filter((u) => u.role === "manager");
+      let maxNum = 0;
+      managers.forEach(m => {
+        const idStr = m.employeeId || m.username || "";
+        const match = idStr.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      });
+      setManagerId(`MGR${String(maxNum + 1).padStart(3, "0")}`);
+    }
+  }, [users, initial]);
+
+  // Auto-generate password from Name or Email
+  useEffect(() => {
+    if (initial) return;
+    if (isPasswordEdited) return;
+
+    let generatedPass = "";
+    if (name.trim()) {
+      const firstName = name.trim().split(" ")[0].toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (firstName) {
+        generatedPass = `${firstName}123`;
+      }
+    } else if (email.trim()) {
+      const prefix = email.split("@")[0].toLowerCase().trim().replace(/[^a-z0-9]/g, "");
+      if (prefix) {
+        generatedPass = `${prefix}123`;
+      }
+    }
+    setPassword(generatedPass);
+  }, [name, email, isPasswordEdited, initial]);
+
+  const handleSave = () => {
+    if (!name || isSaving) return;
+    setIsSaving(true);
+    const username = managerId || (email ? email.toLowerCase().trim() : name.toLowerCase().replace(/\s+/g, "") + "@smarthome.com");
+    onSave({
+      name,
+      username,
+      email: email || undefined,
+      phone: phone || undefined,
+      employeeId: managerId || undefined,
+      password: password || undefined,
+      address: address || undefined,
+      status
+    });
+  };
+
+  const modalTitle = title.includes("Add") ? "+ Register New Manager" : title;
+
   return (
-    <Modal title={title} onClose={onClose}>
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+    <Modal title={modalTitle} onClose={onClose} className="modal-lg">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2.2fr", gap: "10px", marginBottom: 8 }}>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>MANAGER ID</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🆔</span>
+            <input
+              className="form-input"
+              value={managerId}
+              onChange={(e) => setManagerId(e.target.value)}
+              placeholder="MGR001"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
+          </div>
+        </div>
         <div className="form-group">
           <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>FULL NAME</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
             <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👤</span>
-            <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter full name" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
+            <input
+              className="form-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter name"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
           </div>
         </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: 8 }}>
         <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ID / USERNAME</label>
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PHONE NUMBER</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🆔</span>
-            <input className="form-input" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter username or ID" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📱</span>
+            <input
+              className="form-input"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="9876543210"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
           </div>
         </div>
         <div className="form-group">
           <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>LOGIN PASSWORD</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
             <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🔐</span>
-            <input className="form-input" type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Set password" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>EMAIL ADDRESS</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📧</span>
-            <input className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PHONE NUMBER</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📱</span>
-            <input className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
+            <input
+              type="text"
+              className="form-input"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setIsPasswordEdited(true);
+              }}
+              placeholder="Set password"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
           </div>
         </div>
       </div>
-      <div className="modal-actions" style={{ marginTop: 12, justifyContent: "flex-end", gap: 10 }}>
-        <button className="btn btn-ghost" onClick={onClose} style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", color: "#7C3AED", fontWeight: 700 }}>Cancel</button>
-        <button className="btn btn-primary" onClick={() => name && username && onSave({ name, username, password, email, phone })}>Save Manager</button>
+
+      <div className="form-group" style={{ marginBottom: 8 }}>
+        <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ADDRESS</label>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "6px 10px" }}>
+          <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, marginTop: 2 }}>🏠</span>
+          <textarea
+            className="form-textarea"
+            rows={3}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Residential Address"
+            style={{ border: "none", background: "transparent", padding: "4px 8px", color: "#1E293B", fontWeight: 600, resize: "none", width: "100%", outline: "none" }}
+          />
+        </div>
+      </div>
+
+      <div className="form-group" style={{ marginBottom: 8 }}>
+        <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>EMAIL ADDRESS (OPTIONAL)</label>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+          <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📧</span>
+          <input
+            className="form-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email@example.com"
+            style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+          />
+        </div>
+      </div>
+
+      <div className="modal-actions" style={{ justifyContent: "flex-start", gap: 12, marginTop: 8 }}>
+        <button
+          className="btn btn-primary"
+          onClick={handleSave}
+          disabled={isSaving}
+          style={{ opacity: isSaving ? 0.7 : 1 }}
+        >
+          {isSaving ? "Saving..." : "💾 Save Manager"}
+        </button>
+        <button className="btn btn-ghost" onClick={onClose} style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", color: "#7C3AED", fontWeight: 700 }}>
+          Cancel
+        </button>
       </div>
     </Modal>
   );
@@ -650,7 +774,7 @@ export function EmployeeForm({
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px", marginBottom: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1fr", gap: "10px", marginBottom: 8 }}>
         <div className="form-group">
           <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PHONE NUMBER</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
@@ -697,21 +821,6 @@ export function EmployeeForm({
               placeholder="Set password"
               style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
             />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>STATUS</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>✅</span>
-            <select
-              className="form-input"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
-            >
-              <option value="Verified">Verified</option>
-              <option value="Inactive">Inactive</option>
-            </select>
           </div>
         </div>
       </div>
@@ -5395,9 +5504,9 @@ export function SuperAdminIncentiveSection() {
             overflow: "hidden",
             animation: "scaleUp 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
           }}>
-            {/* Header (Clean Normal Purple Shade) */}
+            {/* Header (Matching Purple-to-Pink Gradient) */}
             <div style={{
-              background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #8B5CF6 100%)",
+              background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
               padding: "14px 22px",
               color: "#FFFFFF",
               display: "flex",
@@ -5677,7 +5786,7 @@ export function SuperAdminIncentiveSection() {
                     padding: "9px 26px",
                     borderRadius: "30px",
                     border: "none",
-                    background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #8B5CF6 100%)",
+                    background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
                     color: "#FFFFFF",
                     fontWeight: 800,
                     cursor: "pointer",
