@@ -493,14 +493,46 @@ function UserForm({ title, initial, onSave, onClose }: { title: string; initial?
   const [phone, setPhone] = useState(initial?.phone ?? "");
   return (
     <Modal title={title} onClose={onClose}>
-      <div className="form-group"><label className="form-label">Name</label><input className="form-input" value={name} onChange={(e) => setName(e.target.value)} /></div>
-      <div className="form-group"><label className="form-label">ID / Username</label><input className="form-input" value={username} onChange={(e) => setUsername(e.target.value)} /></div>
-      <div className="form-group"><label className="form-label">Password</label><input className="form-input" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-      <div className="form-group"><label className="form-label">Email</label><input className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-      <div className="form-group"><label className="form-label">Phone</label><input className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-      <div className="modal-actions">
-        <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={() => name && username && onSave({ name, username, password, email, phone })}>Save</button>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>FULL NAME</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👤</span>
+            <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter full name" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ID / USERNAME</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🆔</span>
+            <input className="form-input" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Enter username or ID" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>LOGIN PASSWORD</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🔐</span>
+            <input className="form-input" type="text" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Set password" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>EMAIL ADDRESS</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📧</span>
+            <input className="form-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PHONE NUMBER</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📱</span>
+            <input className="form-input" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="9876543210" style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", outline: "none" }} />
+          </div>
+        </div>
+      </div>
+      <div className="modal-actions" style={{ marginTop: 12, justifyContent: "flex-end", gap: 10 }}>
+        <button className="btn btn-ghost" onClick={onClose} style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", color: "#7C3AED", fontWeight: 700 }}>Cancel</button>
+        <button className="btn btn-primary" onClick={() => name && username && onSave({ name, username, password, email, phone })}>Save Manager</button>
       </div>
     </Modal>
   );
@@ -588,108 +620,140 @@ export function EmployeeForm({
 
   return (
     <Modal title={modalTitle} onClose={onClose} className="modal-lg">
-      <div className="form-row-2-3" style={{ gridTemplateColumns: "1fr 2.2fr" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2.2fr", gap: "10px", marginBottom: 8 }}>
         <div className="form-group">
-          <label className="form-label">EMPLOYEE ID</label>
-          <input
-            className="form-input"
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-            placeholder="EMP001"
-          />
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>EMPLOYEE ID</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🆔</span>
+            <input
+              className="form-input"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              placeholder="EMP001"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
+          </div>
         </div>
         <div className="form-group">
-          <label className="form-label">FULL NAME</label>
-          <input
-            className="form-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter name"
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>FULL NAME</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👤</span>
+            <input
+              className="form-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter name"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px", marginBottom: 8 }}>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PHONE NUMBER</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📱</span>
+            <input
+              className="form-input"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="9876543210"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ROLE</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>💼</span>
+            <select
+              className="form-input"
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
+            >
+              <option value="Sales Associate">Sales Associate</option>
+              <option value="Technician">Technician</option>
+              <option value="Support Specialist">Support Specialist</option>
+              <option value="Inventory Manager">Inventory Manager</option>
+              <option value="Delivery Agent">Delivery Agent</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>LOGIN PASSWORD</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🔐</span>
+            <input
+              type="text"
+              className="form-input"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setIsPasswordEdited(true);
+              }}
+              placeholder="Set password"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>STATUS</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>✅</span>
+            <select
+              className="form-input"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
+            >
+              <option value="Verified">Verified</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="form-group" style={{ marginBottom: 8 }}>
+        <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ADDRESS</label>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "6px 10px" }}>
+          <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, marginTop: 2 }}>🏠</span>
+          <textarea
+            className="form-textarea"
+            rows={3}
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Residential Address"
+            style={{ border: "none", background: "transparent", padding: "4px 8px", color: "#1E293B", fontWeight: 600, resize: "none", width: "100%", outline: "none" }}
           />
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1.2fr 1fr", gap: 16, marginBottom: 16 }}>
-        <div className="form-group">
-          <label className="form-label">PHONE NUMBER</label>
+      <div className="form-group" style={{ marginBottom: 8 }}>
+        <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>EMAIL ADDRESS (OPTIONAL)</label>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+          <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📧</span>
           <input
             className="form-input"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="9876543210"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email@example.com"
+            style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
           />
         </div>
-        <div className="form-group">
-          <label className="form-label">ROLE</label>
-          <select
-            className="form-select"
-            value={jobTitle}
-            onChange={(e) => setJobTitle(e.target.value)}
-          >
-            <option value="Sales Associate">Sales Associate</option>
-            <option value="Technician">Technician</option>
-            <option value="Support Specialist">Support Specialist</option>
-            <option value="Inventory Manager">Inventory Manager</option>
-            <option value="Delivery Agent">Delivery Agent</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label className="form-label">LOGIN PASSWORD</label>
-          <input
-            type="text"
-            className="form-input"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setIsPasswordEdited(true);
-            }}
-            placeholder="Set password"
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label">STATUS</label>
-          <select
-            className="form-select"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <option value="Verified">Verified</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-        </div>
       </div>
 
-      <div className="form-group">
-        <label className="form-label">ADDRESS</label>
-        <textarea
-          className="form-textarea"
-          rows={3}
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Residential Address"
-        />
-      </div>
-
-      <div className="form-group">
-        <label className="form-label">EMAIL ADDRESS (OPTIONAL)</label>
-        <input
-          className="form-input"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@example.com"
-        />
-      </div>
-
-      <div className="modal-actions" style={{ justifyContent: "flex-start", gap: 12 }}>
+      <div className="modal-actions" style={{ justifyContent: "flex-start", gap: 12, marginTop: 8 }}>
         <button
           className="btn btn-primary"
           onClick={handleSave}
           disabled={isSaving}
-          style={{ background: "linear-gradient(135deg, var(--accent), var(--light-brown))", borderColor: "var(--accent)", color: "#fff", opacity: isSaving ? 0.7 : 1 }}
+          style={{ opacity: isSaving ? 0.7 : 1 }}
         >
           {isSaving ? "Saving..." : "💾 Save Employee"}
         </button>
-        <button className="btn btn-ghost" onClick={onClose} style={{ background: "var(--biscuit-light)" }}>
+        <button className="btn btn-ghost" onClick={onClose} style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", color: "#7C3AED", fontWeight: 700 }}>
           Cancel
         </button>
       </div>
@@ -3354,13 +3418,13 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
           <button onClick={() => setActiveTab("employee")} style={{
             padding: "12px 24px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "15px",
             borderRadius: "20px",
-            background: activeTab === "employee" ? "#1E293B" : "#FFFFFF",
+            background: activeTab === "employee" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
             color: activeTab === "employee" ? "#FFFFFF" : "#1E293B",
             transition: "all 300ms ease",
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            boxShadow: activeTab === "employee" ? "0 8px 25px rgba(18, 58, 34, 0.25)" : "0 2px 8px rgba(0,0,0,0.04)"
+            boxShadow: activeTab === "employee" ? "0 8px 25px rgba(124, 58, 237, 0.35)" : "0 2px 8px rgba(0,0,0,0.04)"
           }}>
             <span style={{ color: activeTab === "employee" ? "#FFFFFF" : "#1E293B" }}>👤 Employees</span>
             <span style={{
@@ -3379,13 +3443,13 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
           <button onClick={() => setActiveTab("manager")} style={{
             padding: "12px 24px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: "15px",
             borderRadius: "20px",
-            background: activeTab === "manager" ? "#1E293B" : "#FFFFFF",
+            background: activeTab === "manager" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
             color: activeTab === "manager" ? "#FFFFFF" : "#1E293B",
             transition: "all 300ms ease",
             display: "flex",
             alignItems: "center",
             gap: "10px",
-            boxShadow: activeTab === "manager" ? "0 8px 25px rgba(18, 58, 34, 0.25)" : "0 2px 8px rgba(0,0,0,0.04)"
+            boxShadow: activeTab === "manager" ? "0 8px 25px rgba(124, 58, 237, 0.35)" : "0 2px 8px rgba(0,0,0,0.04)"
           }}>
             <span style={{ color: activeTab === "manager" ? "#FFFFFF" : "#1E293B" }}>👔 Managers</span>
             <span style={{
@@ -3939,44 +4003,48 @@ export function TaskAssignmentSection() {
 
       {/* ── Assign Task Modal ── */}
       {showAssignModal && (
-        <Modal title="Assign Task" onClose={() => setShowAssignModal(false)}>
-          <form onSubmit={handleAssignTaskSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#9c8069", marginBottom: "6px" }}>Task Description</label>
-              <textarea
-                name="taskTitle"
-                placeholder="Describe the task details..."
-                rows={3}
-                style={{
-                  width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #eaddca",
-                  fontSize: "13px", outline: "none", resize: "none", boxSizing: "border-box"
-                }}
-                required
-              />
+        <Modal title="+ Assign New Task" onClose={() => setShowAssignModal(false)}>
+          <form onSubmit={handleAssignTaskSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>TASK DESCRIPTION</label>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "6px 10px" }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, marginTop: 2 }}>📝</span>
+                <textarea
+                  name="taskTitle"
+                  placeholder="Describe the task details..."
+                  rows={3}
+                  style={{
+                    width: "100%", border: "none", background: "transparent", padding: "4px 8px",
+                    fontSize: "13px", color: "#1E293B", fontWeight: 600, outline: "none", resize: "none"
+                  }}
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#9c8069", marginBottom: "6px" }}>Select Assignee</label>
-              <select
-                name="assigneeId"
-                style={{
-                  width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #eaddca",
-                  fontSize: "13px", outline: "none", boxSizing: "border-box", background: "#fff"
-                }}
-                required
-              >
-                <option value="">-- Choose Member --</option>
-                {eligibleAssignees.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.role === "manager" ? "Manager" : "Employee"}{u.jobTitle ? ` - ${u.jobTitle}` : ""})
-                  </option>
-                ))}
-              </select>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>SELECT ASSIGNEE</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👤</span>
+                <select
+                  name="assigneeId"
+                  style={{
+                    width: "100%", border: "none", background: "transparent", padding: "6px 8px",
+                    fontSize: "13px", color: "#1E293B", fontWeight: 600, outline: "none", appearance: "auto"
+                  }}
+                  required
+                >
+                  <option value="">-- Choose Member --</option>
+                  {eligibleAssignees.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role === "manager" ? "Manager" : "Employee"}{u.jobTitle ? ` - ${u.jobTitle}` : ""})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
-              <button className="btn btn-ghost" type="button" onClick={() => setShowAssignModal(false)}>Cancel</button>
-              <button className="btn btn-primary" type="submit" style={{
-                background: "linear-gradient(135deg, #d97706, #b45309)", border: "none"
-              }}>Assign</button>
+              <button className="btn btn-ghost" type="button" onClick={() => setShowAssignModal(false)} style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", color: "#7C3AED", fontWeight: 700 }}>Cancel</button>
+              <button className="btn btn-primary" type="submit">Assign Task</button>
             </div>
           </form>
         </Modal>
@@ -3992,45 +4060,49 @@ export function TaskAssignmentSection() {
             if (title.trim() && assigneeId) {
               handleEditTaskSave(editingTask.id, title.trim(), assigneeId);
             }
-          }} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#9c8069", marginBottom: "6px" }}>Task Description</label>
-              <textarea
-                name="taskTitle"
-                defaultValue={editingTask.title}
-                placeholder="Describe the task details..."
-                rows={3}
-                style={{
-                  width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #eaddca",
-                  fontSize: "13px", outline: "none", resize: "none", boxSizing: "border-box"
-                }}
-                required
-              />
+          }} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>TASK DESCRIPTION</label>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "6px 10px" }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, marginTop: 2 }}>📝</span>
+                <textarea
+                  name="taskTitle"
+                  defaultValue={editingTask.title}
+                  placeholder="Describe the task details..."
+                  rows={3}
+                  style={{
+                    width: "100%", border: "none", background: "transparent", padding: "4px 8px",
+                    fontSize: "13px", color: "#1E293B", fontWeight: 600, outline: "none", resize: "none"
+                  }}
+                  required
+                />
+              </div>
             </div>
-            <div>
-              <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#9c8069", marginBottom: "6px" }}>Select Assignee</label>
-              <select
-                name="assigneeId"
-                defaultValue={editingTask.assignedTo}
-                style={{
-                  width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #eaddca",
-                  fontSize: "13px", outline: "none", boxSizing: "border-box", background: "#fff"
-                }}
-                required
-              >
-                <option value="">-- Choose Member --</option>
-                {eligibleAssignees.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.role === "manager" ? "Manager" : "Employee"}{u.jobTitle ? ` - ${u.jobTitle}` : ""})
-                  </option>
-                ))}
-              </select>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>SELECT ASSIGNEE</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👤</span>
+                <select
+                  name="assigneeId"
+                  defaultValue={editingTask.assignedTo}
+                  style={{
+                    width: "100%", border: "none", background: "transparent", padding: "6px 8px",
+                    fontSize: "13px", color: "#1E293B", fontWeight: 600, outline: "none", appearance: "auto"
+                  }}
+                  required
+                >
+                  <option value="">-- Choose Member --</option>
+                  {eligibleAssignees.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role === "manager" ? "Manager" : "Employee"}{u.jobTitle ? ` - ${u.jobTitle}` : ""})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
-              <button className="btn btn-ghost" type="button" onClick={() => setEditingTask(null)}>Cancel</button>
-              <button className="btn btn-primary" type="submit" style={{
-                background: "linear-gradient(135deg, #d97706, #b45309)", border: "none"
-              }}>Save Changes</button>
+              <button className="btn btn-ghost" type="button" onClick={() => setEditingTask(null)} style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", color: "#7C3AED", fontWeight: 700 }}>Cancel</button>
+              <button className="btn btn-primary" type="submit">Save Changes</button>
             </div>
           </form>
         </Modal>
@@ -5316,7 +5388,7 @@ export function SuperAdminIncentiveSection() {
           }}>
             {/* Header (Clean Normal Purple Shade) */}
             <div style={{
-              background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #8B5CF6 100%)",
+              background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
               padding: "22px 28px",
               color: "#FFFFFF",
               display: "flex",
@@ -5648,25 +5720,6 @@ export function SuperAdminGodownSection() {
         <div>
           <h2 className="page-title">Godown Management & Stock Reports</h2>
           <p className="page-sub">Manage stock and generate detailed reports for Godown 1 and Godown 2.</p>
-        </div>
-        <div>
-          <DownloadDropdown
-            label={`${activeTab} Download`}
-            onPDF={() => {
-              const list = activeTab === "Godown 1" ? godown1Products : godown2Products;
-              const totalValuation = list.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
-              const headers = ["Sr. No.", "Product Name", "SKU", "Category", "Qty", "Unit Cost (₹)", "Total Cost (₹)"];
-              const rows = list.map((p, index) => [index + 1, p.name, p.sku || "—", p.category || "—", p.qty ?? p.stock ?? 0, p.cost || 0, (p.qty ?? p.stock ?? 0) * (p.cost || 0)]);
-              openPDFPreview(`${activeTab} Stock Inventory Report`, headers, rows, `Total Items: ${list.length} | Valuation: ₹${totalValuation.toLocaleString()}`, "pdf");
-            }}
-            onCSV={() => {
-              const list = activeTab === "Godown 1" ? godown1Products : godown2Products;
-              const totalValuation = list.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
-              const headers = ["Sr. No.", "Product Name", "SKU", "Category", "Qty", "Unit Cost (₹)", "Total Cost (₹)"];
-              const rows = list.map((p, index) => [index + 1, p.name, p.sku || "—", p.category || "—", p.qty ?? p.stock ?? 0, p.cost || 0, (p.qty ?? p.stock ?? 0) * (p.cost || 0)]);
-              openPDFPreview(`${activeTab} Stock Inventory Report`, headers, rows, `Total Items: ${list.length} | Valuation: ₹${totalValuation.toLocaleString()}`, "csv");
-            }}
-          />
         </div>
       </div>
 
@@ -6067,14 +6120,6 @@ export function openPDFPreview(
     detail: { sectionTitle, tableHeaders, rows, summaryText, exportType }
   });
   window.dispatchEvent(event);
-
-  if (exportType === "pdf") {
-    downloadSectionPDF(sectionTitle, tableHeaders, rows, summaryText);
-  } else if (exportType === "csv") {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const fileName = `${sectionTitle.replace(/[^a-zA-Z0-9]/g, "_")}_${todayStr}.csv`;
-    exportToCSV(fileName, tableHeaders, rows);
-  }
 }
 
 export function PDFPreviewContainer() {
@@ -6135,7 +6180,7 @@ export function PDFPreviewContainer() {
               </div>
             </div>
             <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", background: "#F5F3FF", color: "#6D28D9", borderRadius: 6, border: "1px solid #E9D8FD" }}>
-              {mode === "csv" ? "CSV / EXCEL PREVIEW MODE" : "PDF PREVIEW MODE"}
+              {mode === "csv" ? "CSV / EXCEL PREVIEW MODE" : mode === "pdf" ? "PDF PREVIEW MODE" : "REPORT PREVIEW MODE"}
             </span>
           </div>
 
@@ -6157,9 +6202,9 @@ export function PDFPreviewContainer() {
           <div style={{ overflowX: "auto", border: "1px solid #E2E8F0", borderRadius: 8 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, textAlign: "left" }}>
               <thead>
-                <tr style={{ background: "#7C3AED", color: "#ffffff" }}>
+                <tr style={{ background: "#F5F3FF", color: "#6D28D9" }}>
                   {data.tableHeaders.map((h, idx) => (
-                    <th key={idx} style={{ padding: "12px 14px", fontWeight: 800, color: "#FFFFFF", backgroundColor: "#7C3AED", borderBottom: "2px solid #6D28D9", whiteSpace: "nowrap" }}>
+                    <th key={idx} style={{ padding: "12px 14px", fontWeight: 800, color: "#6D28D9", backgroundColor: "#F5F3FF", borderBottom: "2px solid #E9D8FD", whiteSpace: "nowrap" }}>
                       {h}
                     </th>
                   ))}
@@ -6216,7 +6261,7 @@ export function PDFPreviewContainer() {
             >
               📊 Download CSV
             </button>
-          ) : mode === "pdf" ? (
+          ) : (
             <button
               className="btn btn-primary"
               onClick={handleConfirmPDF}
@@ -6236,12 +6281,6 @@ export function PDFPreviewContainer() {
             >
               📄 Download PDF
             </button>
-          ) : (
-            <DownloadDropdown
-              label="Download Report"
-              onPDF={handleConfirmPDF}
-              onCSV={handleConfirmCSV}
-            />
           )}
         </div>
       </div>
