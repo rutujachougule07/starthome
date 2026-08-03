@@ -4,6 +4,7 @@ import {
   CheckCircle, Edit2, Trash2, Box, Activity, Clock, AlertCircle, Save, X, Warehouse
 } from 'lucide-react';
 import './styles.css';
+import { getAutoProductImage } from './utils/autoProductImage';
 
 const LOW_STOCK_THRESHOLD = 10;
 
@@ -25,10 +26,7 @@ function StockModal({ type, items, onClose }: any) {
           ) : items.map((item: any) => (
             <div key={item.id} className="Modal-item">
               <div className="Modal-item-left">
-                {item.image
-                  ? <img src={item.image} alt={item.imageAlt} className="Product-image" />
-                  : <div className="Product-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fbece1', color: '#d9966c' }}><Box size={18} /></div>
-                }
+                <img src={getAutoProductImage(item.product, item.brand, item.category, item.image)} alt={item.imageAlt || item.product} className="Product-image" />
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{item.product}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{item.sku} · {item.category}</div>
@@ -281,7 +279,7 @@ function App() {
                 <tbody>
                   {currentInventory.map((item: any) => (
                     <tr key={item.id}>
-                      <td>{item.image ? <img src={item.image} alt={item.imageAlt} className="Product-image" /> : <div className="Product-image" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fbece1', color: '#d9966c' }}><Box size={20} /></div>}</td>
+                      <td><img src={getAutoProductImage(item.product, item.brand, item.category, item.image)} alt={item.imageAlt || item.product} className="Product-image" /></td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{item.product}</div>
                         <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Brand: {item.brand || '—'}</div>

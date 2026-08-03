@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useStore, Customer, Product, Order, Task } from "../app/store";
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm } from "./SuperAdminPage";
+import { getAutoProductImage } from "../utils/autoProductImage";
 
 const NAV: NavItem[] = [
   { key: "overview", label: "Live Dashboard", icon: "📡" },
@@ -754,7 +755,7 @@ function ProductsSection() {
                 <th>Price</th>
                 <th>Stock</th>
                 <th>Status</th>
-                <th>Action</th>
+                <th>Brand</th>
               </tr>
             </thead>
             <tbody>
@@ -762,18 +763,20 @@ function ProductsSection() {
                 <tr key={p.id}>
                   <td>
                     <div className="product-cell-flex">
-                      {p.image ? (
-                        <img src={p.image} className="product-image-cell" alt={p.name} />
-                      ) : (
-                        <div className="product-image-cell" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "var(--biscuit-light)", fontSize: 20 }}>📦</div>
-                      )}
+                      <img
+                        src={getAutoProductImage(p.name, p.brand, p.category, p.image)}
+                        className="product-image-cell"
+                        alt={p.name}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = getAutoProductImage(p.name, p.brand, p.category);
+                        }}
+                      />
                       <div>
                         <div style={{ fontWeight: 600 }}>{p.name}</div>
                         <div style={{ fontSize: 11, color: "var(--brown)", marginTop: 2 }}>
                           {p.sku && <span>SKU: {p.sku}</span>}
-                          {p.sku && <span> · </span>}
-                          <span>Brand: {p.brand || "—"}</span>
-                          {p.warranty && <span> · Warranty: {p.warranty}</span>}
+                          {p.warranty && <span>{p.sku && " · "}Warranty: {p.warranty}</span>}
                           {p.assignedEmployeeId && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id) && (
                             <>
                               <span> · </span>
@@ -799,17 +802,18 @@ function ProductsSection() {
                   <td>{p.qty ?? p.stock}</td>
                   <td><Pill status={p.status} /></td>
                   <td>
-                    {p.incentive > 0 && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id) ? (
-                      <button
-                        className="btn btn-success btn-sm"
-                        style={{ padding: "4px 10px", fontSize: "12px", fontWeight: 600 }}
-                        onClick={() => setSellingProduct(p)}
-                      >
-                        🏷️ Sell
-                      </button>
-                    ) : (
-                      <span style={{ color: "var(--text-muted)" }}>—</span>
-                    )}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontWeight: 600, color: "var(--brown-dark)" }}>{p.brand || "—"}</span>
+                      {p.incentive > 0 && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id) && (
+                        <button
+                          className="btn btn-success btn-sm"
+                          style={{ padding: "3px 8px", fontSize: "11px", fontWeight: 600 }}
+                          onClick={() => setSellingProduct(p)}
+                        >
+                          🏷️ Sell
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -1247,15 +1251,17 @@ export function EmployeeIncentiveSection() {
                 return (
                   <tr key={p.id}>
                     <td>
-                      {p.image ? (
-                        <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)" }}>
-                          <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        </div>
-                      ) : (
-                        <div style={{ width: 40, height: 40, borderRadius: 8, background: "var(--biscuit)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-                          📦
-                        </div>
-                      )}
+                      <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)" }}>
+                        <img
+                          src={getAutoProductImage(p.name, p.brand, p.category, p.image)}
+                          alt={p.name}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = getAutoProductImage(p.name, p.brand, p.category);
+                          }}
+                          style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                        />
+                      </div>
                     </td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{p.name}</div>

@@ -9,6 +9,7 @@ import { AlertCircle, Snowflake, Clock, Flame, CheckCircle2, XCircle, MessageSqu
 import { OrderDocumentModal } from "./EmployeePage";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getAutoProductImage } from "../utils/autoProductImage";
 
 const NAV: NavItem[] = [
   { key: "live", label: "Live Dashboard", icon: "📡" },
@@ -1751,6 +1752,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
 
   const save = () => {
     if (!name) return;
+    const autoImage = getAutoProductImage(name, brand, category, image);
     onSave({
       name,
       sku,
@@ -1766,7 +1768,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
       location: location as any,
       date,
       status,
-      image,
+      image: autoImage,
       assignedEmployeeId
     });
   };
@@ -5122,11 +5124,14 @@ export function SuperAdminIncentiveSection() {
             <div className="product-card-premium" key={p.id}>
               {/* 1. 3D CYLINDRICAL PEDESTAL STAND */}
               <div className="product-img-platform">
-                {p.image ? (
-                  <img src={p.image} alt={p.name} />
-                ) : (
-                  <span style={{ fontSize: 44, position: "relative", zIndex: 2 }}>📦</span>
-                )}
+                <img
+                  src={getAutoProductImage(p.name, p.brand, p.category, p.image)}
+                  alt={p.name}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = getAutoProductImage(p.name, p.brand, p.category);
+                  }}
+                />
               </div>
 
               {/* 2. PRODUCT INFO */}
@@ -5232,11 +5237,15 @@ export function SuperAdminIncentiveSection() {
         return (
           <Modal title="Product & Batch Details" onClose={() => setViewingBatches(null)} className="modal-lg">
             <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", marginBottom: "20px", background: "#EEF4EC", padding: "16px", borderRadius: "16px", border: "1px solid #E2EBE0", alignItems: "flex-start" }}>
-              {viewingBatches.image ? (
-                <img src={viewingBatches.image} alt={viewingBatches.name} style={{ width: "100px", height: "100px", objectFit: "cover", borderRadius: "12px", border: "1px solid #E2EBE0", background: "#FFFFFF", flexShrink: 0 }} />
-              ) : (
-                <div style={{ width: "100px", height: "100px", borderRadius: "12px", background: "#FFFFFF", border: "1px solid #E2EBE0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "36px", flexShrink: 0 }}>📦</div>
-              )}
+              <img
+                src={getAutoProductImage(viewingBatches.name, viewingBatches.brand, viewingBatches.category, viewingBatches.image)}
+                alt={viewingBatches.name}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = getAutoProductImage(viewingBatches.name, viewingBatches.brand, viewingBatches.category);
+                }}
+                style={{ width: "100px", height: "100px", objectFit: "contain", borderRadius: "12px", border: "1px solid #E2EBE0", background: "#FFFFFF", flexShrink: 0 }}
+              />
               <div style={{ flex: 1, minWidth: "200px" }}>
                 <h3 style={{ margin: "0 0 10px 0", fontSize: "20px", color: "#1E293B", textTransform: "capitalize", fontWeight: 800 }}>{viewingBatches.name}</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "8px 16px", fontSize: "13px" }}>
@@ -5317,29 +5326,29 @@ export function SuperAdminIncentiveSection() {
             {/* Header (Clean Normal Purple Shade) */}
             <div style={{
               background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #8B5CF6 100%)",
-              padding: "22px 28px",
+              padding: "14px 22px",
               color: "#FFFFFF",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <div style={{
-                  width: "44px",
-                  height: "44px",
+                  width: "36px",
+                  height: "36px",
                   borderRadius: "50%",
                   background: "rgba(255, 255, 255, 0.2)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "22px",
+                  fontSize: "18px",
                   boxShadow: "inset 0 1px 2px rgba(255, 255, 255, 0.4)"
                 }}>
                   💰
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>Assign Employee Incentive</h3>
-                  <p style={{ margin: "2px 0 0 0", fontSize: "13px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500 }}>Select employee to assign incentive</p>
+                  <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>Assign Employee Incentive</h3>
+                  <p style={{ margin: "1px 0 0 0", fontSize: "12px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500 }}>Select employee to assign incentive</p>
                 </div>
               </div>
               <button
@@ -5349,11 +5358,11 @@ export function SuperAdminIncentiveSection() {
                   background: "rgba(255, 255, 255, 0.22)",
                   border: "1px solid rgba(255, 255, 255, 0.35)",
                   color: "#FFFFFF",
-                  width: "36px",
-                  height: "36px",
+                  width: "30px",
+                  height: "30px",
                   borderRadius: "50%",
                   cursor: "pointer",
-                  fontSize: "16px",
+                  fontSize: "14px",
                   fontWeight: 800,
                   display: "flex",
                   alignItems: "center",
@@ -5366,157 +5375,209 @@ export function SuperAdminIncentiveSection() {
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleAssignIncentiveSubmit} style={{ padding: "28px" }}>
+            <form onSubmit={handleAssignIncentiveSubmit} style={{ padding: "16px 20px" }}>
               {incentiveFormError && (
-                <div style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FCA5A5", padding: "12px 16px", borderRadius: "14px", fontSize: "13px", fontWeight: 700, marginBottom: "20px" }}>
+                <div style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FCA5A5", padding: "8px 12px", borderRadius: "10px", fontSize: "12px", fontWeight: 700, marginBottom: "12px" }}>
                   ⚠️ {incentiveFormError}
                 </div>
               )}
 
-              {/* Product Summary Card with 3D Stand */}
-              <div style={{
-                background: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
-                border: "1px solid #DDD6FE",
-                borderRadius: "20px",
-                padding: "16px 20px",
-                marginBottom: "22px",
-                display: "flex",
-                alignItems: "center",
-                gap: "16px",
-                boxShadow: "inset 0 1px 3px rgba(255, 255, 255, 0.9)"
-              }}>
-                <div className="product-img-platform" style={{ width: 70, height: 65, flexShrink: 0 }}>
-                  {selectedProductForIncentive.image ? (
-                    <img src={selectedProductForIncentive.image} alt={selectedProductForIncentive.name} style={{ width: 44, height: 44, objectFit: "contain", mixBlendMode: "multiply" }} />
-                  ) : (
-                    <span style={{ fontSize: 26, position: "relative", zIndex: 2 }}>📦</span>
-                  )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, fontSize: "18px", color: "#1E2937", textTransform: "lowercase" }}>{selectedProductForIncentive.name}</div>
-                  <div style={{ fontSize: "13px", color: "#64748B", marginTop: 3, fontWeight: 500 }}>
-                    SKU: <strong style={{ color: "#334155" }}>{selectedProductForIncentive.sku || "—"}</strong> &nbsp;|&nbsp; Location: <strong style={{ color: "#7C3AED", fontWeight: 800 }}>{selectedProductForIncentive.location || "Shop"}</strong>
-                  </div>
-                </div>
-              </div>
+              {(() => {
+                const baseUnitPrice = selectedProductForIncentive?.price || selectedProductForIncentive?.cost || selectedProductForIncentive?.batches?.[0]?.cost || selectedProductForIncentive?.batches?.[0]?.price || 0;
+                const qtyNum = parseInt(incentiveFormQty as any) || 1;
+                const pctNum = parseFloat(incentiveFormPercent as any) || 0;
+                const perUnitIncentive = Math.round((baseUnitPrice * pctNum) / 100);
+                const totalIncentiveCalculated = perUnitIncentive * qtyNum;
 
-              {/* 1. Select Employee / Manager */}
-              <div style={{ marginBottom: "20px" }}>
-                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                  👤 SELECT EMPLOYEE / MANAGER <span style={{ color: "#EF4444" }}>*</span>
-                </label>
-                <select
-                  value={incentiveFormEmpId}
-                  onChange={(e) => {
-                    setIncentiveFormEmpId(e.target.value);
-                    setIncentiveFormError("");
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "14px 18px",
-                    borderRadius: "16px",
-                    border: "1px solid #C4B5FD",
-                    fontSize: "15px",
-                    fontWeight: 700,
-                    color: "#2E1065",
-                    background: "#F5F3FF",
-                    outline: "none",
-                    cursor: "pointer",
-                    boxShadow: "0 2px 8px rgba(124, 58, 237, 0.05)"
-                  }}
-                >
-                  <option value="">-- Select Employee --</option>
-                  <option value="all" style={{ fontWeight: 800, color: "#7C3AED" }}>👥 All Employees</option>
-                  {employees.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      👤 {u.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                return (
+                  <>
+                    {/* Product Summary Card with 3D Stand */}
+                    <div style={{
+                      background: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
+                      border: "1px solid #DDD6FE",
+                      borderRadius: "14px",
+                      padding: "10px 14px",
+                      marginBottom: "12px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      boxShadow: "inset 0 1px 3px rgba(255, 255, 255, 0.9)"
+                    }}>
+                      <div className="product-img-platform" style={{ width: 50, height: 44, flexShrink: 0 }}>
+                        <img
+                          src={getAutoProductImage(selectedProductForIncentive.name, selectedProductForIncentive.brand, selectedProductForIncentive.category, selectedProductForIncentive.image)}
+                          alt={selectedProductForIncentive.name}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = getAutoProductImage(selectedProductForIncentive.name, selectedProductForIncentive.brand, selectedProductForIncentive.category);
+                          }}
+                          style={{ width: 36, height: 36, objectFit: "contain" }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 800, fontSize: "15px", color: "#1E2937", textTransform: "lowercase" }}>{selectedProductForIncentive.name}</div>
+                        <div style={{ fontSize: "12px", color: "#64748B", marginTop: 2, fontWeight: 500 }}>
+                          SKU: <strong style={{ color: "#334155" }}>{selectedProductForIncentive.sku || "—"}</strong> &nbsp;|&nbsp;
+                          Location: <strong style={{ color: "#7C3AED", fontWeight: 800 }}>{selectedProductForIncentive.location || "Shop"}</strong> &nbsp;|&nbsp;
+                          Price: <strong style={{ color: "#059669", fontWeight: 800 }}>₹{baseUnitPrice.toLocaleString()} / unit</strong>
+                        </div>
+                      </div>
+                    </div>
 
-              {/* 2. Quantity & Incentive (%) (Side by Side) */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "18px", marginBottom: "24px" }}>
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                    <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                      📦 QUANTITY <span style={{ color: "#EF4444" }}>*</span>
-                    </label>
-                    {selectedProductForIncentive && (
-                      <span style={{ fontSize: "12px", fontWeight: 600, color: "#64748B" }}>
-                        Max: <strong>{selectedProductForIncentive.qty ?? selectedProductForIncentive.stock ?? 1} units</strong>
-                      </span>
-                    )}
-                  </div>
-                  <input
-                    type="number"
-                    min="1"
-                    max={selectedProductForIncentive?.qty ?? selectedProductForIncentive?.stock ?? 9999}
-                    value={incentiveFormQty}
-                    onChange={(e) => {
-                      setIncentiveFormQty(e.target.value === "" ? "" : parseInt(e.target.value) || "");
-                      setIncentiveFormError("");
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "14px 18px",
-                      borderRadius: "16px",
-                      border: "1px solid #C4B5FD",
-                      fontSize: "16px",
-                      fontWeight: 800,
-                      color: "#2E1065",
-                      background: "#F5F3FF",
-                      outline: "none",
-                      boxSizing: "border-box",
-                      boxShadow: "0 2px 8px rgba(124, 58, 237, 0.05)"
-                    }}
-                    placeholder="e.g. 5"
-                  />
-                </div>
+                    {/* 1. Select Employee / Manager */}
+                    <div style={{ marginBottom: "12px" }}>
+                      <label className="form-label" style={{ fontSize: 10, marginBottom: 2, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                        👤 SELECT EMPLOYEE / MANAGER <span style={{ color: "#EF4444" }}>*</span>
+                      </label>
+                      <select
+                        value={incentiveFormEmpId}
+                        onChange={(e) => {
+                          setIncentiveFormEmpId(e.target.value);
+                          setIncentiveFormError("");
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "12px",
+                          border: "1px solid #C4B5FD",
+                          fontSize: "14px",
+                          fontWeight: 700,
+                          color: "#2E1065",
+                          background: "#F5F3FF",
+                          outline: "none",
+                          cursor: "pointer",
+                          boxShadow: "0 2px 6px rgba(124, 58, 237, 0.04)"
+                        }}
+                      >
+                        <option value="">-- Select Employee --</option>
+                        <option value="all" style={{ fontWeight: 800, color: "#7C3AED" }}>👥 All Employees</option>
+                        {employees.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            👤 {u.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                    💰 INCENTIVE (%) <span style={{ color: "#EF4444" }}>*</span>
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="any"
-                      value={incentiveFormPercent}
-                      onChange={(e) => {
-                        const valStr = e.target.value;
-                        setIncentiveFormPercent(valStr);
-                        setIncentiveFormError("");
-                        const pctVal = parseFloat(valStr) || 0;
-                        const basePrice = selectedProductForIncentive?.price || selectedProductForIncentive?.cost || 0;
-                        if (basePrice > 0) {
-                          setIncentiveFormAmount(Math.round((basePrice * pctVal) / 100));
-                        }
-                      }}
-                      style={{
-                        width: "100%",
-                        padding: "14px 40px 14px 18px",
-                        borderRadius: "16px",
-                        border: "1px solid #C4B5FD",
-                        fontSize: "16px",
-                        fontWeight: 800,
-                        color: "#7C3AED",
-                        background: "#F5F3FF",
-                        outline: "none",
-                        boxSizing: "border-box",
-                        boxShadow: "0 2px 8px rgba(124, 58, 237, 0.05)"
-                      }}
-                      placeholder="e.g. 10"
-                    />
-                    <span style={{ position: "absolute", right: "18px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, fontSize: "18px", color: "#7C3AED" }}>%</span>
-                  </div>
-                </div>
-              </div>
+                    {/* 2. Quantity & Incentive (%) (Side by Side) */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                          <label className="form-label" style={{ fontSize: 10, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                            📦 QUANTITY <span style={{ color: "#EF4444" }}>*</span>
+                          </label>
+                          {selectedProductForIncentive && (
+                            <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
+                              Max: <strong>{selectedProductForIncentive.qty ?? selectedProductForIncentive.stock ?? 1} units</strong>
+                            </span>
+                          )}
+                        </div>
+                        <input
+                          type="number"
+                          min="1"
+                          max={selectedProductForIncentive?.qty ?? selectedProductForIncentive?.stock ?? 9999}
+                          value={incentiveFormQty}
+                          onChange={(e) => {
+                            setIncentiveFormQty(e.target.value === "" ? "" : parseInt(e.target.value) || "");
+                            setIncentiveFormError("");
+                          }}
+                          style={{
+                            width: "100%",
+                            padding: "10px 14px",
+                            borderRadius: "12px",
+                            border: "1px solid #C4B5FD",
+                            fontSize: "14px",
+                            fontWeight: 800,
+                            color: "#2E1065",
+                            background: "#F5F3FF",
+                            outline: "none",
+                            boxSizing: "border-box",
+                            boxShadow: "0 2px 6px rgba(124, 58, 237, 0.04)"
+                          }}
+                          placeholder="e.g. 5"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="form-label" style={{ fontSize: 10, marginBottom: 2, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                          💰 INCENTIVE (%) <span style={{ color: "#EF4444" }}>*</span>
+                        </label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="any"
+                            value={incentiveFormPercent}
+                            onChange={(e) => {
+                              const valStr = e.target.value;
+                              setIncentiveFormPercent(valStr);
+                              setIncentiveFormError("");
+                              const pctVal = parseFloat(valStr) || 0;
+                              if (baseUnitPrice > 0) {
+                                setIncentiveFormAmount(Math.round((baseUnitPrice * pctVal) / 100));
+                              }
+                            }}
+                            style={{
+                              width: "100%",
+                              padding: "10px 34px 10px 14px",
+                              borderRadius: "12px",
+                              border: "1px solid #C4B5FD",
+                              fontSize: "14px",
+                              fontWeight: 800,
+                              color: "#7C3AED",
+                              background: "#F5F3FF",
+                              outline: "none",
+                              boxSizing: "border-box",
+                              boxShadow: "0 2px 6px rgba(124, 58, 237, 0.04)"
+                            }}
+                            placeholder="e.g. 10"
+                          />
+                          <span style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, fontSize: "16px", color: "#7C3AED" }}>%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Live Incentive Calculation Breakdown */}
+                    <div style={{
+                      background: "linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 100%)",
+                      border: "1px solid #A7F3D0",
+                      borderRadius: "12px",
+                      padding: "10px 14px",
+                      marginBottom: "16px",
+                      boxShadow: "0 3px 10px rgba(16, 185, 129, 0.06)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "12px"
+                    }}>
+                      <div>
+                        <div style={{ fontSize: "10px", color: "#047857", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          💰 INCENTIVE BREAKDOWN
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#065F46", marginTop: "2px", fontWeight: 600 }}>
+                          1 Unit Price: <strong>₹{baseUnitPrice.toLocaleString()}</strong> &nbsp;×&nbsp; {qtyNum} {qtyNum === 1 ? "unit" : "units"}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: "10px", color: "#047857", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                          EMPLOYEE EARNS ({pctNum}%)
+                        </div>
+                        <div style={{ fontSize: "18px", color: "#059669", fontWeight: 900, lineHeight: 1.1, marginTop: "1px" }}>
+                          ₹{totalIncentiveCalculated.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#065F46", fontWeight: 600, marginTop: "1px" }}>
+                          ({qtyNum > 1 ? `₹${perUnitIncentive.toLocaleString()} / unit` : "total payout"})
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
 
               {/* Form Action Buttons */}
-              <div style={{ display: "flex", gap: "14px", justifyContent: "flex-end", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", alignItems: "center" }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -5524,15 +5585,15 @@ export function SuperAdminIncentiveSection() {
                     setIncentiveFormError("");
                   }}
                   style={{
-                    padding: "12px 28px",
-                    borderRadius: "40px",
+                    padding: "9px 22px",
+                    borderRadius: "30px",
                     border: "1px solid #CBD5E1",
                     background: "#FFFFFF",
                     color: "#6D28D9",
                     fontWeight: 800,
-                    fontSize: "15px",
+                    fontSize: "13px",
                     cursor: "pointer",
-                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.04)",
+                    boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
                     transition: "all 0.2s ease"
                   }}
                 >
@@ -5541,13 +5602,12 @@ export function SuperAdminIncentiveSection() {
                 <button
                   type="submit"
                   style={{
-                    padding: "12px 34px",
-                    borderRadius: "40px",
+                    padding: "9px 26px",
+                    borderRadius: "30px",
                     border: "none",
                     background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 50%, #8B5CF6 100%)",
                     color: "#FFFFFF",
                     fontWeight: 800,
-                    fontSize: "15px",
                     cursor: "pointer",
                     boxShadow: "0 10px 25px rgba(124, 58, 237, 0.4)",
                     display: "inline-flex",
@@ -5613,15 +5673,17 @@ export function SuperAdminGodownSection() {
             return (
               <tr key={p.id}>
                 <td>
-                  {p.image ? (
-                    <div style={{ width: 44, height: 44, borderRadius: 12, overflow: "hidden", border: "1px solid #EAE2D5", background: "#F5EFE6" }}>
-                      <img src={p.image} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    </div>
-                  ) : (
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: "#F5EFE6", border: "1px solid #EAE2D5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-                      📦
-                    </div>
-                  )}
+                  <div style={{ width: 44, height: 44, borderRadius: 12, overflow: "hidden", border: "1px solid #EAE2D5", background: "#F5EFE6" }}>
+                    <img
+                      src={getAutoProductImage(p.name, p.brand, p.category, p.image)}
+                      alt={p.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = getAutoProductImage(p.name, p.brand, p.category);
+                      }}
+                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    />
+                  </div>
                 </td>
                 <td style={{ fontWeight: 600 }}>{p.name}</td>
                 <td>{p.sku || "—"}</td>

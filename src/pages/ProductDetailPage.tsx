@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "../app/store";
 import { ProductForm } from "./SuperAdminPage";
+import { getAutoProductImage } from "../utils/autoProductImage";
 
 interface Batch {
   id?: string;
@@ -217,11 +218,24 @@ export function ProductDetailPage() {
               border: "1px solid #F3EEFF",
               borderRadius: "16px",
               padding: "24px",
-              marginBottom: "24px"
+              marginBottom: "24px",
+              display: "flex",
+              alignItems: "center",
+              gap: "24px"
             }}
           >
-            {/* Info Grid */}
-            <div>
+            <div style={{ width: "90px", height: "90px", borderRadius: "16px", stroke: "#E9D8FD", flexShrink: 0, background: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <img
+                src={getAutoProductImage(data.name, data.brand, data.category, data.image)}
+                alt={data.name}
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = getAutoProductImage(data.name, data.brand, data.category);
+                }}
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
               <h2 style={{ margin: "0 0 12px 0", fontSize: "24px", fontWeight: 900, color: "#5B21B6", textTransform: "capitalize" }}>
                 {data.name}
               </h2>
