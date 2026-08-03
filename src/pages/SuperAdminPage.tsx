@@ -3582,20 +3582,20 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
       {/* ── Employee Tab Content ── */}
       {activeTab === "employee" && (
         <div style={{
-          background: "#fffdf9",
-          borderRadius: "16px", padding: "20px", border: "1px solid #f0e6d6",
-          boxShadow: "0 4px 20px rgba(139, 92, 26, 0.02)",
+          background: "#FFFFFF",
+          borderRadius: "16px", padding: "20px", border: "1px solid #EEF1F8",
+          boxShadow: "0 4px 20px rgba(124, 58, 237, 0.04)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#78350f", display: "flex", alignItems: "center", gap: "8px" }}>
+            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#1E293B", display: "flex", alignItems: "center", gap: "8px" }}>
               <span>👤 All Employees</span>
             </h3>
             {!readOnly && (
               <button onClick={() => setShowAddEmployee(true)} className="btn btn-primary btn-sm" style={{
                 padding: "10px 22px", borderRadius: "999px", border: "none",
-                background: "#1E293B", color: "#FFFFFF",
+                background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)", color: "#FFFFFF",
                 cursor: "pointer", fontSize: "13px", fontWeight: 700,
-                boxShadow: "0 8px 20px rgba(18, 58, 34, 0.25)",
+                boxShadow: "0 8px 20px rgba(124, 58, 237, 0.25)",
                 transition: "all 300ms ease",
               }}>+ Add Employee</button>
             )}
@@ -3609,8 +3609,8 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
                 actions={!readOnly ? (
                   <>
                     <button onClick={() => setEditingEmployee(e)} title="Edit" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #f5e3cc",
-                      background: "#fdf8f2", color: "#b45309", cursor: "pointer", display: "flex",
+                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #F3EEFF",
+                      background: "#F5F3FF", color: "#7C3AED", cursor: "pointer", display: "flex",
                       alignItems: "center", justifyContent: "center", fontSize: "14px", transition: "all 0.2s"
                     }}>✏️</button>
                     <button onClick={() => removeUser(e.id, "employee")} title="Delete" style={{
@@ -3625,7 +3625,7 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
               />
             ))}
             {employees.length === 0 && (
-              <div style={{ gridColumn: "1/-1", textAlign: "center", color: "#c4956a", padding: "20px 0", fontSize: "12px" }}>No employees yet. Click + Add Employee to create one.</div>
+              <div style={{ gridColumn: "1/-1", textAlign: "center", color: "#64748B", padding: "20px 0", fontSize: "12px" }}>No employees yet. Click + Add Employee to create one.</div>
             )}
           </div>
         </div>
@@ -3634,20 +3634,20 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
       {/* ── Manager Tab Content ── */}
       {activeTab === "manager" && (
         <div style={{
-          background: "#fffdf9",
-          borderRadius: "16px", padding: "20px", border: "1px solid #f0e6d6",
-          boxShadow: "0 4px 20px rgba(139, 92, 26, 0.02)",
+          background: "#FFFFFF",
+          borderRadius: "16px", padding: "20px", border: "1px solid #EEF1F8",
+          boxShadow: "0 4px 20px rgba(124, 58, 237, 0.04)",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#78350f", display: "flex", alignItems: "center", gap: "8px" }}>
+            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#1E293B", display: "flex", alignItems: "center", gap: "8px" }}>
               <span>👔 All Managers</span>
             </h3>
             {!readOnly && (
               <button onClick={() => setShowAddManager(true)} className="btn btn-primary btn-sm" style={{
                 padding: "10px 22px", borderRadius: "999px", border: "none",
-                background: "#1E293B", color: "#FFFFFF",
+                background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)", color: "#FFFFFF",
                 cursor: "pointer", fontSize: "13px", fontWeight: 700,
-                boxShadow: "0 8px 20px rgba(18, 58, 34, 0.25)",
+                boxShadow: "0 8px 20px rgba(124, 58, 237, 0.25)",
                 transition: "all 300ms ease",
               }}>+ Add Manager</button>
             )}
@@ -3660,8 +3660,8 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
                 actions={!readOnly ? (
                   <>
                     <button onClick={() => setEditingManager(m)} title="Edit" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #f5e3cc",
-                      background: "#fdf8f2", color: "#b45309", cursor: "pointer", display: "flex",
+                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #F3EEFF",
+                      background: "#F5F3FF", color: "#7C3AED", cursor: "pointer", display: "flex",
                       alignItems: "center", justifyContent: "center", fontSize: "14px", transition: "all 0.2s"
                     }}>✏️</button>
                     <button onClick={() => removeUser(m.id, "manager")} title="Delete" style={{
@@ -3676,7 +3676,7 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
               />
             ))}
             {managers.length === 0 && (
-              <div style={{ gridColumn: "1/-1", textAlign: "center", color: "#c4956a", padding: "20px 0", fontSize: "12px" }}>No managers yet. Click + Add Manager to create one.</div>
+              <div style={{ gridColumn: "1/-1", textAlign: "center", color: "#64748B", padding: "20px 0", fontSize: "12px" }}>No managers yet. Click + Add Manager to create one.</div>
             )}
           </div>
         </div>
@@ -3872,11 +3872,11 @@ export function TaskAssignmentSection() {
       {/* ── Employee List (Active Tab = Employee or if user is Manager) ── */}
       {(activeTab === "employee" || !isSuperAdmin) && (
         <div style={{
-          background: "#fffdf9",
-          borderRadius: "16px", padding: "20px", border: "1px solid #f0e6d6",
-          boxShadow: "0 4px 20px rgba(139, 92, 26, 0.02)",
+          background: "#FFFFFF",
+          borderRadius: "16px", padding: "20px", border: "1px solid #EEF1F8",
+          boxShadow: "0 4px 20px rgba(124, 58, 237, 0.04)",
         }}>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 700, color: "#78350f" }}>👤 Employees Tasks</h3>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 700, color: "#1E293B" }}>👤 Employees Tasks</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "16px" }}>
             {employeesWithTasks.map(e => (
               <UnifiedEmployeeCard
@@ -3891,8 +3891,8 @@ export function TaskAssignmentSection() {
                         setEditingTask(userTasks[0]);
                       }
                     }} title="Edit Task" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #f5e3cc",
-                      background: "#fdf8f2", color: "#b45309", cursor: "pointer", display: "flex",
+                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #F3EEFF",
+                      background: "#F5F3FF", color: "#7C3AED", cursor: "pointer", display: "flex",
                       alignItems: "center", justifyContent: "center", fontSize: "14px", transition: "all 0.2s"
                     }}>✏️</button>
                     <button onClick={() => {
@@ -3911,8 +3911,8 @@ export function TaskAssignmentSection() {
                 }
               >
                 {/* Tasks Section */}
-                <div style={{ marginTop: "12px", borderTop: "1px solid #f5ede2", paddingTop: "10px" }}>
-                  <div style={{ fontWeight: 700, fontSize: "12px", color: "#78350f", marginBottom: "6px" }}>📋 Tasks:</div>
+                <div style={{ marginTop: "12px", borderTop: "1px solid #EEF1F8", paddingTop: "10px" }}>
+                  <div style={{ fontWeight: 700, fontSize: "12px", color: "#1E293B", marginBottom: "6px" }}>📋 Tasks:</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                     {regularTasks.filter(t => t.assignedTo === e.id).map(t => {
                       const styles = t.status === "Completed"
@@ -3928,8 +3928,8 @@ export function TaskAssignmentSection() {
                             display: "flex",
                             flexDirection: "column",
                             gap: "6px",
-                            background: "linear-gradient(to right, #ffffff, #fcfbf9)",
-                            border: "1px solid #f0e6d6",
+                            background: "#F8FAFC",
+                            border: "1px solid #EEF1F8",
                             borderLeft: `4px solid ${styles.bar}`,
                             padding: "10px 14px",
                             borderRadius: "8px",
@@ -3939,7 +3939,7 @@ export function TaskAssignmentSection() {
                           }}
                         >
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ color: "#3f2d20", fontWeight: 600 }}>{t.title}</span>
+                            <span style={{ color: "#1E293B", fontWeight: 600 }}>{t.title}</span>
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                               <span style={{
                                 display: "inline-flex",
@@ -4005,7 +4005,7 @@ export function TaskAssignmentSection() {
               </UnifiedEmployeeCard>
             ))}
             {employeesWithTasks.length === 0 && (
-              <div style={{ gridColumn: "1/-1", textAlign: "center", color: "#c4956a", padding: "20px 0", fontSize: "12px" }}>No employees with assigned tasks.</div>
+              <div style={{ gridColumn: "1/-1", textAlign: "center", color: "#64748B", padding: "20px 0", fontSize: "12px" }}>No employees with assigned tasks.</div>
             )}
           </div>
         </div>
@@ -4014,46 +4014,46 @@ export function TaskAssignmentSection() {
       {/* ── Manager List (Only if Admin & Tab = Manager) ── */}
       {isSuperAdmin && activeTab === "manager" && (
         <div style={{
-          background: "#fffdf9",
-          borderRadius: "16px", padding: "20px", border: "1px solid #f0e6d6",
-          boxShadow: "0 4px 20px rgba(139, 92, 26, 0.02)",
+          background: "#FFFFFF",
+          borderRadius: "16px", padding: "20px", border: "1px solid #EEF1F8",
+          boxShadow: "0 4px 20px rgba(124, 58, 237, 0.04)",
         }}>
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 700, color: "#78350f" }}>👔 Managers Tasks</h3>
+          <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 700, color: "#1E293B" }}>👔 Managers Tasks</h3>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "12px" }}>
             {managersWithTasks.map(m => (
               <div key={m.id} style={{
-                background: "#fff", borderRadius: "12px", padding: "14px",
-                border: "1px solid #f5ede2", boxShadow: "0 4px 12px rgba(139,92,26,0.03)",
+                background: "#FFFFFF", borderRadius: "12px", padding: "14px",
+                border: "1px solid #EEF1F8", boxShadow: "0 4px 12px rgba(124,58,237,0.03)",
                 display: "flex", flexDirection: "column", justifyContent: "space-between",
               }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: "14px", color: "#5c3a21", marginBottom: "10px" }}>{m.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: "14px", color: "#1E293B", marginBottom: "10px" }}>{m.name}</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "11px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Briefcase size={12} style={{ color: "#c29153" }} />
-                      <span style={{ color: "#9c8069", width: "65px" }}>Role:</span>
-                      <strong style={{ color: "#543d2b" }}>{m.jobTitle || "Manager"}</strong>
+                      <Briefcase size={12} style={{ color: "#7C3AED" }} />
+                      <span style={{ color: "#64748B", width: "65px" }}>Role:</span>
+                      <strong style={{ color: "#1E293B" }}>{m.jobTitle || "Manager"}</strong>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <UserIcon size={12} style={{ color: "#c29153" }} />
-                      <span style={{ color: "#9c8069", width: "65px" }}>Username:</span>
-                      <strong style={{ color: "#543d2b" }}>{m.username || "—"}</strong>
+                      <UserIcon size={12} style={{ color: "#7C3AED" }} />
+                      <span style={{ color: "#64748B", width: "65px" }}>Username:</span>
+                      <strong style={{ color: "#1E293B" }}>{m.username || "—"}</strong>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Phone size={12} style={{ color: "#c29153" }} />
-                      <span style={{ color: "#9c8069", width: "65px" }}>Phone:</span>
-                      <strong style={{ color: "#543d2b" }}>{m.phone || "—"}</strong>
+                      <Phone size={12} style={{ color: "#7C3AED" }} />
+                      <span style={{ color: "#64748B", width: "65px" }}>Phone:</span>
+                      <strong style={{ color: "#1E293B" }}>{m.phone || "—"}</strong>
                     </div>
                   </div>
 
                   {/* Tasks Section */}
-                  <div style={{ marginTop: "12px", borderTop: "1px solid #f5ede2", paddingTop: "10px" }}>
-                    <div style={{ fontWeight: 700, fontSize: "12px", color: "#78350f", marginBottom: "6px" }}>📋 Tasks:</div>
+                  <div style={{ marginTop: "12px", borderTop: "1px solid #EEF1F8", paddingTop: "10px" }}>
+                    <div style={{ fontWeight: 700, fontSize: "12px", color: "#1E293B", marginBottom: "6px" }}>📋 Tasks:</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                       {regularTasks.filter(t => t.assignedTo === m.id).map(t => (
-                        <div key={t.id} style={{ display: "flex", flexDirection: "column", gap: "6px", background: "#fdfbfa", border: "1px solid #efe8df", padding: "8px 10px", borderRadius: "8px", fontSize: "11px" }}>
+                        <div key={t.id} style={{ display: "flex", flexDirection: "column", gap: "6px", background: "#F8FAFC", border: "1px solid #EEF1F8", padding: "8px 10px", borderRadius: "8px", fontSize: "11px" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ color: "#5c3a21", fontWeight: 600 }}>{t.title}</span>
+                            <span style={{ color: "#1E293B", fontWeight: 600 }}>{t.title}</span>
                             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                               <span style={{
                                 fontSize: "9px",
