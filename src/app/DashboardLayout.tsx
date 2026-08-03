@@ -292,28 +292,38 @@ export function Pill({ status }: { status: string }) {
   return <span className={`pill pill-${key}`}>{status}</span>;
 }
 
-export function BarChart({ data }: { data: { label: string; value: number }[] }) {
+export function BarChart({ data }: { data: { label: string; value: number; color?: string; displayValue?: string }[] }) {
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
-    <div className="bar-chart" style={{ display: "flex", alignItems: "flex-end", gap: "12px", height: "160px", paddingTop: "20px" }}>
-      {data.map((d) => (
-        <div className="bar-col" key={d.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
-          <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-            <div
-              className="bar"
-              style={{
-                height: `${(d.value / max) * 100}%`,
-                width: "100%",
-                maxWidth: "32px",
-                background: "linear-gradient(180deg, #7C3AED 0%, #EC4899 100%)",
-                borderRadius: "10px 10px 0 0",
-                transition: "height 300ms ease"
-              }}
-            />
+    <div className="bar-chart" style={{ display: "flex", alignItems: "flex-end", gap: "12px", height: "170px", paddingTop: "24px" }}>
+      {data.map((d) => {
+        const heightPct = Math.max((d.value / max) * 100, d.value > 0 ? 12 : 6);
+        const barBg = d.color || "linear-gradient(180deg, #7C3AED 0%, #EC4899 100%)";
+        return (
+          <div className="bar-col" key={d.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", height: "100%" }}>
+            <div style={{ fontSize: "12px", fontWeight: 800, color: d.value > 0 ? "#1E293B" : "#94A3B8", marginBottom: "4px" }}>
+              {d.displayValue !== undefined ? d.displayValue : d.value}
+            </div>
+            <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+              <div
+                className="bar"
+                style={{
+                  height: `${heightPct}%`,
+                  width: "100%",
+                  maxWidth: "36px",
+                  background: barBg,
+                  borderRadius: "10px 10px 0 0",
+                  transition: "height 300ms ease",
+                  boxShadow: d.value > 0 ? "0 4px 12px rgba(124, 58, 237, 0.2)" : "none"
+                }}
+              />
+            </div>
+            <div className="bar-label" style={{ fontSize: "11px", color: "#475569", fontWeight: 700, marginTop: "8px", textAlign: "center", whiteSpace: "nowrap" }}>
+              {d.label}
+            </div>
           </div>
-          <div className="bar-label" style={{ fontSize: "11px", color: "#6F6F6F", fontWeight: 700, marginTop: "8px" }}>{d.label}</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

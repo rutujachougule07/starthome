@@ -46,58 +46,176 @@ export function EmployeePage({ tab = "overview" }: EmployeePageProps) {
 }
 
 function Overview() {
-  const { currentUser, tasks, orders } = useStore();
+  const { currentUser, tasks, orders, products } = useStore();
   const navigate = useNavigate();
   const mine = tasks.filter((t) => t.assignedTo === currentUser!.id);
   const goTo = (tab: string) => navigate({ to: "/employee", search: { tab } });
 
-  const pendingCount = mine.filter((t) => t.status === "Pending").length;
-  const inProgressCount = mine.filter((t) => t.status === "In Progress").length;
-  const completedCount = mine.filter((t) => t.status === "Completed").length;
-  const totalTasks = mine.length || 1;
+  // Punch In State per Employee
+  const userPunchKey = `punch_in_${currentUser?.id}`;
+  const userPunchTimeKey = `punch_time_${currentUser?.id}`;
+  const userPunchCountKey = `punch_count_${currentUser?.id}`;
 
+  const [isPunchedIn, setIsPunchedIn] = useState<boolean>(() => {
+    return localStorage.getItem(userPunchKey) === "true";
+  });
+  const [punchInTime, setPunchInTime] = useState<string>(() => {
+    return localStorage.getItem(userPunchTimeKey) || "";
+  });
+  const [punchCount, setPunchCount] = useState<number>(() => {
+    return Number(localStorage.getItem(userPunchCountKey)) || (isPunchedIn ? 1 : 0);
+  });
+
+  const handleTogglePunchIn = () => {
+    if (isPunchedIn) {
+      // Punch Out
+      setIsPunchedIn(false);
+      localStorage.setItem(userPunchKey, "false");
+    } else {
+      // Punch In
+      const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const newCount = punchCount + 1;
+      setIsPunchedIn(true);
+      setPunchInTime(nowStr);
+      setPunchCount(newCount);
+      localStorage.setItem(userPunchKey, "true");
+      localStorage.setItem(userPunchTimeKey, nowStr);
+      localStorage.setItem(userPunchCountKey, String(newCount));
+    }
+  };
+
+  // 1. Incentive Metrics
+  const assignedIncentiveProducts = products.filter(p => p.assignedEmployeeId === currentUser?.id);
+  const assignedIncentiveOrders = orders.filter(o => o.assignedTo === currentUser?.id && (o.isIncentive || (o.discount || 0) > 0));
+  const incentiveCount = assignedIncentiveProducts.length + assignedIncentiveOrders.length;
+  const incentiveEarnedTotal = assignedIncentiveProducts.reduce((acc, p) => acc + (p.incentive || 0), 0) + assignedIncentiveOrders.reduce((acc, o) => acc + Math.round((o.total * (o.discount || 0)) / 100), 0);
+
+  // 2. Task Complete Metrics
+  const completedCount = mine.filter((t) => t.status === "Completed").length;
+
+  // 3. Orders Metrics
+  const approvedOrders = orders.filter((o) => (o.assignedTo === currentUser?.id || o.createdBy === currentUser?.name) && (o.status === "Approved" || o.status === "Delivered"));
+  const ordersCount = approvedOrders.length;
+
+  // 4. Punch In Value
+  const punchVal = isPunchedIn ? 1 : 0;
+
+  // Bar Chart Data (Incentive, Task Complete, Order, Punch In)
   const chartData = [
-    { label: "Total", value: mine.length },
-    { label: "Pending", value: pendingCount },
-    { label: "In Prog", value: inProgressCount },
-    { label: "Done", value: completedCount },
+    {
+      label: "Incentive",
+      value: incentiveCount > 0 ? incentiveCount : (incentiveEarnedTotal > 0 ? 1 : 0),
+      displayValue: incentiveEarnedTotal > 0 ? `₹${incentiveEarnedTotal.toLocaleString()}` : `${incentiveCount}`,
+      color: "linear-gradient(180deg, #7C3AED 0%, #6D28D9 100%)"
+    },
+    {
+      label: "Task Complete",
+      value: completedCount,
+      displayValue: `${completedCount}`,
+      color: "linear-gradient(180deg, #10B981 0%, #059669 100%)"
+    },
+    {
+      label: "Orders",
+      value: ordersCount,
+      displayValue: `${ordersCount}`,
+      color: "linear-gradient(180deg, #2563EB 0%, #1D4ED8 100%)"
+    },
+    {
+      label: "Punch In",
+      value: punchVal,
+      displayValue: isPunchedIn ? "In ⏰" : "Out",
+      color: "linear-gradient(180deg, #F59E0B 0%, #D97706 100%)"
+    }
   ];
 
-  // Pie Chart calculations
-  const pendingPct = Math.round((pendingCount / totalTasks) * 100);
-  const inProgressPct = Math.round((inProgressCount / totalTasks) * 100);
-  const completedPct = Math.round((completedCount / totalTasks) * 100);
+  // Pie Chart Total & Percentages
+  const totalPie = (incentiveCount || (incentiveEarnedTotal ? 1 : 0)) + completedCount + ordersCount + punchVal;
+  const pieMax = totalPie || 1;
+
+  const incPct = Math.round(((incentiveCount || (incentiveEarnedTotal ? 1 : 0)) / pieMax) * 100);
+  const taskPct = Math.round((completedCount / pieMax) * 100);
+  const orderPct = Math.round((ordersCount / pieMax) * 100);
+  const punchPct = Math.round((punchVal / pieMax) * 100);
 
   return (
     <>
-      <h2 className="page-title">Welcome, {currentUser?.name?.split(" ")[0]}</h2>
-      <p className="page-sub">Here's your work overview for today.</p>
-      <DashboardLeadPipelineOverview />
-      <UpcomingFollowUps />
-      <div className="stat-grid">
-        <StatCard icon="📝" label="Total Tasks" value={mine.length} onClick={() => goTo("tasks")} />
-        <StatCard icon="⏳" label="Pending" value={pendingCount} onClick={() => goTo("tasks")} />
-        <StatCard icon="⚙" label="In Progress" value={inProgressCount} onClick={() => goTo("tasks")} />
-        <StatCard icon="✅" label="Completed" value={completedCount} onClick={() => goTo("tasks")} />
-        <StatCard icon="🧾" label="Active Orders" value={orders.filter((o) => o.status === "Approved").length} onClick={() => goTo("orders")} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
+        <div>
+          <h2 className="page-title" style={{ margin: 0 }}>Welcome, {currentUser?.name?.split(" ")[0]}</h2>
+          <p className="page-sub" style={{ margin: "4px 0 0 0" }}>Here's your work overview for today.</p>
+        </div>
+
+        {/* Punch In / Punch Out Interactive Button Card */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "14px",
+          background: isPunchedIn ? "linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 100%)" : "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
+          border: isPunchedIn ? "1.5px solid #6EE7B7" : "1.5px solid #C4B5FD",
+          padding: "10px 18px",
+          borderRadius: "16px",
+          boxShadow: isPunchedIn ? "0 4px 14px rgba(16, 185, 129, 0.12)" : "0 4px 14px rgba(124, 58, 237, 0.12)"
+        }}>
+          <div>
+            <div style={{ fontSize: "11px", color: isPunchedIn ? "#047857" : "#6D28D9", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              {isPunchedIn ? "🟢 ATTENDANCE STATUS" : "🔴 NOT PUNCHED IN"}
+            </div>
+            <div style={{ fontSize: "13px", fontWeight: 800, color: isPunchedIn ? "#065F46" : "#4C1D95", marginTop: "2px" }}>
+              {isPunchedIn ? `Punched In (${punchInTime || "Today"})` : "Tap button to Punch In"}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleTogglePunchIn}
+            style={{
+              padding: "9px 20px",
+              borderRadius: "30px",
+              border: "none",
+              background: isPunchedIn ? "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" : "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+              color: "#FFFFFF",
+              fontWeight: 800,
+              fontSize: "13px",
+              cursor: "pointer",
+              boxShadow: isPunchedIn ? "0 4px 12px rgba(220, 38, 38, 0.3)" : "0 4px 12px rgba(16, 185, 129, 0.3)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <span>⏰</span>
+            <span>{isPunchedIn ? "Punch Out" : "Punch In Now"}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Bar Chart & Pie Chart Row */}
+      <DashboardLeadPipelineOverview />
+      <UpcomingFollowUps />
+
+      <div className="stat-grid">
+        <StatCard icon="💰" label="Incentive" value={incentiveEarnedTotal > 0 ? `₹${incentiveEarnedTotal.toLocaleString()}` : `${incentiveCount}`} onClick={() => goTo("products")} />
+        <StatCard icon="✅" label="Task Complete" value={completedCount} onClick={() => goTo("tasks")} />
+        <StatCard icon="🧾" label="Orders" value={ordersCount} onClick={() => goTo("orders")} />
+        <StatCard icon="⏰" label="Punch In" value={isPunchedIn ? `In (${punchInTime})` : "Out"} onClick={handleTogglePunchIn} />
+      </div>
+
+      {/* Bar Chart & Pie Chart Row with Requested 4 Metrics */}
       <div className="row-2" style={{ marginBottom: "24px" }}>
+        {/* Performance Bar Chart (Incentive, Task Complete, Order, Punch In) */}
         <div className="panel" style={{ background: "rgba(255, 255, 255, 0.72)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.5)", padding: "22px", boxShadow: "0 15px 40px rgba(0, 0, 0, 0.06)" }}>
           <div className="panel-head" style={{ marginBottom: "16px" }}>
             <h3 className="panel-title" style={{ fontSize: "16px", fontWeight: 800, color: "#1F1F1F", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>📊 Task Performance Bar Chart</span>
+              <span>📊 Employee Performance Overview Chart</span>
             </h3>
           </div>
           <BarChart data={chartData} />
         </div>
 
-        {/* Task Status Breakdown Pie Chart */}
+        {/* Performance Breakdown Pie Chart */}
         <div className="panel" style={{ background: "rgba(255, 255, 255, 0.72)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.5)", padding: "22px", boxShadow: "0 15px 40px rgba(0, 0, 0, 0.06)" }}>
           <div className="panel-head" style={{ marginBottom: "16px" }}>
             <h3 className="panel-title" style={{ fontSize: "16px", fontWeight: 800, color: "#1F1F1F", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>🥧 Task Status Pie Chart</span>
+              <span>🥧 Performance Status Breakdown</span>
             </h3>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-around", flexWrap: "wrap", gap: "16px", padding: "10px 0" }}>
@@ -106,53 +224,65 @@ function Overview() {
               <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
                 {/* Background Ring */}
                 <circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(148, 163, 184, 0.22)" strokeWidth="4" />
-                {/* Completed Slice (Primary Green #1E293B) */}
+                {/* Incentive Slice */}
                 <circle
                   cx="18" cy="18" r="15.915" fill="none"
                   stroke="#7C3AED" strokeWidth="4.5"
-                  strokeDasharray={`${completedPct} ${100 - completedPct}`}
+                  strokeDasharray={`${incPct} ${100 - incPct}`}
                   strokeDashoffset="0"
                 />
-                {/* In Progress Slice (Soft Orange #F59E0B) */}
+                {/* Task Complete Slice */}
+                <circle
+                  cx="18" cy="18" r="15.915" fill="none"
+                  stroke="#10B981" strokeWidth="4.5"
+                  strokeDasharray={`${taskPct} ${100 - taskPct}`}
+                  strokeDashoffset={`-${incPct}`}
+                />
+                {/* Orders Slice */}
+                <circle
+                  cx="18" cy="18" r="15.915" fill="none"
+                  stroke="#2563EB" strokeWidth="4.5"
+                  strokeDasharray={`${orderPct} ${100 - orderPct}`}
+                  strokeDashoffset={`-${incPct + taskPct}`}
+                />
+                {/* Punch In Slice */}
                 <circle
                   cx="18" cy="18" r="15.915" fill="none"
                   stroke="#F59E0B" strokeWidth="4.5"
-                  strokeDasharray={`${inProgressPct} ${100 - inProgressPct}`}
-                  strokeDashoffset={`-${completedPct}`}
-                />
-                {/* Pending Slice (Accent Gold #C59D5F) */}
-                <circle
-                  cx="18" cy="18" r="15.915" fill="none"
-                  stroke="#EC4899" strokeWidth="4.5"
-                  strokeDasharray={`${pendingPct} ${100 - pendingPct}`}
-                  strokeDashoffset={`-${completedPct + inProgressPct}`}
+                  strokeDasharray={`${punchPct} ${100 - punchPct}`}
+                  strokeDashoffset={`-${incPct + taskPct + orderPct}`}
                 />
               </svg>
               <div style={{
                 position: "absolute", inset: 0,
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
               }}>
-                <span style={{ fontSize: "20px", fontWeight: 800, color: "#1F1F1F" }}>{mine.length}</span>
-                <span style={{ fontSize: "10px", color: "#6F6F6F", fontWeight: 700, textTransform: "uppercase" }}>Tasks</span>
+                <span style={{ fontSize: "20px", fontWeight: 800, color: "#1F1F1F" }}>{totalPie}</span>
+                <span style={{ fontSize: "10px", color: "#6F6F6F", fontWeight: 700, textTransform: "uppercase" }}>Activity</span>
               </div>
             </div>
 
-            {/* Pie Chart Legend */}
+            {/* Pie Chart Legend with exact requested items */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
                 <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#7C3AED", display: "inline-block" }} />
-                <span style={{ color: "#6F6F6F", fontWeight: 600 }}>Completed:</span>
-                <span style={{ fontWeight: 800, color: "#1F1F1F" }}>{completedCount} ({completedPct}%)</span>
+                <span style={{ color: "#6F6F6F", fontWeight: 600 }}>Incentive:</span>
+                <span style={{ fontWeight: 800, color: "#1F1F1F" }}>{incentiveEarnedTotal > 0 ? `₹${incentiveEarnedTotal.toLocaleString()}` : incentiveCount}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#10B981", display: "inline-block" }} />
+                <span style={{ color: "#6F6F6F", fontWeight: 600 }}>Task Complete:</span>
+                <span style={{ fontWeight: 800, color: "#1F1F1F" }}>{completedCount}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
+                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#2563EB", display: "inline-block" }} />
+                <span style={{ color: "#6F6F6F", fontWeight: 600 }}>Orders:</span>
+                <span style={{ fontWeight: 800, color: "#1F1F1F" }}>{ordersCount}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
                 <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#F59E0B", display: "inline-block" }} />
-                <span style={{ color: "#6F6F6F", fontWeight: 600 }}>In Progress:</span>
-                <span style={{ fontWeight: 800, color: "#1F1F1F" }}>{inProgressCount} ({inProgressPct}%)</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
-                <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#EC4899", display: "inline-block" }} />
-                <span style={{ color: "#6F6F6F", fontWeight: 600 }}>Pending:</span>
-                <span style={{ fontWeight: 800, color: "#1F1F1F" }}>{pendingCount} ({pendingPct}%)</span>
+                <span style={{ color: "#6F6F6F", fontWeight: 600 }}>Punch In:</span>
+                <span style={{ fontWeight: 800, color: isPunchedIn ? "#059669" : "#DC2626" }}>{isPunchedIn ? `In (${punchInTime})` : "Out"}</span>
               </div>
             </div>
           </div>
