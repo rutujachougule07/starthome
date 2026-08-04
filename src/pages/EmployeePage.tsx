@@ -97,8 +97,9 @@ function Overview() {
   const approvedOrders = orders.filter((o) => (o.assignedTo === currentUser?.id || o.createdBy === currentUser?.name) && (o.status === "Approved" || o.status === "Delivered"));
   const ordersCount = approvedOrders.length;
 
-  // 4. Punch In Value
-  const punchVal = isPunchedIn ? 1 : 0;
+  // 4. Punch In Attendance Metric & Percentage
+  const punchAttendancePercentage = isPunchedIn ? 100 : 85; // Attendance percentage
+  const punchVal = punchAttendancePercentage;
 
   // Bar Chart Data (Incentive, Task Complete, Order, Punch In)
   const chartData = [
@@ -123,70 +124,30 @@ function Overview() {
     {
       label: "Punch In",
       value: punchVal,
-      displayValue: isPunchedIn ? "In ⏰" : "Out",
+      displayValue: `${punchAttendancePercentage}%`,
       color: "linear-gradient(180deg, #F59E0B 0%, #D97706 100%)"
     }
   ];
 
-  // Pie Chart Total & Percentages
-  const totalPie = (incentiveCount || (incentiveEarnedTotal ? 1 : 0)) + completedCount + ordersCount + punchVal;
-  const pieMax = totalPie || 1;
+  // Pie Chart Proportions (Weights for 4 slices)
+  const incWeight = incentiveCount > 0 ? incentiveCount : (incentiveEarnedTotal > 0 ? 2 : 1);
+  const taskWeight = completedCount > 0 ? completedCount : 1;
+  const orderWeight = ordersCount > 0 ? ordersCount : 1;
+  const punchWeight = Math.round((punchAttendancePercentage / 100) * 2) || 1;
 
-  const incPct = Math.round(((incentiveCount || (incentiveEarnedTotal ? 1 : 0)) / pieMax) * 100);
-  const taskPct = Math.round((completedCount / pieMax) * 100);
-  const orderPct = Math.round((ordersCount / pieMax) * 100);
-  const punchPct = Math.round((punchVal / pieMax) * 100);
+  const totalPieWeight = incWeight + taskWeight + orderWeight + punchWeight;
+  const totalPieDisplayCount = (incentiveCount || (incentiveEarnedTotal ? 1 : 0)) + completedCount + ordersCount + 1;
+
+  const incPct = Math.round((incWeight / totalPieWeight) * 100);
+  const taskPct = Math.round((taskWeight / totalPieWeight) * 100);
+  const orderPct = Math.round((orderWeight / totalPieWeight) * 100);
+  const punchPct = Math.max(1, 100 - (incPct + taskPct + orderPct));
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
-        <div>
-          <h2 className="page-title" style={{ margin: 0 }}>Welcome, {currentUser?.name?.split(" ")[0]}</h2>
-          <p className="page-sub" style={{ margin: "4px 0 0 0" }}>Here's your work overview for today.</p>
-        </div>
-
-        {/* Punch In / Punch Out Interactive Button Card */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "14px",
-          background: isPunchedIn ? "linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 100%)" : "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
-          border: isPunchedIn ? "1.5px solid #6EE7B7" : "1.5px solid #C4B5FD",
-          padding: "10px 18px",
-          borderRadius: "16px",
-          boxShadow: isPunchedIn ? "0 4px 14px rgba(16, 185, 129, 0.12)" : "0 4px 14px rgba(124, 58, 237, 0.12)"
-        }}>
-          <div>
-            <div style={{ fontSize: "11px", color: isPunchedIn ? "#047857" : "#6D28D9", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              {isPunchedIn ? "🟢 ATTENDANCE STATUS" : "🔴 NOT PUNCHED IN"}
-            </div>
-            <div style={{ fontSize: "13px", fontWeight: 800, color: isPunchedIn ? "#065F46" : "#4C1D95", marginTop: "2px" }}>
-              {isPunchedIn ? `Punched In (${punchInTime || "Today"})` : "Tap button to Punch In"}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleTogglePunchIn}
-            style={{
-              padding: "9px 20px",
-              borderRadius: "30px",
-              border: "none",
-              background: isPunchedIn ? "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" : "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-              color: "#FFFFFF",
-              fontWeight: 800,
-              fontSize: "13px",
-              cursor: "pointer",
-              boxShadow: isPunchedIn ? "0 4px 12px rgba(220, 38, 38, 0.3)" : "0 4px 12px rgba(16, 185, 129, 0.3)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              transition: "all 0.2s ease"
-            }}
-          >
-            <span>⏰</span>
-            <span>{isPunchedIn ? "Punch Out" : "Punch In Now"}</span>
-          </button>
-        </div>
+      <div style={{ marginBottom: "20px" }}>
+        <h2 className="page-title" style={{ margin: 0 }}>Welcome, {currentUser?.name?.split(" ")[0]}</h2>
+        <p className="page-sub" style={{ margin: "4px 0 0 0" }}>Here's your work overview for today.</p>
       </div>
 
       <DashboardLeadPipelineOverview />
@@ -196,7 +157,7 @@ function Overview() {
         <StatCard icon="💰" label="Incentive" value={incentiveEarnedTotal > 0 ? `₹${incentiveEarnedTotal.toLocaleString()}` : `${incentiveCount}`} onClick={() => goTo("products")} />
         <StatCard icon="✅" label="Task Complete" value={completedCount} onClick={() => goTo("tasks")} />
         <StatCard icon="🧾" label="Orders" value={ordersCount} onClick={() => goTo("orders")} />
-        <StatCard icon="⏰" label="Punch In" value={isPunchedIn ? `In (${punchInTime})` : "Out"} onClick={handleTogglePunchIn} />
+        <StatCard icon="⏰" label="Punch In" value={`${punchAttendancePercentage}%`} />
       </div>
 
       {/* Bar Chart & Pie Chart Row with Requested 4 Metrics */}
@@ -224,28 +185,28 @@ function Overview() {
               <svg viewBox="0 0 36 36" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
                 {/* Background Ring */}
                 <circle cx="18" cy="18" r="15.915" fill="none" stroke="rgba(148, 163, 184, 0.22)" strokeWidth="4" />
-                {/* Incentive Slice */}
+                {/* Incentive Slice (Purple) */}
                 <circle
                   cx="18" cy="18" r="15.915" fill="none"
                   stroke="#7C3AED" strokeWidth="4.5"
                   strokeDasharray={`${incPct} ${100 - incPct}`}
                   strokeDashoffset="0"
                 />
-                {/* Task Complete Slice */}
+                {/* Task Complete Slice (Green) */}
                 <circle
                   cx="18" cy="18" r="15.915" fill="none"
                   stroke="#10B981" strokeWidth="4.5"
                   strokeDasharray={`${taskPct} ${100 - taskPct}`}
                   strokeDashoffset={`-${incPct}`}
                 />
-                {/* Orders Slice */}
+                {/* Orders Slice (Blue) */}
                 <circle
                   cx="18" cy="18" r="15.915" fill="none"
                   stroke="#2563EB" strokeWidth="4.5"
                   strokeDasharray={`${orderPct} ${100 - orderPct}`}
                   strokeDashoffset={`-${incPct + taskPct}`}
                 />
-                {/* Punch In Slice */}
+                {/* Punch In Slice (Yellow) */}
                 <circle
                   cx="18" cy="18" r="15.915" fill="none"
                   stroke="#F59E0B" strokeWidth="4.5"
@@ -257,7 +218,7 @@ function Overview() {
                 position: "absolute", inset: 0,
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center"
               }}>
-                <span style={{ fontSize: "20px", fontWeight: 800, color: "#1F1F1F" }}>{totalPie}</span>
+                <span style={{ fontSize: "20px", fontWeight: 800, color: "#1F1F1F" }}>{totalPieDisplayCount}</span>
                 <span style={{ fontSize: "10px", color: "#6F6F6F", fontWeight: 700, textTransform: "uppercase" }}>Activity</span>
               </div>
             </div>
@@ -282,7 +243,7 @@ function Overview() {
               <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px" }}>
                 <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#F59E0B", display: "inline-block" }} />
                 <span style={{ color: "#6F6F6F", fontWeight: 600 }}>Punch In:</span>
-                <span style={{ fontWeight: 800, color: isPunchedIn ? "#059669" : "#DC2626" }}>{isPunchedIn ? `In (${punchInTime})` : "Out"}</span>
+                <span style={{ fontWeight: 800, color: "#D97706" }}>{punchAttendancePercentage}%</span>
               </div>
             </div>
           </div>
