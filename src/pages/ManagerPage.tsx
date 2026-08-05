@@ -432,10 +432,14 @@ function OrdersMgmt() {
       {show && (
         <CreateOrderModal
           onClose={() => setShow(false)}
-          onSave={(customerName, productId, qty, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate) => {
+          onSave={(customerName, customerPhone, customerAddress, productId, qty, discountPct, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate) => {
             const p = products.find((p) => p.id === productId)!;
             const orderId = uid("o");
             const notifId = uid("n");
+            const rawTotal = qty * p.price;
+            const finalDiscount = Number(discountPct) || 0;
+            const calculatedTotal = Math.round(rawTotal * (1 - finalDiscount / 100));
+
             setState((s) => {
               let existingCust = s.customers.find(
                 (c) => c.name.trim().toLowerCase() === customerName.trim().toLowerCase()
@@ -447,12 +451,18 @@ function OrdersMgmt() {
                 const newCust = {
                   id: targetCustomerId,
                   name: customerName.trim(),
-                  phone: "",
-                  address: "",
+                  phone: customerPhone.trim(),
+                  address: customerAddress.trim(),
                   email: "",
                   status: "Active"
                 };
                 nextCustomers = [...s.customers, newCust];
+              } else {
+                nextCustomers = s.customers.map(c => c.id === targetCustomerId ? {
+                  ...c,
+                  phone: customerPhone.trim() || c.phone,
+                  address: customerAddress.trim() || c.address
+                } : c);
               }
               const finalCustomerName = existingCust ? existingCust.name : customerName.trim();
               const docLabel = docType === "Bill" ? "Bill" : "Order Copy";
@@ -469,7 +479,8 @@ function OrdersMgmt() {
                     productId,
                     productName: p.name,
                     qty,
-                    total: qty * p.price,
+                    discount: finalDiscount,
+                    total: calculatedTotal,
                     createdBy: "manager",
                     status: "Pending",
                     date: new Date().toISOString().slice(0, 10),
@@ -502,8 +513,12 @@ function OrdersMgmt() {
         <CreateOrderModal
           initial={editingOrder}
           onClose={() => setEditingOrder(null)}
-          onSave={(customerName, productId, qty, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate) => {
+          onSave={(customerName, customerPhone, customerAddress, productId, qty, discountPct, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate) => {
             const p = products.find((p) => p.id === productId)!;
+            const rawTotal = qty * p.price;
+            const finalDiscount = Number(discountPct) || 0;
+            const calculatedTotal = Math.round(rawTotal * (1 - finalDiscount / 100));
+
             setState((s) => {
               let existingCust = s.customers.find(
                 (c) => c.name.trim().toLowerCase() === customerName.trim().toLowerCase()
@@ -515,12 +530,18 @@ function OrdersMgmt() {
                 const newCust = {
                   id: targetCustomerId,
                   name: customerName.trim(),
-                  phone: "",
-                  address: "",
+                  phone: customerPhone.trim(),
+                  address: customerAddress.trim(),
                   email: "",
                   status: "Active"
                 };
                 nextCustomers = [...s.customers, newCust];
+              } else {
+                nextCustomers = s.customers.map(c => c.id === targetCustomerId ? {
+                  ...c,
+                  phone: customerPhone.trim() || c.phone,
+                  address: customerAddress.trim() || c.address
+                } : c);
               }
               const finalCustomerName = existingCust ? existingCust.name : customerName.trim();
               const oldOrder = s.orders.find((o) => o.id === editingOrder.id);
@@ -548,7 +569,8 @@ function OrdersMgmt() {
                   productId,
                   productName: p.name,
                   qty,
-                  total: qty * p.price,
+                  discount: finalDiscount,
+                  total: calculatedTotal,
                   assignedTo,
                   assignedToName,
                   customerBargain,
@@ -566,13 +588,19 @@ function OrdersMgmt() {
   );
 }
 
-function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSave: (customerName: string, productId: string, qty: number, assignedTo: string, assignedToName: string, customerBargain?: string, docType?: "Bill" | "Order Copy", bookingExpiryDate?: string) => void; onClose: () => void }) {
+function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSave: (customerName: string, customerPhone: string, customerAddress: string, productId: string, qty: number, discountPct: number, assignedTo: string, assignedToName: string, customerBargain?: string, docType?: "Bill" | "Order Copy", bookingExpiryDate?: string) => void; onClose: () => void }) {
   const { customers, products, users } = useStore();
   const active = products.filter((p) => p.status === "Active" || p.status === "Verified");
   const employees = users.filter((u) => u.role === "employee");
+
+  const initialCust = customers.find(c => c.id === initial?.customerId || c.name.toLowerCase() === initial?.customerName?.toLowerCase());
+
   const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
+  const [customerPhone, setCustomerPhone] = useState(initialCust?.phone ?? "");
+  const [customerAddress, setCustomerAddress] = useState(initialCust?.address ?? "");
   const [productId, setProductId] = useState(initial?.productId ?? active[0]?.id ?? "");
   const [qty, setQty] = useState(initial?.qty ?? 1);
+  const [discountPct, setDiscountPct] = useState<number | string>(initial?.discount ?? 0);
   const [assignedTo, setAssignedTo] = useState(initial?.assignedTo ?? employees[0]?.id ?? "");
   const [customerBargain, setCustomerBargain] = useState(initial?.customerBargain ?? "");
   const [docType, setDocType] = useState<"Bill" | "Order Copy">(initial?.docType ?? "Bill");
@@ -580,12 +608,81 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
     initial?.bookingExpiryDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   );
 
-  const selectedProduct = active.find(p => p.id === productId);
+  const selectedProduct = active.find((p) => p.id === productId);
 
-  /* ── Premium inline styles ── */
-  const sectionLabel: React.CSSProperties = { fontSize: "10px", fontWeight: 800, letterSpacing: "1.4px", textTransform: "uppercase" as const, color: "#7C3AED", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" };
-  const inputStyle: React.CSSProperties = { width: "100%", padding: "11px 14px", borderRadius: "12px", border: "1.5px solid #EDE4FF", background: "#F3EEFF", fontSize: "13.5px", fontWeight: 500, color: "#1E293B", outline: "none", transition: "border-color .2s, box-shadow .2s" };
-  const selectStyle: React.CSSProperties = { ...inputStyle, appearance: "none" as const, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%234F46E5' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" };
+  const handleCustomerNameChange = (val: string) => {
+    setCustomerName(val);
+    const existing = customers.find((c) => c.name.trim().toLowerCase() === val.trim().toLowerCase());
+    if (existing) {
+      if (existing.phone) setCustomerPhone(existing.phone);
+      if (existing.address) setCustomerAddress(existing.address);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerName.trim()) {
+      alert("Please enter customer name");
+      return;
+    }
+    if (!customerPhone.trim()) {
+      alert("Please enter customer phone number");
+      return;
+    }
+    if (!productId) {
+      alert("Please select a product");
+      return;
+    }
+    const emp = employees.find((u) => u.id === assignedTo);
+    onSave(
+      customerName.trim(),
+      customerPhone.trim(),
+      customerAddress.trim(),
+      productId,
+      qty,
+      Number(discountPct) || 0,
+      assignedTo,
+      emp?.name ?? "",
+      customerBargain.trim(),
+      docType,
+      docType === "Order Copy" ? bookingExpiryDate : undefined
+    );
+  };
+
+  /* ── Styles matching screenshot exactly ── */
+  const sectionLabel: React.CSSProperties = {
+    fontSize: "11px",
+    fontWeight: 800,
+    letterSpacing: "1.2px",
+    textTransform: "uppercase" as const,
+    color: "#7C3AED",
+    marginBottom: "6px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px"
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "13px 18px",
+    borderRadius: "50px",
+    border: "1.5px solid #E2E8F0",
+    background: "#FFFFFF",
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#1E293B",
+    outline: "none",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+    transition: "border-color .2s, box-shadow .2s"
+  };
+
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    appearance: "none" as const,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237C3AED' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 18px center"
+  };
 
   return createPortal(
     <div
@@ -607,35 +704,35 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
           maxHeight: "calc(100vh - 32px)",
           display: "flex", flexDirection: "column",
           overflow: "hidden",
-          boxShadow: "0 32px 72px rgba(79, 70, 229, 0.18), 0 2px 8px rgba(0,0,0,0.08)",
+          boxShadow: "0 32px 72px rgba(168, 85, 247, 0.25)",
           border: "1px solid #EDE4FF"
         }}
       >
         {/* ── Gradient Header ── */}
         <div style={{
-          background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
-          padding: "16px 22px",
+          background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
+          padding: "18px 24px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           flexShrink: 0
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{
-              width: "38px", height: "38px", borderRadius: "50%",
-              background: "rgba(255, 255, 255, 0.2)", backdropFilter: "blur(8px)",
+              width: "40px", height: "40px", borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.22)", backdropFilter: "blur(8px)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "18px", boxShadow: "inset 0 1px 2px rgba(255, 255, 255, 0.4)"
             }}>🛒</div>
             <div>
-              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>
-                {initial ? "Edit Order" : "Create Order"}
+              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>
+                {initial ? `Edit Order #${initial.id}` : "Add New Order"}
               </h3>
               <p style={{ margin: "2px 0 0", fontSize: "12px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500 }}>
-                Fill the details below to create a new order
+                {initial ? "Update order details below" : "Fill the details below to create a new order"}
               </p>
             </div>
           </div>
           <button type="button" onClick={onClose} style={{
-            width: "30px", height: "30px", borderRadius: "50%",
+            width: "32px", height: "32px", borderRadius: "50%",
             background: "rgba(255, 255, 255, 0.22)", backdropFilter: "blur(6px)",
             border: "1px solid rgba(255, 255, 255, 0.35)",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -644,111 +741,144 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
         </div>
 
         {/* ── Scrollable Body ── */}
-        <div style={{ flex: "1 1 auto", overflowY: "auto", padding: "22px 26px 10px" }}>
+        <div style={{ flex: "1 1 auto", overflowY: "auto", padding: "22px 26px 16px", display: "flex", flexDirection: "column", gap: "16px" }}>
 
-          {/* CUSTOMER */}
-          <div style={{ marginBottom: "18px" }}>
-            <div style={sectionLabel}>👤 Customer</div>
+          {/* CUSTOMER NAME */}
+          <div>
+            <div style={sectionLabel}>👤 CUSTOMER NAME *</div>
             <input
               type="text"
-              list="customers-datalist-mgr"
-              placeholder="Type or select customer name"
+              list="mgr-cust-datalist"
+              placeholder="Type customer name"
               value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              onChange={(e) => handleCustomerNameChange(e.target.value)}
               style={inputStyle}
             />
-            <datalist id="customers-datalist-mgr">
+            <datalist id="mgr-cust-datalist">
               {customers.map((c) => <option key={c.id} value={c.name} />)}
             </datalist>
           </div>
 
-          {/* PRODUCT */}
-          <div style={{ marginBottom: "18px" }}>
-            <div style={sectionLabel}>📦 Product</div>
+          {/* PHONE NUMBER */}
+          <div>
+            <div style={sectionLabel}>📱 PHONE NUMBER *</div>
+            <input
+              type="text"
+              placeholder="Enter customer phone number"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+
+          {/* ADDRESS */}
+          <div>
+            <div style={sectionLabel}>📍 ADDRESS</div>
+            <input
+              type="text"
+              placeholder="Enter address (optional)"
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
+
+          {/* SELECT PRODUCT */}
+          <div>
+            <div style={sectionLabel}>📦 SELECT PRODUCT *</div>
             <select value={productId} onChange={(e) => setProductId(e.target.value)} style={selectStyle}>
-              {active.map((p) => <option key={p.id} value={p.id}>{p.name}{p.brand ? ` (${p.brand})` : ""}</option>)}
+              {active.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} {p.brand ? `(${p.brand})` : ""} - ₹{p.price.toLocaleString()} (Stock: {p.qty ?? p.stock ?? 0})
+                </option>
+              ))}
             </select>
             {selectedProduct && (
               <div style={{
                 marginTop: "8px", display: "inline-flex", alignItems: "center", gap: "6px",
-                background: "linear-gradient(135deg, #F3EEFF, #EDE4FF)", padding: "6px 14px",
-                borderRadius: "20px", fontSize: "12px", fontWeight: 700, color: "#6D28D9"
+                background: "#F3EEFF", padding: "6px 16px",
+                borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#7C3AED"
               }}>
                 💰 ₹{selectedProduct.price.toLocaleString()}
               </div>
             )}
           </div>
 
-          {/* QUANTITY */}
-          <div style={{ marginBottom: "18px" }}>
-            <div style={sectionLabel}>🔢 Quantity</div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <button type="button" onClick={() => setQty(Math.max(1, qty - 1))} style={{
-                width: "38px", height: "38px", borderRadius: "12px",
-                background: "#F3EEFF", border: "1.5px solid #C7D2FE",
-                fontSize: "18px", fontWeight: 700, color: "#7C3AED",
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center"
-              }}>−</button>
+          {/* QUANTITY & DISCOUNT GRID */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+            <div>
+              <div style={sectionLabel}>🔢 QUANTITY *</div>
               <input
-                type="number" min={1} value={qty}
-                onChange={(e) => setQty(+e.target.value)}
-                style={{ ...inputStyle, textAlign: "center", maxWidth: "100px", fontWeight: 700, fontSize: "16px" }}
+                type="number"
+                min={1}
+                value={qty}
+                onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
+                style={inputStyle}
               />
-              <button type="button" onClick={() => setQty(qty + 1)} style={{
-                width: "38px", height: "38px", borderRadius: "12px",
-                background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)", border: "none",
-                fontSize: "18px", fontWeight: 700, color: "#fff",
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(124, 58, 237, 0.35)"
-              }}>+</button>
+            </div>
+            <div>
+              <div style={sectionLabel}>💰 DISCOUNT (%)</div>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={discountPct}
+                onChange={(e) => setDiscountPct(e.target.value === "" ? "" : Number(e.target.value))}
+                placeholder="0%"
+                style={inputStyle}
+              />
             </div>
           </div>
 
           {/* ASSIGN EMPLOYEE */}
-          <div style={{ marginBottom: "18px" }}>
-            <div style={sectionLabel}>👨‍💼 Assign Employee</div>
+          <div>
+            <div style={sectionLabel}>👨‍💼 ASSIGN EMPLOYEE</div>
             <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} style={selectStyle}>
               {employees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
             </select>
           </div>
 
           {/* DOCUMENT TYPE */}
-          <div style={{ marginBottom: "18px" }}>
-            <div style={sectionLabel}>📋 Document Type *</div>
-            <div style={{ display: "flex", gap: "10px" }}>
-              <label onClick={() => setDocType("Bill")} style={{
-                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
-                fontWeight: 700, fontSize: "13px", transition: "all .2s",
-                background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                color: docType === "Bill" ? "#fff" : "#475569",
-                border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
-                boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
-              }}>
-                <input type="radio" name="docTypeSelectMgr" value="Bill" checked={docType === "Bill"} onChange={() => setDocType("Bill")} style={{ display: "none" }} />
+          <div>
+            <div style={sectionLabel}>📋 DOCUMENT TYPE *</div>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                type="button"
+                onClick={() => setDocType("Bill")}
+                style={{
+                  flex: 1, padding: "12px 18px", borderRadius: "50px", cursor: "pointer",
+                  fontWeight: 800, fontSize: "14px", transition: "all .2s",
+                  background: docType === "Bill" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
+                  color: docType === "Bill" ? "#FFFFFF" : "#475569",
+                  border: docType === "Bill" ? "none" : "1.5px solid #E2E8F0",
+                  boxShadow: docType === "Bill" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none"
+                }}
+              >
                 🧾 Bill
-              </label>
-              <label onClick={() => setDocType("Order Copy")} style={{
-                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
-                fontWeight: 700, fontSize: "13px", transition: "all .2s",
-                background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                color: docType === "Order Copy" ? "#fff" : "#475569",
-                border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
-                boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
-              }}>
-                <input type="radio" name="docTypeSelectMgr" value="Order Copy" checked={docType === "Order Copy"} onChange={() => setDocType("Order Copy")} style={{ display: "none" }} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDocType("Order Copy")}
+                style={{
+                  flex: 1, padding: "12px 18px", borderRadius: "50px", cursor: "pointer",
+                  fontWeight: 800, fontSize: "14px", transition: "all .2s",
+                  background: docType === "Order Copy" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
+                  color: docType === "Order Copy" ? "#FFFFFF" : "#475569",
+                  border: docType === "Order Copy" ? "none" : "1.5px solid #E2E8F0",
+                  boxShadow: docType === "Order Copy" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none"
+                }}
+              >
                 📄 Order Copy
-              </label>
+              </button>
             </div>
           </div>
 
-          {/* ORDER COPY BOOKING EXPIRY */}
+          {/* BOOKING EXPIRY DATE IF ORDER COPY */}
           {docType === "Order Copy" && (
             <div style={{
               background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)", padding: "16px",
-              borderRadius: "16px", border: "1.5px solid #DDD6FE",
-              marginBottom: "18px", display: "flex", flexDirection: "column", gap: "10px"
+              borderRadius: "20px", border: "1.5px solid #DDD6FE",
+              display: "flex", flexDirection: "column", gap: "10px"
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: "#6D28D9" }}>⏳ Booking Expiry Date *</span>
@@ -798,46 +928,61 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
             </div>
           )}
 
-          {/* CUSTOMER BARGAINING */}
-          <div style={{ marginBottom: "18px" }}>
-            <div style={sectionLabel}>✍️ Customer Bargaining / Remarks</div>
-            <textarea
+          {/* BARGAINING / REMARKS */}
+          <div>
+            <div style={sectionLabel}>✍️ BARGAINING / REMARKS</div>
+            <input
+              type="text"
               placeholder="E.g. Wants 10% discount or ₹80 off..."
               value={customerBargain}
               onChange={(e) => setCustomerBargain(e.target.value)}
-              rows={3}
-              style={{ ...inputStyle, resize: "vertical" }}
+              style={inputStyle}
             />
           </div>
+
         </div>
 
         {/* ── Footer Buttons ── */}
         <div style={{
           padding: "16px 26px 20px",
-          borderTop: "1px solid #EDE4FF",
+          borderTop: "1px solid #F1F5F9",
           display: "flex", justifyContent: "flex-end", gap: "12px",
-          flexShrink: 0, background: "#FAFBFF"
+          flexShrink: 0, background: "#FAFAFA"
         }}>
-          <button type="button" onClick={onClose} style={{
-            padding: "10px 22px", borderRadius: "30px",
-            background: "#FFFFFF", border: "1px solid #CBD5E1",
-            fontWeight: 800, fontSize: "13.5px", color: "#64748B",
-            cursor: "pointer", display: "flex", alignItems: "center", gap: "6px"
-          }}>✕ Cancel</button>
-          <button type="button" onClick={() => {
-            if (customerName.trim() && productId && qty > 0 && assignedTo) {
-              const emp = employees.find((e) => e.id === assignedTo)!;
-              onSave(customerName.trim(), productId, qty, assignedTo, emp.name, customerBargain.trim(), docType, docType === "Order Copy" ? bookingExpiryDate : undefined);
-            }
-          }} style={{
-            padding: "10px 26px", borderRadius: "30px",
-            background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
-            border: "none",
-            fontWeight: 800, fontSize: "13.5px", color: "#fff",
-            cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
-            boxShadow: "0 6px 18px rgba(124, 58, 237, 0.35)",
-            transition: "transform .15s, box-shadow .15s"
-          }}>🚀 {initial ? "Save Changes" : "Send for Approval"}</button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: "12px 24px",
+              borderRadius: "50px",
+              border: "1.5px solid #E2E8F0",
+              background: "#FFFFFF",
+              color: "#475569",
+              fontWeight: 700,
+              fontSize: "14px",
+              cursor: "pointer"
+            }}
+          >
+            ✕ Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            style={{
+              padding: "12px 24px",
+              borderRadius: "50px",
+              border: "none",
+              background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
+              color: "#FFFFFF",
+              fontWeight: 800,
+              fontSize: "14px",
+              boxShadow: "0 8px 24px rgba(168, 85, 247, 0.4)",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", gap: "8px"
+            }}
+          >
+            🚀 {initial ? "Save Changes" : "Submit Order for Approval"}
+          </button>
         </div>
       </div>
     </div>,
