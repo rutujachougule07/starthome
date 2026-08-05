@@ -4276,6 +4276,7 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
   const { setState, users, currentUser } = useStore();
   const [localNotes, setLocalNotes] = useState(lead.notes || "");
   const [localDate, setLocalDate] = useState(lead.followUpDate || "");
+  const [reminderToast, setReminderToast] = useState(false);
   const isSuperAdmin = currentUser?.role === "superadmin";
 
   useEffect(() => {
@@ -4300,10 +4301,16 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
   };
 
   const handleSetReminder = () => {
+    if (!localDate) {
+      alert("Please select a date before setting a reminder!");
+      return;
+    }
     setState((s) => ({
       ...s,
-      leads: s.leads.map((l) => (l.id === lead.id ? { ...l, followUpDate: localDate || undefined } : l)),
+      leads: s.leads.map((l) => (l.id === lead.id ? { ...l, followUpDate: localDate } : l)),
     }));
+    setReminderToast(true);
+    setTimeout(() => setReminderToast(false), 3000);
   };
 
   const handleClearReminder = () => {
@@ -4522,67 +4529,75 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
             <span>📅</span>
             <span style={{ fontSize: "12px", fontWeight: 800, color: "#8a6632", textTransform: "uppercase", letterSpacing: "0.5px" }}>Next Follow-up Date</span>
           </div>
-          <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "12px", alignItems: "center" }}>
             <input
               type="date"
               className="form-input"
-              style={{ margin: 0, height: "42px", background: "#ffffff" }}
+              style={{ margin: 0, height: "42px", background: "#ffffff", borderRadius: "12px", border: "1.5px solid #EDE4FF", padding: "0 12px", fontSize: "14px", fontWeight: 600, color: "#1E293B" }}
               value={localDate}
               onChange={(e) => setLocalDate(e.target.value)}
-              disabled={isSuperAdmin}
             />
-            {!isSuperAdmin && (
-              <button
-                onClick={handleSetReminder}
-                className="btn btn-primary"
-                style={{
-                  backgroundColor: "#d97706",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "#ffffff",
-                  fontWeight: 700,
-                  padding: "0 20px",
-                  height: "42px",
-                  whiteSpace: "nowrap",
-                  cursor: "pointer"
-                }}
-              >
-                Set Reminder
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={handleSetReminder}
+              style={{
+                background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+                border: "none",
+                borderRadius: "30px",
+                color: "#ffffff",
+                fontWeight: 700,
+                fontSize: "14px",
+                padding: "0 24px",
+                height: "42px",
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(124, 58, 237, 0.35)",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease"
+              }}
+            >
+              Set Reminder
+            </button>
           </div>
+
+          {reminderToast && (
+            <div style={{ background: "#DCFCE7", color: "#166534", border: "1px solid #86EFAC", padding: "6px 12px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>
+              ✅ Reminder saved successfully!
+            </div>
+          )}
 
           {/* Alert Set Banner */}
           {lead.followUpDate && (
             <div style={{
-              background: "#fffdf0",
-              border: "1px solid #fde047",
-              borderRadius: "8px",
-              padding: "8px 12px",
+              background: "#F5F3FF",
+              border: "1px solid #DDD6FE",
+              borderRadius: "12px",
+              padding: "10px 14px",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600, color: "#854d0e" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 700, color: "#6D28D9" }}>
                 <span>🔔</span>
                 <span>Reminder set for: {formatReminderDate(lead.followUpDate)}</span>
               </div>
-              {!isSuperAdmin && (
-                <button
-                  onClick={handleClearReminder}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    fontSize: "14px",
-                    color: "#dc2626",
-                    padding: 0
-                  }}
-                  title="Remove Reminder"
-                >
-                  🗑
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={handleClearReminder}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  color: "#dc2626",
+                  padding: 0
+                }}
+                title="Remove Reminder"
+              >
+                🗑
+              </button>
             </div>
           )}
         </div>
@@ -4933,88 +4948,146 @@ export function LeadsSection() {
       {/* Add / Edit Modal */}
       {(showAddModal || editingLead !== null) && (
         <Modal
-          title={editingLead ? "Edit Lead Details" : "Create New Inquiry Lead"}
+          title={editingLead ? "Edit Lead Details" : "+ Create New Inquiry Lead"}
           onClose={() => {
             setShowAddModal(false);
             setEditingLead(null);
           }}
+          className="modal-lg"
         >
-          <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <div className="form-group">
-              <label className="form-label">Full Name <span style={{ color: "#dc2626" }}>*</span></label>
-              <input
-                className="form-input"
-                placeholder="Enter your full name"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-              />
+          <div className="modal-body" style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+            {/* Row 1: Full Name & WhatsApp No */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px" }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>FULL NAME <span style={{ color: "#dc2626" }}>*</span></label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👤</span>
+                  <input
+                    className="form-input"
+                    placeholder="Enter your full name"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%" }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>WHATSAPP NO <span style={{ color: "#dc2626" }}>*</span></label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>💬</span>
+                  <input
+                    className="form-input"
+                    placeholder="+91 XXXXX XXXXX"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value)}
+                    style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%" }}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">WhatsApp No</label>
-              <input
-                className="form-input"
-                placeholder="+91 XXXXX XXXXX"
-                value={formPhone}
-                onChange={(e) => setFormPhone(e.target.value)}
-              />
+            {/* Row 2: Email & City */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px" }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>EMAIL</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>✉️</span>
+                  <input
+                    className="form-input"
+                    placeholder="example@gmail.com"
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%" }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>CITY</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📍</span>
+                  <input
+                    className="form-input"
+                    placeholder="Your City"
+                    value={formCity}
+                    onChange={(e) => setFormCity(e.target.value)}
+                    style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%" }}
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* Row 3: Gender */}
             <div className="form-group">
-              <label className="form-label">Email</label>
-              <input
-                className="form-input"
-                placeholder="example@gmail.com"
-                value={formEmail}
-                onChange={(e) => setFormEmail(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">City</label>
-              <input
-                className="form-input"
-                placeholder="Your City"
-                value={formCity}
-                onChange={(e) => setFormCity(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ textTransform: "none", fontSize: "14px", fontWeight: 600 }}>Gender</label>
-              <div style={{ display: "flex", gap: "24px", marginTop: "12px", marginBottom: "8px" }}>
+              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>GENDER</label>
+              <div style={{ display: "flex", gap: "16px", marginTop: "4px" }}>
                 {(["Male", "Female", "Other"] as const).map(g => (
-                  <label key={g} style={{ display: "flex", alignItems: "center", gap: "12px", cursor: "pointer" }} onClick={() => setFormGender(g)}>
+                  <label key={g} style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }} onClick={() => setFormGender(g)}>
                     <div style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: formGender === g ? "2px solid #d97706" : "1px solid #d6d3d1",
-                      display: "flex", alignItems: "center", justifyContent: "center", background: "#ffffff",
+                      width: "24px", height: "24px", borderRadius: "50%",
+                      border: formGender === g ? "2px solid #7C3AED" : "1px solid #CBD5E1",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: formGender === g ? "#F5F3FF" : "#FFFFFF",
                       transition: "all 0.2s"
                     }}>
-                      {formGender === g && <div style={{ width: "12px", height: "12px", borderRadius: "50%", background: "#d97706", animation: "fade-in 0.2s ease" }} />}
+                      {formGender === g && <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#7C3AED" }} />}
                     </div>
-                    <span style={{ fontSize: "14px", fontWeight: 600, color: "#4a3411" }}>{g}</span>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: formGender === g ? "#7C3AED" : "#475569" }}>{g}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Product of Interest</label>
-              <select className="form-input" value={formProduct} onChange={(e) => setFormProduct(e.target.value)}>
-                <option value="">Select a Product</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.name}>{p.name}</option>
-                ))}
-                <option value="Other Product">Other Product</option>
-              </select>
+            {/* Row 4: Product of Interest & Lead Source */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px" }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PRODUCT OF INTEREST</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📦</span>
+                  <select
+                    className="form-input"
+                    value={formProduct}
+                    onChange={(e) => setFormProduct(e.target.value)}
+                    style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", appearance: "auto" }}
+                  >
+                    <option value="">Select a Product</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                    <option value="Other Product">Other Product</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>LEAD SOURCE</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🌐</span>
+                  <select
+                    className="form-input"
+                    value={formSource}
+                    onChange={(e) => setFormSource(e.target.value)}
+                    style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", appearance: "auto" }}
+                  >
+                    <option value="Walk-in">Walk-in</option>
+                    <option value="Phone">Phone Call</option>
+                    <option value="Online">Online Form</option>
+                    <option value="Referral">Referral</option>
+                    <option value="Advertisement">Advertisement</option>
+                  </select>
+                </div>
+              </div>
             </div>
 
+            {/* Row 5: Product Brand */}
             <div className="form-group">
-              <label className="form-label">Product Brand</label>
+              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PRODUCT BRAND</label>
               {availableBrands.length === 0 ? (
-                <div style={{ fontSize: "13px", color: "#a8a29e", padding: "10px", background: "#f5f5f5", borderRadius: "8px", border: "1px solid #e5e5e5" }}>No Brands Available</div>
+                <div style={{ fontSize: "13px", color: "#94A3B8", padding: "8px 12px", background: "#F8FAFC", borderRadius: "10px", border: "1px solid #F3EEFF" }}>No Brands Available</div>
               ) : (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
                   {[...availableBrands, "Other"].map((b) => (
                     <button
                       key={b}
@@ -5023,9 +5096,9 @@ export function LeadsSection() {
                       style={{
                         padding: "6px 14px",
                         borderRadius: "20px",
-                        border: formBrand === b ? "1px solid #d97706" : "1px solid #d6d3d1",
-                        background: formBrand === b ? "#fef3c7" : "#ffffff",
-                        color: formBrand === b ? "#92400e" : "#57534e",
+                        border: formBrand === b ? "1px solid #7C3AED" : "1px solid #E2E8F0",
+                        background: formBrand === b ? "#F5F3FF" : "#FFFFFF",
+                        color: formBrand === b ? "#7C3AED" : "#64748B",
                         fontSize: "13px",
                         fontWeight: 600,
                         cursor: "pointer",
@@ -5039,55 +5112,73 @@ export function LeadsSection() {
               )}
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Lead Source</label>
-              <select className="form-input" value={formSource} onChange={(e) => setFormSource(e.target.value)}>
-                <option value="Walk-in">Walk-in</option>
-                <option value="Phone">Phone Call</option>
-                <option value="Online">Online Form</option>
-                <option value="Referral">Referral</option>
-                <option value="Advertisement">Advertisement</option>
-              </select>
-            </div>
-
+            {/* Row 6: Assign Lead to Staff (if applicable) */}
             {currentUser?.role !== "employee" && currentUser?.role !== "manager" && (
               <div className="form-group">
-                <label className="form-label">Assign Lead to Staff</label>
-                <select
-                  className="form-input"
-                  value={formAssignedTo}
-                  onChange={(e) => setFormAssignedTo(e.target.value)}
-                  disabled={!!(editingLead && editingLead.assignedTo)}
-                >
-                  <option value="" disabled hidden>Select Staff</option>
-                  {assignableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.role})
-                    </option>
-                  ))}
-                </select>
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ASSIGN LEAD TO STAFF</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👥</span>
+                  <select
+                    className="form-input"
+                    value={formAssignedTo}
+                    onChange={(e) => setFormAssignedTo(e.target.value)}
+                    disabled={!!(editingLead && editingLead.assignedTo)}
+                    style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, width: "100%", appearance: "auto" }}
+                  >
+                    <option value="" disabled hidden>Select Staff</option>
+                    {assignableUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             )}
 
-
-
-            <div className="modal-actions" style={{ marginTop: "10px" }}>
+            {/* Action Buttons */}
+            <div className="modal-actions" style={{ justifyContent: "flex-start", gap: 12, marginTop: 12 }}>
               <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSave}
+                disabled={!formName || !formPhone}
+                style={{
+                  background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+                  border: "none",
+                  color: "#ffffff",
+                  borderRadius: 12,
+                  padding: "10px 24px",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  boxShadow: "0 4px 12px rgba(124, 58, 237, 0.35)",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+              >
+                💾 {editingLead ? "Update Lead" : "Save Lead"}
+              </button>
+              <button
+                type="button"
                 className="btn btn-ghost"
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingLead(null);
                 }}
+                style={{
+                  background: "#F5F3FF",
+                  border: "1px solid #E9D8FD",
+                  color: "#7C3AED",
+                  borderRadius: 12,
+                  padding: "10px 24px",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer"
+                }}
               >
                 Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleSave}
-                disabled={!formName || !formPhone}
-                style={{ background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)", border: "none" }}
-              >
-                {editingLead ? "Update Lead" : "Add Lead"}
               </button>
             </div>
           </div>
@@ -5263,28 +5354,30 @@ export function SuperAdminIncentiveSection() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ background: "#F3E8FF", color: "#6D28D9", padding: "6px 16px", borderRadius: 40, fontWeight: 700, fontSize: 13 }}>&gt; 90 Days</span>
-          <DownloadDropdown
-            onPDF={() => {
-              const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Qty (>90 Days)", "Incentive / Unit", "Total Incentive"];
-              const rows = groupedOldProducts.map((p, index) => {
-                const qty = p.qty ?? p.stock ?? 0;
-                const unitIncentive = p.incentive || 0;
-                const totalIncentive = qty * unitIncentive;
-                return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitIncentive, totalIncentive];
-              });
-              openPDFPreview("Incentive Products Report (>90 Days)", headers, rows, `Total Incentive Products: ${groupedOldProducts.length}`, "pdf");
-            }}
-            onCSV={() => {
-              const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Qty (>90 Days)", "Incentive / Unit", "Total Incentive"];
-              const rows = groupedOldProducts.map((p, index) => {
-                const qty = p.qty ?? p.stock ?? 0;
-                const unitIncentive = p.incentive || 0;
-                const totalIncentive = qty * unitIncentive;
-                return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitIncentive, totalIncentive];
-              });
-              openPDFPreview("Incentive Products Report (>90 Days)", headers, rows, `Total Incentive Products: ${groupedOldProducts.length}`, "csv");
-            }}
-          />
+          {currentUser?.role !== "manager" && (
+            <DownloadDropdown
+              onPDF={() => {
+                const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Qty (>90 Days)", "Incentive / Unit", "Total Incentive"];
+                const rows = groupedOldProducts.map((p, index) => {
+                  const qty = p.qty ?? p.stock ?? 0;
+                  const unitIncentive = p.incentive || 0;
+                  const totalIncentive = qty * unitIncentive;
+                  return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitIncentive, totalIncentive];
+                });
+                openPDFPreview("Incentive Products Report (>90 Days)", headers, rows, `Total Incentive Products: ${groupedOldProducts.length}`, "pdf");
+              }}
+              onCSV={() => {
+                const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Qty (>90 Days)", "Incentive / Unit", "Total Incentive"];
+                const rows = groupedOldProducts.map((p, index) => {
+                  const qty = p.qty ?? p.stock ?? 0;
+                  const unitIncentive = p.incentive || 0;
+                  const totalIncentive = qty * unitIncentive;
+                  return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitIncentive, totalIncentive];
+                });
+                openPDFPreview("Incentive Products Report (>90 Days)", headers, rows, `Total Incentive Products: ${groupedOldProducts.length}`, "csv");
+              }}
+            />
+          )}
         </div>
       </div>
 

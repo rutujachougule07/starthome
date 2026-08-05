@@ -613,33 +613,33 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
       >
         {/* ── Gradient Header ── */}
         <div style={{
-          background: "linear-gradient(135deg, #7C3AED 0%, #7C3AED 50%, #7C3AED 100%)",
-          padding: "22px 26px",
+          background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+          padding: "16px 22px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           flexShrink: 0
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{
-              width: "46px", height: "46px", borderRadius: "16px",
-              background: "rgba(255,255,255,0.2)", backdropFilter: "blur(8px)",
+              width: "38px", height: "38px", borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.2)", backdropFilter: "blur(8px)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "22px", boxShadow: "0 4px 14px rgba(0,0,0,0.12)"
+              fontSize: "18px", boxShadow: "inset 0 1px 2px rgba(255, 255, 255, 0.4)"
             }}>🛒</div>
             <div>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>
+              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>
                 {initial ? "Edit Order" : "Create Order"}
               </h3>
-              <p style={{ margin: "3px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.78)", fontWeight: 500 }}>
+              <p style={{ margin: "2px 0 0", fontSize: "12px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500 }}>
                 Fill the details below to create a new order
               </p>
             </div>
           </div>
           <button type="button" onClick={onClose} style={{
-            width: "36px", height: "36px", borderRadius: "50%",
-            background: "rgba(255,255,255,0.18)", backdropFilter: "blur(6px)",
-            border: "1px solid rgba(255,255,255,0.25)",
+            width: "30px", height: "30px", borderRadius: "50%",
+            background: "rgba(255, 255, 255, 0.22)", backdropFilter: "blur(6px)",
+            border: "1px solid rgba(255, 255, 255, 0.35)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            cursor: "pointer", fontSize: "16px", color: "#fff", fontWeight: 700
+            cursor: "pointer", fontSize: "14px", color: "#fff", fontWeight: 800
           }}>✕</button>
         </div>
 
@@ -696,10 +696,10 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
               />
               <button type="button" onClick={() => setQty(qty + 1)} style={{
                 width: "38px", height: "38px", borderRadius: "12px",
-                background: "linear-gradient(135deg, #7C3AED, #7C3AED)", border: "none",
+                background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)", border: "none",
                 fontSize: "18px", fontWeight: 700, color: "#fff",
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 3px 10px rgba(79, 70, 229, 0.3)"
+                boxShadow: "0 4px 12px rgba(124, 58, 237, 0.35)"
               }}>+</button>
             </div>
           </div>
@@ -718,24 +718,24 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
             <div style={{ display: "flex", gap: "10px" }}>
               <label onClick={() => setDocType("Bill")} style={{
                 flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                padding: "10px 14px", borderRadius: "14px", cursor: "pointer",
+                padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
                 fontWeight: 700, fontSize: "13px", transition: "all .2s",
-                background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED, #7C3AED)" : "#F8FAFC",
+                background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
                 color: docType === "Bill" ? "#fff" : "#475569",
-                border: docType === "Bill" ? "none" : "1.5px solid #E2E8F0",
-                boxShadow: docType === "Bill" ? "0 4px 14px rgba(79, 70, 229, 0.3)" : "none"
+                border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
+                boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
               }}>
                 <input type="radio" name="docTypeSelectMgr" value="Bill" checked={docType === "Bill"} onChange={() => setDocType("Bill")} style={{ display: "none" }} />
                 🧾 Bill
               </label>
               <label onClick={() => setDocType("Order Copy")} style={{
                 flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                padding: "10px 14px", borderRadius: "14px", cursor: "pointer",
+                padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
                 fontWeight: 700, fontSize: "13px", transition: "all .2s",
-                background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED, #9333EA)" : "#F8FAFC",
+                background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
                 color: docType === "Order Copy" ? "#fff" : "#475569",
-                border: docType === "Order Copy" ? "none" : "1.5px solid #E2E8F0",
-                boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.3)" : "none"
+                border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
+                boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
               }}>
                 <input type="radio" name="docTypeSelectMgr" value="Order Copy" checked={docType === "Order Copy"} onChange={() => setDocType("Order Copy")} style={{ display: "none" }} />
                 📄 Order Copy
@@ -776,7 +776,7 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
                     <button key={preset.days} type="button" onClick={() => setBookingExpiryDate(iso)} style={{
                       padding: "5px 12px", borderRadius: "10px",
                       border: isSelected ? "none" : "1px solid #C4B5FD",
-                      background: isSelected ? "linear-gradient(135deg, #7C3AED, #9333EA)" : "#fff",
+                      background: isSelected ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#fff",
                       color: isSelected ? "#fff" : "#6D28D9",
                       fontSize: "11px", fontWeight: 700, cursor: "pointer",
                       boxShadow: isSelected ? "0 3px 8px rgba(124, 58, 237, 0.3)" : "none",
@@ -815,13 +815,13 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
         <div style={{
           padding: "16px 26px 20px",
           borderTop: "1px solid #EDE4FF",
-          display: "flex", justifyContent: "flex-end", gap: "10px",
+          display: "flex", justifyContent: "flex-end", gap: "12px",
           flexShrink: 0, background: "#FAFBFF"
         }}>
           <button type="button" onClick={onClose} style={{
-            padding: "10px 22px", borderRadius: "14px",
-            background: "#F1F5F9", border: "1.5px solid #E2E8F0",
-            fontWeight: 700, fontSize: "13px", color: "#64748B",
+            padding: "10px 22px", borderRadius: "30px",
+            background: "#FFFFFF", border: "1px solid #CBD5E1",
+            fontWeight: 800, fontSize: "13.5px", color: "#64748B",
             cursor: "pointer", display: "flex", alignItems: "center", gap: "6px"
           }}>✕ Cancel</button>
           <button type="button" onClick={() => {
@@ -830,12 +830,12 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
               onSave(customerName.trim(), productId, qty, assignedTo, emp.name, customerBargain.trim(), docType, docType === "Order Copy" ? bookingExpiryDate : undefined);
             }
           }} style={{
-            padding: "10px 26px", borderRadius: "14px",
-            background: "linear-gradient(135deg, #7C3AED 0%, #7C3AED 50%, #7C3AED 100%)",
+            padding: "10px 26px", borderRadius: "30px",
+            background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
             border: "none",
-            fontWeight: 700, fontSize: "13px", color: "#fff",
+            fontWeight: 800, fontSize: "13.5px", color: "#fff",
             cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
-            boxShadow: "0 4px 16px rgba(79, 70, 229, 0.35)",
+            boxShadow: "0 6px 18px rgba(124, 58, 237, 0.35)",
             transition: "transform .15s, box-shadow .15s"
           }}>🚀 {initial ? "Save Changes" : "Send for Approval"}</button>
         </div>
@@ -926,34 +926,6 @@ function ProductsAvail() {
             </div>
           </div>
         </div>
-
-        <div className="header-buttons">
-          <DownloadDropdown
-            label="Download"
-            onPDF={() => {
-              const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Quantity", "Unit Cost", "Total Cost", "Supplier", "Date", "Status"];
-              const rows = filteredProducts.map((p, index) => {
-                const qty = p.qty ?? p.stock ?? 0;
-                const unitCost = p.cost || 0;
-                const totalCost = qty * unitCost;
-                const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-                return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitCost, totalCost, p.supplier || "—", formattedDate, p.status || "Verified"];
-              });
-              openPDFPreview("Stocking Inventory Report", headers, rows, `Total Products: ${filteredProducts.length}`, "pdf");
-            }}
-            onCSV={() => {
-              const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Quantity", "Unit Cost", "Total Cost", "Supplier", "Date", "Status"];
-              const rows = filteredProducts.map((p, index) => {
-                const qty = p.qty ?? p.stock ?? 0;
-                const unitCost = p.cost || 0;
-                const totalCost = qty * unitCost;
-                const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
-                return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitCost, totalCost, p.supplier || "—", formattedDate, p.status || "Verified"];
-              });
-              openPDFPreview("Stocking Inventory Report", headers, rows, `Total Products: ${filteredProducts.length}`, "csv");
-            }}
-          />
-        </div>
       </div>
 
       {/* Search */}
@@ -964,19 +936,6 @@ function ProductsAvail() {
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search product name, category or SKU..."
         />
-      </div>
-
-      {/* Category */}
-      <div className="category-row">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            className={categoryFilter === cat ? "active-category" : ""}
-            onClick={() => setCategoryFilter(cat)}
-          >
-            {cat}
-          </button>
-        ))}
       </div>
 
       {/* Stats */}

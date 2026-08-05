@@ -1,6 +1,7 @@
 
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useStore, Customer, Product, Order, Task } from "../app/store";
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm } from "./SuperAdminPage";
@@ -504,6 +505,16 @@ function OrderUpdates() {
   const { orders, products, currentUser, setState, uid } = useStore();
   const [activeDoc, setActiveDoc] = useState<{ order: Order; type: "Bill" | "Order Copy" } | null>(null);
   const [showAddOrder, setShowAddOrder] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+
+  const handleDeleteOrder = (id: string) => {
+    if (confirm("Are you sure you want to delete this order?")) {
+      setState((s) => ({
+        ...s,
+        orders: s.orders.filter((o) => o.id !== id)
+      }));
+    }
+  };
 
   const myOrders = orders.filter((o) => o.assignedTo === currentUser?.id && o.sentToEmployee && (o.status === "Approved" || o.status === "Delivered"));
   const otherOrders = orders.filter((o) => o.assignedTo !== currentUser?.id && o.sentToEmployee && (o.status === "Approved" || o.status === "Delivered"));
@@ -582,24 +593,29 @@ function OrderUpdates() {
                     <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
                   </div>
 
-                  {o.status === "Approved" ? (
-                    <button
-                      className="btn btn-success btn-sm"
-                      style={{ padding: "5px 12px", fontSize: 11, borderRadius: 8, background: "#10B981", color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 700 }}
-                      onClick={() => {
-                        if (confirm("Mark this order as delivered?")) {
-                          setState((s) => ({
-                            ...s,
-                            orders: s.orders.map((order) => order.id === o.id ? { ...order, status: "Delivered" } : order)
-                          }));
-                        }
-                      }}
-                    >
-                      🚚 Mark Delivered
-                    </button>
-                  ) : (
-                    <span style={{ fontSize: 11, color: "#10B981", fontWeight: 700, background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "3px 10px", borderRadius: 999 }}>Completed</span>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    {o.status === "Approved" ? (
+                      <button
+                        className="btn btn-success btn-sm"
+                        style={{ padding: "5px 12px", fontSize: 11, borderRadius: 8, background: "#10B981", color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 700 }}
+                        onClick={() => {
+                          if (confirm("Mark this order as delivered?")) {
+                            setState((s) => ({
+                              ...s,
+                              orders: s.orders.map((order) => order.id === o.id ? { ...order, status: "Delivered" } : order)
+                            }));
+                          }
+                        }}
+                      >
+                        🚚 Mark Delivered
+                      </button>
+                    ) : (
+                      <span style={{ fontSize: 11, color: "#10B981", fontWeight: 700, background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "3px 10px", borderRadius: 999 }}>Completed</span>
+                    )}
+
+                    <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                    <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                  </div>
                 </div>
               </div>
             );
@@ -661,8 +677,14 @@ function OrderUpdates() {
                   <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
                 </div>
                 <div className="data-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px", borderTop: "1px solid #E2E8F0", padding: "12px 16px" }}>
-                  <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 Bill</button>
-                  <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                    <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 Bill</button>
+                    <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                    <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                  </div>
                 </div>
               </div>
             );
@@ -671,8 +693,14 @@ function OrderUpdates() {
         </div>
       </div>
 
-      {showAddOrder && (
-        <EmployeeCreateOrderModal onClose={() => setShowAddOrder(false)} />
+      {(showAddOrder || editingOrder !== null) && (
+        <EmployeeCreateOrderModal
+          initial={editingOrder || undefined}
+          onClose={() => {
+            setShowAddOrder(false);
+            setEditingOrder(null);
+          }}
+        />
       )}
 
       {activeDoc && (
@@ -925,108 +953,115 @@ function ProductsSection() {
           <style>{`
             .sell-modal {
               max-width: 540px !important;
-              padding: 26px 30px !important;
-              border-radius: 16px !important;
-              box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12) !important;
+              padding: 24px 28px !important;
+              border-radius: 24px !important;
+              box-shadow: 0 24px 60px rgba(124, 58, 237, 0.18) !important;
+              border: 1px solid #EDE4FF !important;
             }
             .sell-modal .modal-head {
-              margin-bottom: 16px !important;
-              padding-bottom: 10px !important;
+              margin-bottom: 18px !important;
+              padding-bottom: 12px !important;
+              border-bottom: 1.5px solid #EDE4FF !important;
             }
             .sell-modal .modal-title {
-              font-size: 21px !important;
+              font-size: 20px !important;
+              font-weight: 800 !important;
+              color: #1E293B !important;
+              letter-spacing: -0.3px !important;
             }
           `}</style>
           {sellError && (
-            <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", padding: "10px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, marginBottom: "14px" }}>
+            <div style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FCA5A5", padding: "10px 14px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
               ⚠️ {sellError}
             </div>
           )}
           {sellSuccess && (
-            <div style={{ background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", padding: "10px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
+            <div style={{ background: "#DCFCE7", color: "#166534", border: "1px solid #86EFAC", padding: "10px 14px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
               ✅ {sellSuccess}
             </div>
           )}
           <div style={{
-            background: "linear-gradient(135deg, var(--biscuit-light) 0%, #fff 100%)",
-            padding: "12px 16px",
-            borderRadius: "10px",
-            border: "1px solid var(--border)",
-            marginBottom: "16px",
-            boxShadow: "inset 0 0 10px rgba(122, 90, 50, 0.02)"
+            background: "linear-gradient(135deg, #F8FAFC 0%, #F3EEFF 100%)",
+            padding: "14px 18px",
+            borderRadius: "16px",
+            border: "1.5px solid #EDE4FF",
+            marginBottom: "18px"
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "var(--brown-dark)" }}>{sellingProduct.name}</h4>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "2px 6px", borderRadius: "4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#1E293B" }}>{sellingProduct.name}</h4>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#D97706", background: "#FEF3C7", border: "1px solid #FDE047", padding: "3px 10px", borderRadius: "20px" }}>
                 💰 Incentive: {sellingProduct.price > 0 ? Math.round((sellingProduct.incentive / sellingProduct.price) * 100) : 0}%
               </span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px", fontSize: "12px", color: "var(--brown)" }}>
-              <span>Brand: <strong>{sellingProduct.brand || "—"}</strong> · SKU: <code>{sellingProduct.sku}</code></span>
-              <span style={{ fontWeight: 700, color: "var(--brown-dark)" }}>Price (1 Unit): ₹{unitPrice.toLocaleString()}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", fontSize: "12px", color: "#64748B" }}>
+              <span>Brand: <strong style={{ color: "#1E293B" }}>{sellingProduct.brand || "—"}</strong> · SKU: <code style={{ color: "#7C3AED", background: "#F5F3FF", padding: "2px 6px", borderRadius: "6px" }}>{sellingProduct.sku}</code></span>
+              <span style={{ fontWeight: 800, color: "#1E293B", fontSize: "13px" }}>Price (1 Unit): ₹{unitPrice.toLocaleString()}</span>
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "14px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "14px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Customer Name *
             </label>
             <input
               type="text"
               className="form-input"
-              style={{ height: "40px", padding: "8px 12px", fontSize: "14px", borderRadius: "10px", border: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}
+              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Enter customer name"
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "14px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "14px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Phone Number *
             </label>
             <input
               type="text"
               className="form-input"
-              style={{ height: "40px", padding: "8px 12px", fontSize: "14px", borderRadius: "10px", border: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}
+              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Enter phone number"
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Address
             </label>
             <input
               type="text"
               className="form-input"
-              style={{ height: "40px", padding: "8px 12px", fontSize: "14px", borderRadius: "10px", border: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}
+              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
               value={customerAddress}
               onChange={(e) => setCustomerAddress(e.target.value)}
               placeholder="Enter address (optional)"
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Document Type *
             </label>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <label style={{
+            <div style={{ display: "flex", gap: "10px" }}>
+              <label onClick={() => setDocType("Bill")} style={{
                 flex: 1,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "8px",
                 padding: "10px 14px",
-                borderRadius: "10px",
-                border: docType === "Bill" ? "2px solid #0284c7" : "1px solid var(--border)",
-                background: docType === "Bill" ? "#f0f9ff" : "#fff",
+                borderRadius: "30px",
+                border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
+                background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
                 cursor: "pointer",
-                fontWeight: 600,
+                fontWeight: 700,
                 fontSize: "13px",
-                color: docType === "Bill" ? "#0369a1" : "inherit"
+                color: docType === "Bill" ? "#FFFFFF" : "#475569",
+                boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                transition: "all 0.2s ease"
               }}>
                 <input
                   type="radio"
@@ -1034,22 +1069,26 @@ function ProductsSection() {
                   value="Bill"
                   checked={docType === "Bill"}
                   onChange={() => setDocType("Bill")}
+                  style={{ display: "none" }}
                 />
                 🧾 Bill
               </label>
-              <label style={{
+              <label onClick={() => setDocType("Order Copy")} style={{
                 flex: 1,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "8px",
                 padding: "10px 14px",
-                borderRadius: "10px",
-                border: docType === "Order Copy" ? "2px solid #9333ea" : "1px solid var(--border)",
-                background: docType === "Order Copy" ? "#faf5ff" : "#fff",
+                borderRadius: "30px",
+                border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
+                background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
                 cursor: "pointer",
-                fontWeight: 600,
+                fontWeight: 700,
                 fontSize: "13px",
-                color: docType === "Order Copy" ? "#6D28D9" : "inherit"
+                color: docType === "Order Copy" ? "#FFFFFF" : "#475569",
+                boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                transition: "all 0.2s ease"
               }}>
                 <input
                   type="radio"
@@ -1057,6 +1096,7 @@ function ProductsSection() {
                   value="Order Copy"
                   checked={docType === "Order Copy"}
                   onChange={() => setDocType("Order Copy")}
+                  style={{ display: "none" }}
                 />
                 📄 Order Copy
               </label>
@@ -1064,23 +1104,23 @@ function ProductsSection() {
           </div>
 
           {docType === "Order Copy" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px", background: "#faf5ff", padding: "14px", borderRadius: "12px", border: "1px solid #e9d5ff" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px", background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)", padding: "16px", borderRadius: "16px", border: "1.5px solid #DDD6FE" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "#6D28D9", letterSpacing: "0.5px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#6D28D9", letterSpacing: "1px" }}>
                   ⏳ Booking Expiry Date *
                 </label>
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "#7e22ce" }}>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED", background: "rgba(124, 58, 237, 0.1)", padding: "4px 10px", borderRadius: "8px" }}>
                   📅 {bookingExpiryDate ? new Date(bookingExpiryDate + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Select Date"}
                 </span>
               </div>
 
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
-                <span style={{ fontSize: "11px", fontWeight: 600, color: "#6D28D9", alignSelf: "center" }}>Quick Set:</span>
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "#6D28D9", alignSelf: "center", letterSpacing: "0.5px" }}>Quick Set:</span>
                 {[
                   { label: "+7 Days", days: 7 },
                   { label: "+15 Days", days: 15 },
-                  { label: "+30 Days (1 Month)", days: 30 },
-                  { label: "+60 Days (2 Months)", days: 60 },
+                  { label: "+30 Days", days: 30 },
+                  { label: "+60 Days", days: 60 },
                 ].map((preset) => {
                   const targetDate = new Date();
                   targetDate.setDate(targetDate.getDate() + preset.days);
@@ -1093,14 +1133,15 @@ function ProductsSection() {
                       type="button"
                       onClick={() => setBookingExpiryDate(iso)}
                       style={{
-                        padding: "4px 10px",
-                        borderRadius: "6px",
-                        border: isSelected ? "1.5px solid #7e22ce" : "1px solid #d8b4fe",
-                        background: isSelected ? "#7e22ce" : "#fff",
-                        color: isSelected ? "#fff" : "#6D28D9",
+                        padding: "5px 12px",
+                        borderRadius: "10px",
+                        border: isSelected ? "none" : "1px solid #C4B5FD",
+                        background: isSelected ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                        color: isSelected ? "#FFFFFF" : "#6D28D9",
                         fontSize: "11px",
                         fontWeight: 700,
-                        cursor: "pointer"
+                        cursor: "pointer",
+                        boxShadow: isSelected ? "0 3px 8px rgba(124, 58, 237, 0.3)" : "none"
                       }}
                     >
                       {preset.label}
@@ -1112,26 +1153,26 @@ function ProductsSection() {
               <input
                 type="date"
                 className="form-input"
-                style={{ height: "42px", padding: "8px 12px", fontSize: "14px", borderRadius: "8px", border: "1px solid #d8b4fe", width: "100%", boxSizing: "border-box", background: "#fff" }}
+                style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #C4B5FD", width: "100%", boxSizing: "border-box", background: "#FFFFFF", color: "#1E293B" }}
                 value={bookingExpiryDate}
                 min={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setBookingExpiryDate(e.target.value)}
               />
 
-              <span style={{ fontSize: "11px", color: "#7e22ce", lineHeight: "1.3" }}>
+              <span style={{ fontSize: "11px", color: "#7C3AED", fontWeight: 500 }}>
                 💡 If booking is not fulfilled by this date, an expiration alert will be sent to Admin.
               </span>
             </div>
           )}
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Quantity
             </label>
             <input
               type="number"
               className="form-input"
-              style={{ height: "40px", padding: "8px 12px", fontSize: "14px", borderRadius: "10px", border: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}
+              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
               value={sellQty}
               onChange={(e) => setSellQty(Math.max(1, Number(e.target.value)))}
               onWheel={(e) => (e.target as HTMLInputElement).blur()}
@@ -1139,14 +1180,14 @@ function ProductsSection() {
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Discount (%)
             </label>
             <input
               type="number"
               className="form-input"
-              style={{ height: "40px", padding: "8px 12px", fontSize: "14px", borderRadius: "10px", border: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}
+              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
               value={discountAmount}
               onChange={(e) => setDiscountAmount(e.target.value === "" ? "" : Number(e.target.value))}
               onWheel={(e) => (e.target as HTMLInputElement).blur()}
@@ -1156,16 +1197,16 @@ function ProductsSection() {
             />
           </div>
 
-          <div style={{ padding: "12px", background: "var(--biscuit-light)", borderRadius: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--brown)" }}>Final Total:</span>
-            <span style={{ fontSize: "18px", fontWeight: 800, color: "var(--brown-dark)" }}>₹{Math.max(0, (unitPrice * sellQty) - Math.round(((Number(discountAmount) || 0) / 100) * (unitPrice * sellQty))).toLocaleString()}</span>
+          <div style={{ padding: "14px 18px", background: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)", borderRadius: "16px", border: "1.5px solid #DDD6FE", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "14px", fontWeight: 700, color: "#6D28D9" }}>Final Total:</span>
+            <span style={{ fontSize: "20px", fontWeight: 900, color: "#2E1065" }}>₹{Math.max(0, (unitPrice * sellQty) - Math.round(((Number(discountAmount) || 0) / 100) * (unitPrice * sellQty))).toLocaleString()}</span>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "16px" }}>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "20px" }}>
             <button
               className="btn btn-ghost"
               onClick={() => setSellingProduct(null)}
-              style={{ padding: "8px 20px", fontSize: "14px", fontWeight: 600, borderRadius: "10px", background: "var(--biscuit-light)", height: "40px" }}
+              style={{ padding: "10px 22px", fontSize: "13.5px", fontWeight: 800, borderRadius: "30px", background: "#FFFFFF", border: "1px solid #CBD5E1", color: "#64748B", height: "42px", cursor: "pointer" }}
             >
               Cancel
             </button>
@@ -1174,16 +1215,16 @@ function ProductsSection() {
               onClick={handleSell}
               disabled={!customerName.trim() || !customerPhone.trim()}
               style={{
-                padding: "8px 24px",
-                fontSize: "14px",
-                fontWeight: 600,
-                borderRadius: "10px",
-                background: (!customerName.trim() || !customerPhone.trim()) ? "var(--border)" : "linear-gradient(135deg, var(--accent), var(--accent-dark))",
+                padding: "10px 26px",
+                fontSize: "13.5px",
+                fontWeight: 800,
+                borderRadius: "30px",
+                background: (!customerName.trim() || !customerPhone.trim()) ? "#CBD5E1" : "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
                 border: "none",
-                color: "#fff",
+                color: "#FFFFFF",
                 cursor: (!customerName.trim() || !customerPhone.trim()) ? "not-allowed" : "pointer",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                height: "40px"
+                boxShadow: (!customerName.trim() || !customerPhone.trim()) ? "none" : "0 6px 18px rgba(124, 58, 237, 0.35)",
+                height: "42px"
               }}
             >
               Submit Sale
@@ -1400,108 +1441,115 @@ export function EmployeeIncentiveSection() {
           <style>{`
             .sell-modal {
               max-width: 540px !important;
-              padding: 26px 30px !important;
-              border-radius: 16px !important;
-              box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12) !important;
+              padding: 24px 28px !important;
+              border-radius: 24px !important;
+              box-shadow: 0 24px 60px rgba(124, 58, 237, 0.18) !important;
+              border: 1px solid #EDE4FF !important;
             }
             .sell-modal .modal-head {
-              margin-bottom: 16px !important;
-              padding-bottom: 10px !important;
+              margin-bottom: 18px !important;
+              padding-bottom: 12px !important;
+              border-bottom: 1.5px solid #EDE4FF !important;
             }
             .sell-modal .modal-title {
-              font-size: 21px !important;
+              font-size: 20px !important;
+              font-weight: 800 !important;
+              color: #1E293B !important;
+              letter-spacing: -0.3px !important;
             }
           `}</style>
           {incSellError && (
-            <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", padding: "10px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, marginBottom: "14px" }}>
+            <div style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FCA5A5", padding: "10px 14px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
               ⚠️ {incSellError}
             </div>
           )}
           {incSellSuccess && (
-            <div style={{ background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", padding: "10px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
+            <div style={{ background: "#DCFCE7", color: "#166534", border: "1px solid #86EFAC", padding: "10px 14px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
               ✅ {incSellSuccess}
             </div>
           )}
           <div style={{
-            background: "linear-gradient(135deg, var(--biscuit-light) 0%, #fff 100%)",
-            padding: "12px 16px",
-            borderRadius: "10px",
-            border: "1px solid var(--border)",
-            marginBottom: "16px",
-            boxShadow: "inset 0 0 10px rgba(122, 90, 50, 0.02)"
+            background: "linear-gradient(135deg, #F8FAFC 0%, #F3EEFF 100%)",
+            padding: "14px 18px",
+            borderRadius: "16px",
+            border: "1.5px solid #EDE4FF",
+            marginBottom: "18px"
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "var(--brown-dark)" }}>{sellingProduct.name}</h4>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "#d97706", background: "#fef3c7", padding: "2px 6px", borderRadius: "4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#1E293B" }}>{sellingProduct.name}</h4>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#D97706", background: "#FEF3C7", border: "1px solid #FDE047", padding: "3px 10px", borderRadius: "20px" }}>
                 💰 Incentive: {sellingProduct.price > 0 ? Math.round((sellingProduct.incentive / sellingProduct.price) * 100) : 0}%
               </span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px", fontSize: "12px", color: "var(--brown)" }}>
-              <span>Brand: <strong>{sellingProduct.brand || "—"}</strong> · SKU: <code>{sellingProduct.sku}</code></span>
-              <span style={{ fontWeight: 700, color: "var(--brown-dark)" }}>Price (1 Unit): ₹{unitPrice.toLocaleString()}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", fontSize: "12px", color: "#64748B" }}>
+              <span>Brand: <strong style={{ color: "#1E293B" }}>{sellingProduct.brand || "—"}</strong> · SKU: <code style={{ color: "#7C3AED", background: "#F5F3FF", padding: "2px 6px", borderRadius: "6px" }}>{sellingProduct.sku}</code></span>
+              <span style={{ fontWeight: 800, color: "#1E293B", fontSize: "13px" }}>Price (1 Unit): ₹{unitPrice.toLocaleString()}</span>
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "14px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "14px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Customer Name *
             </label>
             <input
               type="text"
               className="form-input"
-              style={{ height: "40px", padding: "8px 12px", fontSize: "14px", borderRadius: "10px", border: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}
+              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Enter customer name"
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "14px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "14px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Phone Number *
             </label>
             <input
               type="text"
               className="form-input"
-              style={{ height: "40px", padding: "8px 12px", fontSize: "14px", borderRadius: "10px", border: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}
+              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
               placeholder="Enter phone number"
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Address
             </label>
             <input
               type="text"
               className="form-input"
-              style={{ height: "40px", padding: "8px 12px", fontSize: "14px", borderRadius: "10px", border: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}
+              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
               value={customerAddress}
               onChange={(e) => setCustomerAddress(e.target.value)}
               placeholder="Enter address (optional)"
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px", marginBottom: "16px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)", letterSpacing: "0.5px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
+            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
               Document Type *
             </label>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <label style={{
+            <div style={{ display: "flex", gap: "10px" }}>
+              <label onClick={() => setDocType("Bill")} style={{
                 flex: 1,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "8px",
                 padding: "10px 14px",
-                borderRadius: "10px",
-                border: docType === "Bill" ? "2px solid #0284c7" : "1px solid var(--border)",
-                background: docType === "Bill" ? "#f0f9ff" : "#fff",
+                borderRadius: "30px",
+                border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
+                background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
                 cursor: "pointer",
-                fontWeight: 600,
+                fontWeight: 700,
                 fontSize: "13px",
-                color: docType === "Bill" ? "#0369a1" : "inherit"
+                color: docType === "Bill" ? "#FFFFFF" : "#475569",
+                boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                transition: "all 0.2s ease"
               }}>
                 <input
                   type="radio"
@@ -1509,22 +1557,26 @@ export function EmployeeIncentiveSection() {
                   value="Bill"
                   checked={docType === "Bill"}
                   onChange={() => setDocType("Bill")}
+                  style={{ display: "none" }}
                 />
                 🧾 Bill
               </label>
-              <label style={{
+              <label onClick={() => setDocType("Order Copy")} style={{
                 flex: 1,
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "8px",
                 padding: "10px 14px",
-                borderRadius: "10px",
-                border: docType === "Order Copy" ? "2px solid #9333ea" : "1px solid var(--border)",
-                background: docType === "Order Copy" ? "#faf5ff" : "#fff",
+                borderRadius: "30px",
+                border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
+                background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
                 cursor: "pointer",
-                fontWeight: 600,
+                fontWeight: 700,
                 fontSize: "13px",
-                color: docType === "Order Copy" ? "#6D28D9" : "inherit"
+                color: docType === "Order Copy" ? "#FFFFFF" : "#475569",
+                boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                transition: "all 0.2s ease"
               }}>
                 <input
                   type="radio"
@@ -1532,6 +1584,7 @@ export function EmployeeIncentiveSection() {
                   value="Order Copy"
                   checked={docType === "Order Copy"}
                   onChange={() => setDocType("Order Copy")}
+                  style={{ display: "none" }}
                 />
                 📄 Order Copy
               </label>
@@ -1539,23 +1592,23 @@ export function EmployeeIncentiveSection() {
           </div>
 
           {docType === "Order Copy" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px", background: "#faf5ff", padding: "14px", borderRadius: "12px", border: "1px solid #e9d5ff" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px", background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)", padding: "16px", borderRadius: "16px", border: "1.5px solid #DDD6FE" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "#6D28D9", letterSpacing: "0.5px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#6D28D9", letterSpacing: "1px" }}>
                   ⏳ Booking Expiry Date *
                 </label>
-                <span style={{ fontSize: "12px", fontWeight: 700, color: "#7e22ce" }}>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED", background: "rgba(124, 58, 237, 0.1)", padding: "4px 10px", borderRadius: "8px" }}>
                   📅 {bookingExpiryDate ? new Date(bookingExpiryDate + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Select Date"}
                 </span>
               </div>
 
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
-                <span style={{ fontSize: "11px", fontWeight: 600, color: "#6D28D9", alignSelf: "center" }}>Quick Set:</span>
+                <span style={{ fontSize: "10px", fontWeight: 700, color: "#6D28D9", alignSelf: "center", letterSpacing: "0.5px" }}>Quick Set:</span>
                 {[
                   { label: "+7 Days", days: 7 },
                   { label: "+15 Days", days: 15 },
-                  { label: "+30 Days (1 Month)", days: 30 },
-                  { label: "+60 Days (2 Months)", days: 60 },
+                  { label: "+30 Days", days: 30 },
+                  { label: "+60 Days", days: 60 },
                 ].map((preset) => {
                   const targetDate = new Date();
                   targetDate.setDate(targetDate.getDate() + preset.days);
@@ -1568,14 +1621,15 @@ export function EmployeeIncentiveSection() {
                       type="button"
                       onClick={() => setBookingExpiryDate(iso)}
                       style={{
-                        padding: "4px 10px",
-                        borderRadius: "6px",
-                        border: isSelected ? "1.5px solid #7e22ce" : "1px solid #d8b4fe",
-                        background: isSelected ? "#7e22ce" : "#fff",
-                        color: isSelected ? "#fff" : "#6D28D9",
+                        padding: "5px 12px",
+                        borderRadius: "10px",
+                        border: isSelected ? "none" : "1px solid #C4B5FD",
+                        background: isSelected ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                        color: isSelected ? "#FFFFFF" : "#6D28D9",
                         fontSize: "11px",
                         fontWeight: 700,
-                        cursor: "pointer"
+                        cursor: "pointer",
+                        boxShadow: isSelected ? "0 3px 8px rgba(124, 58, 237, 0.3)" : "none"
                       }}
                     >
                       {preset.label}
@@ -1587,23 +1641,23 @@ export function EmployeeIncentiveSection() {
               <input
                 type="date"
                 className="form-input"
-                style={{ height: "42px", padding: "8px 12px", fontSize: "14px", borderRadius: "8px", border: "1px solid #d8b4fe", width: "100%", boxSizing: "border-box", background: "#fff" }}
+                style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #C4B5FD", width: "100%", boxSizing: "border-box", background: "#FFFFFF", color: "#1E293B" }}
                 value={bookingExpiryDate}
                 min={new Date().toISOString().slice(0, 10)}
                 onChange={(e) => setBookingExpiryDate(e.target.value)}
               />
 
-              <span style={{ fontSize: "11px", color: "#7e22ce", lineHeight: "1.3" }}>
+              <span style={{ fontSize: "11px", color: "#7C3AED", fontWeight: 500 }}>
                 💡 If booking is not fulfilled by this date, an expiration alert will be sent to Admin.
               </span>
             </div>
           )}
 
-          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "16px" }}>
+          <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "20px" }}>
             <button
               className="btn btn-ghost"
               onClick={() => setSellingProduct(null)}
-              style={{ padding: "8px 20px", fontSize: "14px", fontWeight: 600, borderRadius: "10px", background: "var(--biscuit-light)", height: "40px" }}
+              style={{ padding: "10px 22px", fontSize: "13.5px", fontWeight: 800, borderRadius: "30px", background: "#FFFFFF", border: "1px solid #CBD5E1", color: "#64748B", height: "42px", cursor: "pointer" }}
             >
               Cancel
             </button>
@@ -1612,16 +1666,16 @@ export function EmployeeIncentiveSection() {
               onClick={handleSell}
               disabled={!customerName.trim() || !customerPhone.trim()}
               style={{
-                padding: "8px 24px",
-                fontSize: "14px",
-                fontWeight: 600,
-                borderRadius: "10px",
-                background: (!customerName.trim() || !customerPhone.trim()) ? "var(--border)" : "linear-gradient(135deg, var(--accent), var(--accent-dark))",
+                padding: "10px 26px",
+                fontSize: "13.5px",
+                fontWeight: 800,
+                borderRadius: "30px",
+                background: (!customerName.trim() || !customerPhone.trim()) ? "#CBD5E1" : "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
                 border: "none",
-                color: "#fff",
+                color: "#FFFFFF",
                 cursor: (!customerName.trim() || !customerPhone.trim()) ? "not-allowed" : "pointer",
-                boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-                height: "40px"
+                boxShadow: (!customerName.trim() || !customerPhone.trim()) ? "none" : "0 6px 18px rgba(124, 58, 237, 0.35)",
+                height: "42px"
               }}
             >
               Submit Sale
@@ -1890,18 +1944,19 @@ export function OrderDocumentModal({
   );
 }
 
-export function EmployeeCreateOrderModal({ onClose }: { onClose: () => void }) {
+export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => void; initial?: Order }) {
   const { customers, products, setState, uid, currentUser } = useStore();
   const activeProducts = products.filter(p => p.status === "Active" || p.status === "Verified");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerAddress, setCustomerAddress] = useState("");
-  const [productId, setProductId] = useState(activeProducts[0]?.id || "");
-  const [qty, setQty] = useState(1);
-  const [discountPct, setDiscountPct] = useState<number | "">("");
-  const [docType, setDocType] = useState<"Bill" | "Order Copy">("Bill");
-  const [bookingExpiryDate, setBookingExpiryDate] = useState(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-  const [customerBargain, setCustomerBargain] = useState("");
+  const initialCust = initial ? customers.find(c => c.id === initial.customerId || c.name === initial.customerName) : undefined;
+  const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
+  const [customerPhone, setCustomerPhone] = useState(initialCust?.phone ?? "");
+  const [customerAddress, setCustomerAddress] = useState(initialCust?.address ?? "");
+  const [productId, setProductId] = useState(initial?.productId ?? activeProducts[0]?.id ?? "");
+  const [qty, setQty] = useState(initial?.qty ?? 1);
+  const [discountPct, setDiscountPct] = useState<number | "">(initial?.discount ?? "");
+  const [docType, setDocType] = useState<"Bill" | "Order Copy">(initial?.docType ?? "Bill");
+  const [bookingExpiryDate, setBookingExpiryDate] = useState(() => initial?.bookingExpiryDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+  const [customerBargain, setCustomerBargain] = useState(initial?.customerBargain ?? "");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -1919,6 +1974,33 @@ export function EmployeeCreateOrderModal({ onClose }: { onClose: () => void }) {
     }
     if (!selectedProduct) {
       setErrorMsg("Please select a product.");
+      return;
+    }
+
+    if (initial) {
+      setState((s: any) => ({
+        ...s,
+        orders: s.orders.map((or: Order) =>
+          or.id === initial.id
+            ? {
+              ...or,
+              customerName: customerName.trim(),
+              productId: selectedProduct.id,
+              productName: selectedProduct.name,
+              qty,
+              total: finalTotal,
+              discount: Number(discountPct) || 0,
+              customerBargain: customerBargain.trim() || undefined,
+              docType,
+              bookingExpiryDate: docType === "Order Copy" ? bookingExpiryDate : undefined
+            }
+            : or
+        )
+      }));
+      setSuccessMsg(`Order #${initial.id} updated successfully!`);
+      setTimeout(() => {
+        onClose();
+      }, 1000);
       return;
     }
 
@@ -1990,259 +2072,329 @@ export function EmployeeCreateOrderModal({ onClose }: { onClose: () => void }) {
     }, 1200);
   };
 
-  return (
-    <Modal title="➕ Add New Order" onClose={onClose}>
-      {errorMsg && (
-        <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", padding: "10px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 600, marginBottom: "14px" }}>
-          ⚠️ {errorMsg}
-        </div>
-      )}
-      {successMsg && (
-        <div style={{ background: "#dcfce7", color: "#15803d", border: "1px solid #86efac", padding: "10px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
-          ✅ {successMsg}
-        </div>
-      )}
-      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-          <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)" }}>
-            Customer Name *
-          </label>
-          <input
-            type="text"
-            className="form-input"
-            list="employee-customers-datalist"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Type customer name"
-          />
-          <datalist id="employee-customers-datalist">
-            {customers.map((c) => (
-              <option key={c.id} value={c.name} />
-            ))}
-          </datalist>
-        </div>
+  /* ── Styling Tokens ── */
+  const sectionLabel: React.CSSProperties = { fontSize: "10px", fontWeight: 800, letterSpacing: "1.4px", textTransform: "uppercase" as const, color: "#7C3AED", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" };
+  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 14px", borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F3EEFF", fontSize: "13.5px", fontWeight: 600, color: "#1E293B", outline: "none", boxSizing: "border-box" as const };
+  const selectStyle: React.CSSProperties = { ...inputStyle, appearance: "none" as const, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237C3AED' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" };
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-          <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)" }}>
-            Phone Number *
-          </label>
-          <input
-            type="text"
-            className="form-input"
-            value={customerPhone}
-            onChange={(e) => setCustomerPhone(e.target.value)}
-            placeholder="Enter customer phone number"
-          />
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-          <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)" }}>
-            Address
-          </label>
-          <input
-            type="text"
-            className="form-input"
-            value={customerAddress}
-            onChange={(e) => setCustomerAddress(e.target.value)}
-            placeholder="Enter address (optional)"
-          />
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-          <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)" }}>
-            Select Product *
-          </label>
-          <select className="form-select" value={productId} onChange={(e) => setProductId(e.target.value)}>
-            {activeProducts.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} {p.brand ? `(${p.brand})` : ""} - ₹{p.price.toLocaleString()} (Stock: {p.qty ?? p.stock ?? 0})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)" }}>
-              Quantity *
-            </label>
-            <input
-              type="number"
-              className="form-input"
-              min={1}
-              value={qty}
-              onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
-            />
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-            <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)" }}>
-              Discount (%)
-            </label>
-            <input
-              type="number"
-              className="form-input"
-              min={0}
-              max={100}
-              value={discountPct}
-              onChange={(e) => setDiscountPct(e.target.value === "" ? "" : Number(e.target.value))}
-              placeholder="0%"
-            />
-          </div>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-          <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)" }}>
-            Document Type *
-          </label>
-          <div style={{ display: "flex", gap: "12px" }}>
-            <label style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 14px",
-              borderRadius: "10px",
-              border: docType === "Bill" ? "2px solid #0284c7" : "1px solid var(--border)",
-              background: docType === "Bill" ? "#f0f9ff" : "#fff",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: "13px",
-              color: docType === "Bill" ? "#0369a1" : "inherit"
-            }}>
-              <input
-                type="radio"
-                name="empModalDocType"
-                value="Bill"
-                checked={docType === "Bill"}
-                onChange={() => setDocType("Bill")}
-              />
-              🧾 Bill
-            </label>
-            <label style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 14px",
-              borderRadius: "10px",
-              border: docType === "Order Copy" ? "2px solid #9333ea" : "1px solid var(--border)",
-              background: docType === "Order Copy" ? "#faf5ff" : "#fff",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: "13px",
-              color: docType === "Order Copy" ? "#6D28D9" : "inherit"
-            }}>
-              <input
-                type="radio"
-                name="empModalDocType"
-                value="Order Copy"
-                checked={docType === "Order Copy"}
-                onChange={() => setDocType("Order Copy")}
-              />
-              📄 Order Copy
-            </label>
-          </div>
-        </div>
-
-        {docType === "Order Copy" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px", background: "#faf5ff", padding: "14px", borderRadius: "12px", border: "1px solid #e9d5ff" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "#6D28D9", letterSpacing: "0.5px" }}>
-                ⏳ Booking Expiry Date *
-              </label>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "#7e22ce" }}>
-                📅 {bookingExpiryDate ? new Date(bookingExpiryDate + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Select Date"}
-              </span>
+  return createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0,
+        background: "rgba(15, 23, 42, 0.55)",
+        backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        zIndex: 999999, padding: "16px"
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: "#FFFFFF",
+          borderRadius: "28px",
+          width: "100%", maxWidth: "540px",
+          maxHeight: "calc(100vh - 32px)",
+          display: "flex", flexDirection: "column",
+          overflow: "hidden",
+          boxShadow: "0 32px 72px rgba(124, 58, 237, 0.25)",
+          border: "1px solid #EDE4FF"
+        }}
+      >
+        {/* ── Gradient Header ── */}
+        <div style={{
+          background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+          padding: "16px 22px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexShrink: 0
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "38px", height: "38px", borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.2)", backdropFilter: "blur(8px)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "18px", boxShadow: "inset 0 1px 2px rgba(255, 255, 255, 0.4)"
+            }}>{initial ? "✏️" : "🛒"}</div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>
+                {initial ? `Edit Order #${initial.id}` : "Add New Order"}
+              </h3>
+              <p style={{ margin: "2px 0 0", fontSize: "12px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500 }}>
+                {initial ? "Update order details below" : "Fill the details below to create a new order"}
+              </p>
             </div>
-
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
-              <span style={{ fontSize: "11px", fontWeight: 600, color: "#6D28D9", alignSelf: "center" }}>Quick Set:</span>
-              {[
-                { label: "+7 Days", days: 7 },
-                { label: "+15 Days", days: 15 },
-                { label: "+30 Days (1 Month)", days: 30 },
-                { label: "+60 Days (2 Months)", days: 60 },
-              ].map((preset) => {
-                const targetDate = new Date();
-                targetDate.setDate(targetDate.getDate() + preset.days);
-                const iso = targetDate.toISOString().slice(0, 10);
-                const isSelected = bookingExpiryDate === iso;
-
-                return (
-                  <button
-                    key={preset.days}
-                    type="button"
-                    onClick={() => setBookingExpiryDate(iso)}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      border: isSelected ? "1.5px solid #7e22ce" : "1px solid #d8b4fe",
-                      background: isSelected ? "#7e22ce" : "#fff",
-                      color: isSelected ? "#fff" : "#6D28D9",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      cursor: "pointer"
-                    }}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <input
-              type="date"
-              className="form-input"
-              style={{ height: "42px", padding: "8px 12px", fontSize: "14px", borderRadius: "8px", border: "1px solid #d8b4fe", width: "100%", boxSizing: "border-box", background: "#fff" }}
-              value={bookingExpiryDate}
-              min={new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setBookingExpiryDate(e.target.value)}
-            />
-
-            <span style={{ fontSize: "11px", color: "#7e22ce", lineHeight: "1.3" }}>
-              💡 If booking is not fulfilled by this date, an expiration alert will be sent to Admin.
-            </span>
           </div>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-          <label style={{ fontSize: "12px", fontWeight: 700, textTransform: "uppercase", color: "var(--brown-dark)" }}>
-            Bargaining / Remarks
-          </label>
-          <input
-            type="text"
-            className="form-input"
-            value={customerBargain}
-            onChange={(e) => setCustomerBargain(e.target.value)}
-            placeholder="E.g. Customer requested ₹500 discount"
-          />
+          <button type="button" onClick={onClose} style={{
+            width: "30px", height: "30px", borderRadius: "50%",
+            background: "rgba(255, 255, 255, 0.22)", backdropFilter: "blur(6px)",
+            border: "1px solid rgba(255, 255, 255, 0.35)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", fontSize: "14px", color: "#fff", fontWeight: 800
+          }}>✕</button>
         </div>
 
-        <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "10px", marginTop: "4px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#64748b" }}>
-            <span>Subtotal ({qty}x):</span>
-            <span>₹{baseTotal.toLocaleString()}</span>
-          </div>
-          {discountVal > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#dc2626", marginTop: "4px" }}>
-              <span>Discount ({discountPct}%):</span>
-              <span>- ₹{discountVal.toLocaleString()}</span>
+        {/* ── Scrollable Body ── */}
+        <div style={{ flex: "1 1 auto", overflowY: "auto", padding: "20px 24px 10px" }}>
+          {errorMsg && (
+            <div style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FCA5A5", padding: "10px 14px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
+              ⚠️ {errorMsg}
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "16px", fontWeight: 800, color: "#0f172a", marginTop: "6px", borderTop: "1px dashed #cbd5e1", paddingTop: "6px" }}>
-            <span>Total Payable:</span>
-            <span>₹{finalTotal.toLocaleString()}</span>
+          {successMsg && (
+            <div style={{ background: "#DCFCE7", color: "#166534", border: "1px solid #86EFAC", padding: "10px 14px", borderRadius: "12px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
+              ✅ {successMsg}
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+            {/* Customer Name */}
+            <div>
+              <div style={sectionLabel}>👤 Customer Name *</div>
+              <input
+                type="text"
+                style={inputStyle}
+                list="employee-customers-datalist"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Type customer name"
+              />
+              <datalist id="employee-customers-datalist">
+                {customers.map((c) => (
+                  <option key={c.id} value={c.name} />
+                ))}
+              </datalist>
+            </div>
+
+            {/* Phone Number */}
+            <div>
+              <div style={sectionLabel}>📱 Phone Number *</div>
+              <input
+                type="text"
+                style={inputStyle}
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="Enter customer phone number"
+              />
+            </div>
+
+            {/* Address */}
+            <div>
+              <div style={sectionLabel}>📍 Address</div>
+              <input
+                type="text"
+                style={inputStyle}
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                placeholder="Enter address (optional)"
+              />
+            </div>
+
+            {/* Select Product */}
+            <div>
+              <div style={sectionLabel}>📦 Select Product *</div>
+              <select style={selectStyle} value={productId} onChange={(e) => setProductId(e.target.value)}>
+                {activeProducts.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.brand ? `(${p.brand})` : ""} - ₹{p.price.toLocaleString()} (Stock: {p.qty ?? p.stock ?? 0})
+                  </option>
+                ))}
+              </select>
+              {selectedProduct && (
+                <div style={{
+                  marginTop: "8px", display: "inline-flex", alignItems: "center", gap: "6px",
+                  background: "linear-gradient(135deg, #F3EEFF, #EDE4FF)", padding: "6px 14px",
+                  borderRadius: "20px", fontSize: "12px", fontWeight: 800, color: "#6D28D9"
+                }}>
+                  💰 ₹{selectedProduct.price.toLocaleString()}
+                </div>
+              )}
+            </div>
+
+            {/* Quantity & Discount */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div>
+                <div style={sectionLabel}>🔢 Quantity *</div>
+                <input
+                  type="number"
+                  style={inputStyle}
+                  min={1}
+                  value={qty}
+                  onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
+                />
+              </div>
+
+              <div>
+                <div style={sectionLabel}>💰 Discount (%)</div>
+                <input
+                  type="number"
+                  style={inputStyle}
+                  min={0}
+                  max={100}
+                  value={discountPct}
+                  onChange={(e) => setDiscountPct(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="0%"
+                />
+              </div>
+            </div>
+
+            {/* Document Type */}
+            <div>
+              <div style={sectionLabel}>📋 Document Type *</div>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <label onClick={() => setDocType("Bill")} style={{
+                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                  padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
+                  fontWeight: 700, fontSize: "13px", transition: "all .2s",
+                  background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                  color: docType === "Bill" ? "#fff" : "#475569",
+                  border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
+                  boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
+                }}>
+                  <input
+                    type="radio"
+                    name="empModalDocType"
+                    value="Bill"
+                    checked={docType === "Bill"}
+                    onChange={() => setDocType("Bill")}
+                    style={{ display: "none" }}
+                  />
+                  🧾 Bill
+                </label>
+                <label onClick={() => setDocType("Order Copy")} style={{
+                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                  padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
+                  fontWeight: 700, fontSize: "13px", transition: "all .2s",
+                  background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                  color: docType === "Order Copy" ? "#fff" : "#475569",
+                  border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
+                  boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
+                }}>
+                  <input
+                    type="radio"
+                    name="empModalDocType"
+                    value="Order Copy"
+                    checked={docType === "Order Copy"}
+                    onChange={() => setDocType("Order Copy")}
+                    style={{ display: "none" }}
+                  />
+                  📄 Order Copy
+                </label>
+              </div>
+            </div>
+
+            {/* Booking Expiry Date */}
+            {docType === "Order Copy" && (
+              <div style={{
+                background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)", padding: "16px",
+                borderRadius: "16px", border: "1.5px solid #DDD6FE",
+                display: "flex", flexDirection: "column", gap: "10px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: "#6D28D9" }}>⏳ Booking Expiry Date *</span>
+                  <span style={{
+                    fontSize: "12px", fontWeight: 700, color: "#7C3AED",
+                    background: "rgba(124, 58, 237, 0.1)", padding: "4px 10px", borderRadius: "8px"
+                  }}>
+                    📅 {bookingExpiryDate ? new Date(bookingExpiryDate + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Select Date"}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "10px", fontWeight: 700, color: "#6D28D9", alignSelf: "center", letterSpacing: "0.5px" }}>Quick Set:</span>
+                  {[
+                    { label: "+7 Days", days: 7 },
+                    { label: "+15 Days", days: 15 },
+                    { label: "+30 Days", days: 30 },
+                    { label: "+60 Days", days: 60 },
+                  ].map((preset) => {
+                    const targetDate = new Date();
+                    targetDate.setDate(targetDate.getDate() + preset.days);
+                    const iso = targetDate.toISOString().slice(0, 10);
+                    const isSelected = bookingExpiryDate === iso;
+                    return (
+                      <button key={preset.days} type="button" onClick={() => setBookingExpiryDate(iso)} style={{
+                        padding: "5px 12px", borderRadius: "10px",
+                        border: isSelected ? "none" : "1px solid #C4B5FD",
+                        background: isSelected ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#fff",
+                        color: isSelected ? "#fff" : "#6D28D9",
+                        fontSize: "11px", fontWeight: 700, cursor: "pointer",
+                        boxShadow: isSelected ? "0 3px 8px rgba(124, 58, 237, 0.3)" : "none",
+                        transition: "all .2s"
+                      }}>{preset.label}</button>
+                    );
+                  })}
+                </div>
+
+                <input
+                  type="date" value={bookingExpiryDate}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setBookingExpiryDate(e.target.value)}
+                  style={{ ...inputStyle, background: "#fff", border: "1.5px solid #C4B5FD" }}
+                />
+                <span style={{ fontSize: "11px", color: "#7C3AED", fontWeight: 500 }}>
+                  💡 Expiration alert will be sent to Admin if not fulfilled by this date.
+                </span>
+              </div>
+            )}
+
+            {/* Bargaining / Remarks */}
+            <div>
+              <div style={sectionLabel}>✍️ Bargaining / Remarks</div>
+              <input
+                type="text"
+                style={inputStyle}
+                value={customerBargain}
+                onChange={(e) => setCustomerBargain(e.target.value)}
+                placeholder="E.g. Customer requested ₹500 discount"
+              />
+            </div>
+
+            {/* Price Summary Breakdown Card */}
+            <div style={{ background: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)", padding: "14px 16px", borderRadius: "16px", border: "1px solid #DDD6FE" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#64748B", fontWeight: 600 }}>
+                <span>Subtotal ({qty}x):</span>
+                <span>₹{baseTotal.toLocaleString()}</span>
+              </div>
+              {discountVal > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#EF4444", marginTop: "4px", fontWeight: 600 }}>
+                  <span>Discount ({discountPct}%):</span>
+                  <span>- ₹{discountVal.toLocaleString()}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "16px", fontWeight: 900, color: "#2E1065", marginTop: "8px", borderTop: "1px dashed #C4B5FD", paddingTop: "8px" }}>
+                <span>Total Payable:</span>
+                <span>₹{finalTotal.toLocaleString()}</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="modal-actions" style={{ marginTop: "20px" }}>
-        <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={handleSubmit} style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dark))" }}>
-          Submit Order for Approval
-        </button>
+        {/* ── Footer Buttons ── */}
+        <div style={{
+          padding: "16px 24px 20px",
+          borderTop: "1px solid #EDE4FF",
+          display: "flex", justifyContent: "flex-end", gap: "12px",
+          flexShrink: 0, background: "#FAFBFF"
+        }}>
+          <button type="button" onClick={onClose} style={{
+            padding: "10px 22px", borderRadius: "30px",
+            background: "#FFFFFF", border: "1px solid #CBD5E1",
+            fontWeight: 800, fontSize: "13.5px", color: "#64748B",
+            cursor: "pointer", display: "flex", alignItems: "center", gap: "6px"
+          }}>✕ Cancel</button>
+          <button type="button" onClick={handleSubmit} style={{
+            padding: "10px 26px", borderRadius: "30px",
+            background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+            border: "none",
+            fontWeight: 800, fontSize: "13.5px", color: "#fff",
+            cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+            boxShadow: "0 6px 18px rgba(124, 58, 237, 0.35)",
+            transition: "transform .15s, box-shadow .15s"
+          }}>🚀 Submit Order for Approval</button>
+        </div>
       </div>
-    </Modal>
+    </div>,
+    document.body
   );
 }

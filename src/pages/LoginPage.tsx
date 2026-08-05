@@ -57,7 +57,7 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
-                autoComplete="new-password"
+                autoComplete="current-password"
               />
               <button type="button" className="password-toggle" onClick={() => setShow((s) => !s)} aria-label="Toggle password visibility">
                 {show ? <EyeOff size={18} /> : <Eye size={18} />}

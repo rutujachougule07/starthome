@@ -867,6 +867,12 @@ button.nav-item:hover {
   position: relative;
 }
 
+/* Hide default browser password reveal & clear icons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}
+
 .password-wrap .form-input {
   padding-right: 44px;
 }
@@ -1827,39 +1833,41 @@ table.tbl {
 
 /* ===== CIRCULAR ACTION BUTTONS ===== */
 .btn-circle {
-  width: 32px !important;
-  height: 32px !important;
+  width: 34px !important;
+  height: 34px !important;
   border-radius: 50% !important;
   padding: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border: 1px solid var(--border) !important;
-  background: var(--warm-white) !important;
-  font-size: 13px !important;
-  color: var(--brown-dark) !important;
-  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid #E9D8FD !important;
+  background: #F5F3FF !important;
+  font-size: 14px !important;
+  color: #7C3AED !important;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.08) !important;
   cursor: pointer;
   transition: background 0.2s, transform 0.15s, border-color 0.2s, color 0.2s !important;
 }
 
 .btn-circle:hover {
-  background: var(--biscuit-light) !important;
+  background: #EDE4FF !important;
   transform: translateY(-1px) !important;
-  border-color: var(--accent) !important;
-  color: var(--accent-dark) !important;
+  border-color: #7C3AED !important;
+  color: #6D28D9 !important;
 }
 
 .btn-circle-danger {
-  color: var(--danger) !important;
-  border: 1px solid #f4d6d2 !important;
-  background: #fffafa !important;
+  color: #EF4444 !important;
+  border: 1px solid #FEE2E2 !important;
+  background: #FEF2F2 !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.08) !important;
 }
 
 .btn-circle-danger:hover {
-  background: #fdf2f0 !important;
-  border-color: var(--danger) !important;
-  color: var(--danger) !important;
+  background: #FEE2E2 !important;
+  border-color: #EF4444 !important;
+  color: #DC2626 !important;
+  transform: translateY(-1px) !important;
 }
 
 /* ===== PREMIUM PROFILE PAGE ===== */
@@ -3540,8 +3548,7 @@ button[type="submit"]:active {
     inset 0 1px 1px rgba(255, 255, 255, 0.35) !important;
 }
 
-.btn-danger,
-.btn-circle-danger {
+.btn-danger {
   background: linear-gradient(135deg, #F43F5E 0%, #EF4444 100%) !important;
   color: #FFFFFF !important;
   box-shadow: 0 12px 26px -10px rgba(239, 68, 68, 0.55) !important;
