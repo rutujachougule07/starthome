@@ -1831,43 +1831,51 @@ table.tbl {
   white-space: nowrap !important;
 }
 
-/* ===== CIRCULAR ACTION BUTTONS ===== */
-.btn-circle {
-  width: 34px !important;
-  height: 34px !important;
+/* ===== CIRCULAR ACTION BUTTONS MATCHING USER SCREENSHOT ===== */
+.btn-circle,
+button.btn-circle {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
   border-radius: 50% !important;
   padding: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border: 1px solid #E9D8FD !important;
-  background: #F5F3FF !important;
-  font-size: 14px !important;
+  border: 1px solid #EDE4FF !important;
+  background: #F3EEFF !important;
+  font-size: 15px !important;
   color: #7C3AED !important;
-  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.08) !important;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.15s, border-color 0.2s, color 0.2s !important;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.08) !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-.btn-circle:hover {
+.btn-circle:hover,
+button.btn-circle:hover {
   background: #EDE4FF !important;
-  transform: translateY(-1px) !important;
-  border-color: #7C3AED !important;
+  transform: translateY(-2px) scale(1.06) !important;
+  border-color: #C7D2FE !important;
   color: #6D28D9 !important;
+  box-shadow: 0 6px 14px rgba(124, 58, 237, 0.16) !important;
 }
 
-.btn-circle-danger {
+.btn-circle-danger,
+button.btn-circle-danger {
   color: #EF4444 !important;
-  border: 1px solid #FEE2E2 !important;
-  background: #FEF2F2 !important;
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid #FFE4E6 !important;
+  background: #FFF1F2 !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08) !important;
 }
 
-.btn-circle-danger:hover {
-  background: #FEE2E2 !important;
-  border-color: #EF4444 !important;
+.btn-circle-danger:hover,
+button.btn-circle-danger:hover {
+  background: #FFE4E6 !important;
+  border-color: #FDA4AF !important;
   color: #DC2626 !important;
-  transform: translateY(-1px) !important;
+  transform: translateY(-2px) scale(1.06) !important;
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.16) !important;
 }
 
 /* ===== PREMIUM PROFILE PAGE ===== */

@@ -1385,13 +1385,7 @@ function ProductsSection() {
 
 
 
-      {/* Floating Button */}
-      {createPortal(
-        <div className="floating-btn" title="Add Product" onClick={() => setShowAdd(true)}>
-          ⚡
-        </div>,
-        document.body
-      )}
+
 
       <div className="panel" style={{ marginTop: "24px" }}>
         <div className="panel-head">
@@ -3608,18 +3602,8 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
                 userTasks={tasks.filter(t => t.assignedTo === e.id)}
                 actions={!readOnly ? (
                   <>
-                    <button onClick={() => setEditingEmployee(e)} title="Edit" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #F3EEFF",
-                      background: "#F5F3FF", color: "#7C3AED", cursor: "pointer", display: "flex",
-                      alignItems: "center", justifyContent: "center", fontSize: "14px", transition: "all 0.2s"
-                    }}>✏️</button>
-                    <button onClick={() => removeUser(e.id, "employee")} title="Delete" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #fee2e2",
-                      background: "#fef2f2", color: "#ef4444", cursor: "pointer", display: "flex",
-                      alignItems: "center", justifyContent: "center", transition: "all 0.2s"
-                    }}>
-                      <Trash2 size={14} />
-                    </button>
+                    <button className="btn btn-circle" onClick={() => setEditingEmployee(e)} title="Edit Employee">✏️</button>
+                    <button className="btn btn-circle btn-circle-danger" onClick={() => removeUser(e.id, "employee")} title="Delete Employee">🗑️</button>
                   </>
                 ) : undefined}
               />
@@ -3659,18 +3643,8 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
                 employee={m}
                 actions={!readOnly ? (
                   <>
-                    <button onClick={() => setEditingManager(m)} title="Edit" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #F3EEFF",
-                      background: "#F5F3FF", color: "#7C3AED", cursor: "pointer", display: "flex",
-                      alignItems: "center", justifyContent: "center", fontSize: "14px", transition: "all 0.2s"
-                    }}>✏️</button>
-                    <button onClick={() => removeUser(m.id, "manager")} title="Delete" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #fee2e2",
-                      background: "#fef2f2", color: "#ef4444", cursor: "pointer", display: "flex",
-                      alignItems: "center", justifyContent: "center", transition: "all 0.2s"
-                    }}>
-                      <Trash2 size={14} />
-                    </button>
+                    <button className="btn btn-circle" onClick={() => setEditingManager(m)} title="Edit Manager">✏️</button>
+                    <button className="btn btn-circle btn-circle-danger" onClick={() => removeUser(m.id, "manager")} title="Delete Manager">🗑️</button>
                   </>
                 ) : undefined}
               />
@@ -3890,23 +3864,13 @@ export function TaskAssignmentSection() {
                       if (userTasks.length > 0) {
                         setEditingTask(userTasks[0]);
                       }
-                    }} title="Edit Task" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #F3EEFF",
-                      background: "#F5F3FF", color: "#7C3AED", cursor: "pointer", display: "flex",
-                      alignItems: "center", justifyContent: "center", fontSize: "14px", transition: "all 0.2s"
-                    }}>✏️</button>
+                    }} className="btn btn-circle" title="Edit Task">✏️</button>
                     <button onClick={() => {
                       const userTasks = regularTasks.filter(t => t.assignedTo === e.id);
                       if (userTasks.length > 0) {
                         handleDeleteTask(userTasks[0].id);
                       }
-                    }} title="Delete Task" style={{
-                      width: "32px", height: "32px", borderRadius: "50%", border: "1px solid #fee2e2",
-                      background: "#fef2f2", color: "#ef4444", cursor: "pointer", display: "flex",
-                      alignItems: "center", justifyContent: "center", transition: "all 0.2s"
-                    }}>
-                      <Trash2 size={14} />
-                    </button>
+                    }} className="btn btn-circle btn-circle-danger" title="Delete Task">🗑️</button>
                   </>
                 }
               >

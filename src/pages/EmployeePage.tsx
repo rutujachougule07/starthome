@@ -158,7 +158,7 @@ function Overview() {
         <StatCard icon="💰" label="Incentive" value={incentiveEarnedTotal > 0 ? `₹${incentiveEarnedTotal.toLocaleString()}` : `${incentiveCount}`} onClick={() => goTo("products")} />
         <StatCard icon="✅" label="Task Complete" value={completedCount} onClick={() => goTo("tasks")} />
         <StatCard icon="🧾" label="Orders" value={ordersCount} onClick={() => goTo("orders")} />
-        <StatCard icon="⏰" label="Punch In" value={`${punchAttendancePercentage}%`} />
+        <StatCard icon="⏰" label="Punch In" value={`${punchAttendancePercentage}%`} onClick={() => goTo("profile")} />
       </div>
 
       {/* Bar Chart & Pie Chart Row with Requested 4 Metrics */}
@@ -315,10 +315,14 @@ function TasksSection() {
     }
   };
 
+  const [filterStatus, setFilterStatus] = useState<"All" | "Completed" | "In Progress" | "Pending">("All");
+
   const total = mine.length;
   const completed = mine.filter((t) => t.status === "Completed").length;
   const inProgress = mine.filter((t) => t.status === "In Progress").length;
   const pending = mine.filter((t) => t.status === "Pending").length;
+
+  const displayTasks = filterStatus === "All" ? mine : mine.filter((t) => t.status === filterStatus);
 
   return (
     <>
@@ -327,15 +331,28 @@ function TasksSection() {
 
       {/* Task summary cards */}
       <div className="stat-grid" style={{ marginBottom: 20 }}>
-        <StatCard icon="📝" label="Total" value={total} />
-        <StatCard icon="✅" label="Completed" value={completed} />
-        <StatCard icon="⚙" label="In Progress" value={inProgress} />
-        <StatCard icon="⏳" label="Pending" value={pending} />
+        <StatCard icon="📝" label="Total" value={total} onClick={() => setFilterStatus("All")} />
+        <StatCard icon="✅" label="Completed" value={completed} onClick={() => setFilterStatus("Completed")} />
+        <StatCard icon="⚙" label="In Progress" value={inProgress} onClick={() => setFilterStatus("In Progress")} />
+        <StatCard icon="⏳" label="Pending" value={pending} onClick={() => setFilterStatus("Pending")} />
       </div>
 
       <div className="panel">
-        <div className={mine.length > 0 ? "card-grid" : ""}>
-          {mine.map((t) => (
+        {filterStatus !== "All" && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", padding: "10px 16px", background: "rgba(124, 58, 237, 0.08)", borderRadius: "12px", border: "1px solid rgba(124, 58, 237, 0.2)" }}>
+            <span style={{ fontWeight: 700, fontSize: "13px", color: "#6D28D9" }}>
+              🔍 Showing: <strong>{filterStatus} Tasks</strong> ({displayTasks.length})
+            </span>
+            <button
+              onClick={() => setFilterStatus("All")}
+              style={{ background: "#7C3AED", color: "#FFF", border: "none", borderRadius: "20px", padding: "4px 12px", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}
+            >
+              Show All
+            </button>
+          </div>
+        )}
+        <div className={displayTasks.length > 0 ? "card-grid" : ""}>
+          {displayTasks.map((t) => (
             <div key={t.id} className="data-card">
               <div className="data-card-header">
                 <h4 className="data-card-title">{t.title}</h4>
@@ -2199,17 +2216,29 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
               <select style={selectStyle} value={productId} onChange={(e) => setProductId(e.target.value)}>
                 {activeProducts.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} {p.brand ? `(${p.brand})` : ""} - ₹{p.price.toLocaleString()} (Stock: {p.qty ?? p.stock ?? 0})
+                    {p.name} {p.brand ? `(${p.brand})` : ""}
                   </option>
                 ))}
               </select>
               {selectedProduct && (
-                <div style={{
-                  marginTop: "8px", display: "inline-flex", alignItems: "center", gap: "6px",
-                  background: "linear-gradient(135deg, #F3EEFF, #EDE4FF)", padding: "6px 14px",
-                  borderRadius: "20px", fontSize: "12px", fontWeight: 800, color: "#6D28D9"
-                }}>
-                  💰 ₹{selectedProduct.price.toLocaleString()}
+                <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: "6px",
+                    background: "#F3EEFF", padding: "6px 16px",
+                    borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#7C3AED",
+                    boxShadow: "0 2px 6px rgba(124, 58, 237, 0.12)"
+                  }}>
+                    💰 ₹{selectedProduct.price.toLocaleString()}
+                  </div>
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: "6px",
+                    background: "#E0F2FE", padding: "6px 16px",
+                    borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#0369A1",
+                    border: "1px solid #BAE6FD",
+                    boxShadow: "0 2px 6px rgba(3, 105, 161, 0.12)"
+                  }}>
+                    📦 Stock: {selectedProduct.qty ?? selectedProduct.stock ?? 0}
+                  </div>
                 </div>
               )}
             </div>

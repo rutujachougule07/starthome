@@ -70,11 +70,11 @@ function Overview({ onNav }: { onNav: (tab: string) => void }) {
       <DashboardLeadPipelineOverview />
       <UpcomingFollowUps />
       <div className="stat-grid">
-        <StatCard icon="👥" label="Employees" value={emp} />
-        <StatCard icon="🧑‍💼" label="Customers" value={customers.length} />
-        <StatCard icon="🧾" label="Orders" value={orders.length} />
-        <StatCard icon="⏳" label="Pending Approvals" value={pending} />
-        <StatCard icon="✅" label="Tasks Completed" value={tasks.filter((t) => t.status === "Completed").length} />
+        <StatCard icon="👥" label="Employees" value={emp} onClick={() => onNav("assign")} />
+        <StatCard icon="🧑‍💼" label="Customers" value={customers.length} onClick={() => onNav("leads")} />
+        <StatCard icon="🧾" label="Orders" value={orders.length} onClick={() => onNav("orders")} />
+        <StatCard icon="⏳" label="Pending Approvals" value={pending} onClick={() => onNav("orders")} />
+        <StatCard icon="✅" label="Tasks Completed" value={tasks.filter((t) => t.status === "Completed").length} onClick={() => onNav("task-assign")} />
         <StatCard icon="💰" label="INCENTIVE (> 90 DAYS)" value={incentive90Days} onClick={() => onNav("incentive")} />
       </div>
 
@@ -789,17 +789,29 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
             <select value={productId} onChange={(e) => setProductId(e.target.value)} style={selectStyle}>
               {active.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} {p.brand ? `(${p.brand})` : ""} - ₹{p.price.toLocaleString()} (Stock: {p.qty ?? p.stock ?? 0})
+                  {p.name} {p.brand ? `(${p.brand})` : ""}
                 </option>
               ))}
             </select>
             {selectedProduct && (
-              <div style={{
-                marginTop: "8px", display: "inline-flex", alignItems: "center", gap: "6px",
-                background: "#F3EEFF", padding: "6px 16px",
-                borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#7C3AED"
-              }}>
-                💰 ₹{selectedProduct.price.toLocaleString()}
+              <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  background: "#F3EEFF", padding: "6px 16px",
+                  borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#7C3AED",
+                  boxShadow: "0 2px 6px rgba(124, 58, 237, 0.12)"
+                }}>
+                  💰 ₹{selectedProduct.price.toLocaleString()}
+                </div>
+                <div style={{
+                  display: "inline-flex", alignItems: "center", gap: "6px",
+                  background: "#E0F2FE", padding: "6px 16px",
+                  borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#0369A1",
+                  border: "1px solid #BAE6FD",
+                  boxShadow: "0 2px 6px rgba(3, 105, 161, 0.12)"
+                }}>
+                  📦 Stock: {selectedProduct.qty ?? selectedProduct.stock ?? 0}
+                </div>
               </div>
             )}
           </div>
