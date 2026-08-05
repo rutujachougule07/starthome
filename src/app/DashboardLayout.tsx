@@ -77,11 +77,11 @@ export function DashboardLayout({ role, title, nav, active, onNav, children }: P
           {/* Top Section: Brand + Navigation Links */}
           <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
             {/* Brand Logo Header */}
-            <div className="sidebar-brand">
-              <span className="logo-sq">⚡</span>
+            <div className="sidebar-brand" style={{ gap: "10px" }}>
+              <img src="/logo.png" alt="Star Home Logo" className="logo-img" style={{ width: 44, height: 44, objectFit: "contain" }} />
               <div style={{ display: "flex", flexDirection: "column" }}>
-                <span style={{ fontSize: "18px", fontWeight: 800, color: "#1E293B", letterSpacing: "-0.4px", lineHeight: 1.1 }}>ElectroHub</span>
-                <span style={{ fontSize: "12px", color: "#556052", fontWeight: 600 }}>Electric Shop</span>
+                <span style={{ fontSize: "16px", fontWeight: 800, color: "#1E293B", letterSpacing: "-0.4px", lineHeight: 1.1 }}>STAR HOME</span>
+                <span style={{ fontSize: "11px", color: "#556052", fontWeight: 600 }}>APPLIANCES</span>
               </div>
             </div>
 

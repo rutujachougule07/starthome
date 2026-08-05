@@ -1781,11 +1781,14 @@ export function OrderDocumentModal({
           paddingBottom: "16px",
           marginBottom: "20px"
         }}>
-          <div>
-            <h2 style={{ margin: 0, color: "#0f172a", fontSize: "22px", fontWeight: 800 }}>SMART HOME</h2>
-            <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#64748b" }}>
-              Sales & Services · Smart Home Automation
-            </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <img src="/logo.png" alt="Star Home Logo" style={{ width: "48px", height: "48px", objectFit: "contain" }} />
+            <div>
+              <h2 style={{ margin: 0, color: "#0f172a", fontSize: "20px", fontWeight: 800 }}>STAR HOME APPLIANCES</h2>
+              <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#64748b" }}>
+                Sales & Services · Home & Electrical Appliances
+              </p>
+            </div>
           </div>
           <div style={{ textAlign: "right" }}>
             <span style={{

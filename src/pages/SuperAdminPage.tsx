@@ -6435,12 +6435,15 @@ export function PDFPreviewContainer() {
           fontFamily: "Inter, system-ui, sans-serif"
         }}>
           <div style={{ borderBottom: "2px solid #7C3AED", paddingBottom: 14, marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: 18, color: "#1e293b", fontWeight: 700 }}>
-                Smart Home Systems - {data.sectionTitle}
-              </h2>
-              <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
-                Super Admin System Report | Generated: {today}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <img src="/logo.png" alt="Star Home Logo" style={{ width: 40, height: 40, objectFit: "contain" }} />
+              <div>
+                <h2 style={{ margin: 0, fontSize: 18, color: "#1e293b", fontWeight: 700 }}>
+                  Star Home Appliances - {data.sectionTitle}
+                </h2>
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                  Super Admin System Report | Generated: {today}
+                </div>
               </div>
             </div>
             <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", background: "#F5F3FF", color: "#6D28D9", borderRadius: 6, border: "1px solid #E9D8FD" }}>
