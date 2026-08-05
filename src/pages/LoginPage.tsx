@@ -1,15 +1,22 @@
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Navigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useStore } from "../app/store";
+import { useStore, loadCurrentUser } from "../app/store";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 export function LoginPage() {
-  const { login } = useStore();
+  const { login, currentUser: storeUser } = useStore();
+  const currentUser = storeUser || loadCurrentUser();
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
+
+  if (currentUser) {
+    if (currentUser.role === "superadmin") return <Navigate to="/super-admin" search={{ tab: "live" }} />;
+    if (currentUser.role === "manager") return <Navigate to="/manager" search={{ tab: "overview" }} />;
+    return <Navigate to="/employee" search={{ tab: "overview" }} />;
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

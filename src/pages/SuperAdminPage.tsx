@@ -1,11 +1,11 @@
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useStore, Product, User, Order, Lead, Task } from "../app/store";
+import { useStore, loadCurrentUser, Product, User, Order, Lead, Task } from "../app/store";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { ProductBatchDetailsModal } from "../components/ProductBatchDetailsModal";
 import { DashboardLayout, StatCard, Pill, BarChart, Modal, NavItem } from "../app/DashboardLayout";
-import { AlertCircle, Snowflake, Clock, Flame, CheckCircle2, XCircle, MessageSquare, Briefcase, Calendar, Phone, User as UserIcon, Trash2, Mail, Key, Search, Download, Plus, SlidersHorizontal } from "lucide-react";
+import { AlertCircle, Snowflake, Clock, Flame, CheckCircle2, XCircle, MessageSquare, Briefcase, Calendar, Phone, User as UserIcon, Trash2, Mail, Key, Search, Download, Plus, SlidersHorizontal, Eye, EyeOff } from "lucide-react";
 import { OrderDocumentModal } from "./EmployeePage";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -198,7 +198,8 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
     navigate({ to: "/super-admin", search: { tab } });
   };
 
-  if (!store.currentUser || store.currentUser.role !== "superadmin") return <Navigate to="/login" />;
+  const user = store.currentUser || loadCurrentUser();
+  if (!user || user.role !== "superadmin") return <Navigate to="/login" />;
 
   return (
     <>
@@ -3257,10 +3258,10 @@ export function ProfileSection() {
                     </span>
                     <button
                       onClick={() => setShowPassword(!showPassword)}
-                      style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: 0, opacity: 0.8, display: "inline-flex", alignSelf: "center" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, opacity: 0.8, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
                       title={showPassword ? "Hide Password" : "Show Password"}
                     >
-                      {showPassword ? "👁️" : "🙈"}
+                      {showPassword ? <EyeOff size={18} color="#7C3AED" /> : <Eye size={18} color="#7C3AED" />}
                     </button>
                   </div>
                 </div>

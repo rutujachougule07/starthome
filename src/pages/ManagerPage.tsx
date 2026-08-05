@@ -2,7 +2,7 @@ import { EmployeeIncentiveSection } from "./EmployeePage";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { useStore, User, Customer, Order, Product } from "../app/store";
+import { useStore, loadCurrentUser, User, Customer, Order, Product } from "../app/store";
 import { DashboardLayout, StatCard, Pill, Modal, NavItem, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview } from "./SuperAdminPage";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
@@ -31,7 +31,8 @@ export function ManagerPage({ tab = "overview" }: ManagerPageProps) {
     navigate({ to: "/manager", search: { tab } });
   };
 
-  if (!store.currentUser || store.currentUser.role !== "manager") return <Navigate to="/login" />;
+  const user = store.currentUser || loadCurrentUser();
+  if (!user || user.role !== "manager") return <Navigate to="/login" />;
 
   return (
     <DashboardLayout role="manager" title="Manager" nav={NAV} active={active} onNav={setActive}>

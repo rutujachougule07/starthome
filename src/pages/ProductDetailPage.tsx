@@ -47,7 +47,7 @@ export function ProductDetailPage() {
       if (r) {
         setRole(r);
       } else {
-        const userRaw = localStorage.getItem("sham_current_user_v2");
+        const userRaw = sessionStorage.getItem("sham_current_user_v2") || localStorage.getItem("sham_current_user_v2");
         if (userRaw) {
           const u = JSON.parse(userRaw);
           setRole(u.role || "superadmin");

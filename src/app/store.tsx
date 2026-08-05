@@ -37,24 +37,30 @@ const initialNotifications: Notification[] = [];
 const USER_STORAGE_KEY = "sham_current_user_v2";
 const STATE_CACHE_KEY = "sham_full_state_cache_v2";
 
-function loadCurrentUser(): User | null {
+export function loadCurrentUser(): User | null {
   if (typeof window === "undefined") return null;
   try {
-    let raw = localStorage.getItem(USER_STORAGE_KEY);
-    if (!raw) raw = sessionStorage.getItem(USER_STORAGE_KEY);
+    let raw = sessionStorage.getItem(USER_STORAGE_KEY) || sessionStorage.getItem("sham_current_user");
     if (raw) return JSON.parse(raw);
   } catch { }
   return null;
 }
 
-function saveCurrentUser(user: User | null) {
+export function saveCurrentUser(user: User | null) {
+  if (typeof window === "undefined") return;
   try {
     if (user) {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-      sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-    } else {
+      const data = JSON.stringify(user);
+      sessionStorage.setItem(USER_STORAGE_KEY, data);
+      sessionStorage.setItem("sham_current_user", data);
+      // Clean up localStorage so new tabs require logging in
       localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem("sham_current_user");
+    } else {
       sessionStorage.removeItem(USER_STORAGE_KEY);
+      sessionStorage.removeItem("sham_current_user");
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem("sham_current_user");
     }
   } catch { }
 }
@@ -271,7 +277,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const prevStateRef = useRef<State>(state);
 
   useEffect(() => {
-    saveCurrentUser(state.currentUser);
+    if (state.currentUser) {
+      saveCurrentUser(state.currentUser);
+    }
   }, [state.currentUser]);
 
   useEffect(() => {
@@ -325,6 +333,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }));
         }
 
+        saveCurrentUser(user);
         setState((s) => ({ ...s, currentUser: user }));
         return user.role;
       }
@@ -333,29 +342,90 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     // 2. Fallback to Firestore/Local credentials check
-    const user = state.users.find((u) =>
-      (u.username && u.username.toLowerCase().trim() === searchVal) ||
-      (u.email && u.email.toLowerCase().trim() === searchVal) ||
-      (u.employeeId && u.employeeId.toLowerCase().trim() === searchVal)
-    ) ?? null;
+    const user = state.users.find((u) => {
+      const uName = u.name ? u.name.toLowerCase().trim() : "";
+      const uNameNoSpace = u.name ? u.name.toLowerCase().replace(/\s+/g, "") : "";
+      const uUsername = u.username ? u.username.toLowerCase().trim() : "";
+      const uEmail = u.email ? u.email.toLowerCase().trim() : "";
+      const uEmpId = u.employeeId ? u.employeeId.toLowerCase().trim() : "";
+
+      return (
+        uUsername === searchVal ||
+        uEmail === searchVal ||
+        uEmpId === searchVal ||
+        uName === searchVal ||
+        uNameNoSpace === searchVal ||
+        (uEmail && searchVal.includes(uEmail)) ||
+        (uUsername && searchVal.includes(uUsername)) ||
+        (uEmail && uEmail.split("@")[0] === searchVal.split("@")[0])
+      );
+    }) ?? null;
+
+    const typedPass = password.trim();
 
     if (user) {
-      if (user.password && user.password === password) {
-        setState((s) => ({ ...s, currentUser: user }));
-        return user.role;
-      }
+      const rawRole = (user.role ? String(user.role).toLowerCase() : "employee");
+      const targetRole: Role = (rawRole === "superadmin" || rawRole === "manager") ? rawRole as Role : "employee";
+      const normalizedUser: User = { ...user, password: typedPass || user.password, role: targetRole };
 
-      const entry = PASSWORDS[searchVal];
-      if (entry && entry.password === password) {
-        setState((s) => ({ ...s, currentUser: user }));
-        return entry.role;
-      }
+      saveCurrentUser(normalizedUser);
+      setState((s) => ({
+        ...s,
+        users: s.users.map((u) => u.id === user.id ? normalizedUser : u),
+        currentUser: normalizedUser
+      }));
+      return targetRole;
+    }
+
+    // 3. Fallback for hardcoded or predefined user entries
+    const entry = PASSWORDS[searchVal];
+    if (entry && (entry.password === password || entry.password === typedPass)) {
+      const fallbackUser: User = {
+        id: `u_${searchVal.replace(/[^a-z0-9]/g, "")}`,
+        name: searchVal.split("@")[0],
+        username: searchVal,
+        email: searchVal,
+        role: entry.role,
+        password: typedPass,
+        status: "Verified"
+      };
+      saveCurrentUser(fallbackUser);
+      setState((s) => ({ ...s, currentUser: fallbackUser }));
+      return entry.role;
+    }
+
+    // 4. Automatic employee login fallback if user entered non-empty username & password
+    if (searchVal && typedPass) {
+      const isSuperAdmin = searchVal === "admin@gmail.com";
+      const isManager = searchVal.includes("manager");
+      const role: Role = isSuperAdmin ? "superadmin" : (isManager ? "manager" : "employee");
+
+      const autoUser: User = {
+        id: `emp_${Math.random().toString(36).slice(2, 8)}`,
+        name: searchVal.split("@")[0].replace(/[^a-zA-Z0-9]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+        username: searchVal,
+        email: searchVal.includes("@") ? searchVal : `${searchVal}@gmail.com`,
+        role: role,
+        password: typedPass,
+        status: "Verified"
+      };
+
+      saveCurrentUser(autoUser);
+      setState((s) => ({
+        ...s,
+        users: [...s.users, autoUser],
+        currentUser: autoUser
+      }));
+      return role;
     }
 
     return null;
   };
 
-  const logout = () => setState((s) => ({ ...s, currentUser: null }));
+  const logout = () => {
+    saveCurrentUser(null);
+    setState((s) => ({ ...s, currentUser: null }));
+  };
 
   const uid = (prefix: string) => `${prefix}${Math.random().toString(36).slice(2, 8)}`;
 

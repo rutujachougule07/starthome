@@ -2,7 +2,7 @@
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { useStore, Customer, Product, Order, Task } from "../app/store";
+import { useStore, loadCurrentUser, Customer, Product, Order, Task } from "../app/store";
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm } from "./SuperAdminPage";
 import { getAutoProductImage } from "../utils/autoProductImage";
@@ -29,7 +29,8 @@ export function EmployeePage({ tab = "overview" }: EmployeePageProps) {
     navigate({ to: "/employee", search: { tab } });
   };
 
-  if (!store.currentUser || store.currentUser.role !== "employee") {
+  const user = store.currentUser || loadCurrentUser();
+  if (!user || user.role !== "employee") {
     return <Navigate to="/login" />;
   }
 
