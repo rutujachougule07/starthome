@@ -4,7 +4,29 @@ import { db, auth } from "../pages/firebase";
 
 export type Role = "superadmin" | "manager" | "employee";
 
-export interface User { id: string; name: string; username: string; role: Role; email?: string; phone?: string; employeeId?: string; jobTitle?: string; password?: string; address?: string; status?: string; }
+export interface User { 
+  id: string; 
+  name: string; 
+  username: string; 
+  role: Role; 
+  email?: string; 
+  phone?: string; 
+  employeeId?: string; 
+  jobTitle?: string; 
+  password?: string; 
+  address?: string; 
+  status?: string;
+  department?: string;
+  designation?: string;
+  dateOfJoining?: string;
+  shift?: string;
+  emergencyContact?: string;
+  panNumber?: string;
+  aadharNumber?: string;
+  locationTracking?: string;
+  punchSetting?: string;
+  branchAccess?: string;
+}
 export interface Product { id: string; name: string; category: string; price: number; stock: number; status: string; sku: string; image: string; qty: number; cost: number; incentive: number; supplier: string; date: string; warranty?: string; brand?: string; location?: "Shop" | "Godown 1" | "Godown 2" | "Display"; assignedEmployeeId?: string; incentiveSeen?: boolean; }
 export interface Customer { id: string; name: string; email: string; phone: string; address: string; status: string; }
 export interface Order { id: string; customerId: string; customerName: string; productId: string; productName: string; qty: number; total: number; discount?: number; createdBy: string; status: "Pending" | "Approved" | "Rejected" | "Delivered"; date: string; assignedTo?: string; assignedToName?: string; sentToEmployee?: boolean; customerBargain?: string; docType?: "Bill" | "Order Copy"; bookingExpiryDate?: string; isIncentive?: boolean; }

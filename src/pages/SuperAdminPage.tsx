@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useStore, loadCurrentUser, Product, User, Order, Lead, Task } from "../app/store";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { ProductBatchDetailsModal } from "../components/ProductBatchDetailsModal";
+import { EmployeeDetailsModal } from "../components/EmployeeDetailsModal";
 import { DashboardLayout, StatCard, Pill, BarChart, Modal, NavItem } from "../app/DashboardLayout";
 import { AlertCircle, Snowflake, Clock, Flame, CheckCircle2, XCircle, MessageSquare, Briefcase, Calendar, Phone, User as UserIcon, Trash2, Mail, Key, Search, Download, Plus, SlidersHorizontal, Eye, EyeOff } from "lucide-react";
 import { OrderDocumentModal } from "./EmployeePage";
@@ -679,10 +680,17 @@ export function EmployeeForm({
   const [employeeId, setEmployeeId] = useState(initial?.employeeId ?? "");
   const [name, setName] = useState(initial?.name ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
+  const [emergencyContact, setEmergencyContact] = useState(initial?.emergencyContact ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
+  const [department, setDepartment] = useState(initial?.department ?? "Sales & Operations");
+  const [designation, setDesignation] = useState(initial?.designation ?? initial?.jobTitle ?? "Sales Associate");
   const [jobTitle, setJobTitle] = useState(initial?.jobTitle ?? "Sales Associate");
+  const [dateOfJoining, setDateOfJoining] = useState(initial?.dateOfJoining ?? new Date().toISOString().slice(0, 10));
+  const [shift, setShift] = useState(initial?.shift ?? "Full Day (9:00 AM - 7:00 PM)");
+  const [branchAccess, setBranchAccess] = useState(initial?.branchAccess ?? "Main Branch");
+  const [locationTracking, setLocationTracking] = useState(initial?.locationTracking ?? "Enabled");
   const [password, setPassword] = useState(initial?.password ?? "");
   const [address, setAddress] = useState(initial?.address ?? "");
-  const [email, setEmail] = useState(initial?.email ?? "");
   const [status, setStatus] = useState(initial?.status ?? "Verified");
   const [isPasswordEdited, setIsPasswordEdited] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -734,11 +742,18 @@ export function EmployeeForm({
       username,
       email: email || undefined,
       phone: phone || undefined,
+      emergencyContact: emergencyContact || undefined,
       employeeId: employeeId || undefined,
-      jobTitle,
+      department: department || undefined,
+      designation: designation || jobTitle || undefined,
+      jobTitle: designation || jobTitle || "Sales Associate",
+      dateOfJoining: dateOfJoining || undefined,
+      shift: shift || undefined,
+      branchAccess: branchAccess || undefined,
+      locationTracking: locationTracking || undefined,
       password: password || undefined,
       address: address || undefined,
-      status
+      status: status || "Verified"
     });
   };
 
@@ -746,129 +761,489 @@ export function EmployeeForm({
 
   return (
     <Modal title={modalTitle} onClose={onClose} className="modal-lg">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2.2fr", gap: "10px", marginBottom: 8 }}>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>EMPLOYEE ID</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🆔</span>
-            <input
-              className="form-input"
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              placeholder="EMP001"
-              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
-            />
+      <div style={{ maxHeight: "72vh", overflowY: "auto", paddingRight: "6px" }}>
+        {/* Personal Information Section */}
+        <div style={{ fontSize: "11px", fontWeight: 800, color: "#7C3AED", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8 }}>
+          👤 Personal Information
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "10px", marginBottom: 10 }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>EMPLOYEE ID</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>🆔</span>
+              <input
+                className="form-input"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                placeholder="EMP001"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>FULL NAME *</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>👤</span>
+              <input
+                className="form-input"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter full name"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
           </div>
         </div>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>FULL NAME</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👤</span>
-            <input
-              className="form-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter name"
-              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
-            />
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: 14 }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>MOBILE NUMBER</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>📱</span>
+              <input
+                className="form-input"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Mobile number"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>EMERGENCY CONTACT</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>🚨</span>
+              <input
+                className="form-input"
+                value={emergencyContact}
+                onChange={(e) => setEmergencyContact(e.target.value)}
+                placeholder="Emergency contact"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>EMAIL ADDRESS</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>📧</span>
+              <input
+                className="form-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Work Information Section */}
+        <div style={{ fontSize: "11px", fontWeight: 800, color: "#7C3AED", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8, marginTop: 10 }}>
+          💼 Work Information
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: 10 }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>DEPARTMENT</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>🏢</span>
+              <input
+                className="form-input"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                placeholder="e.g. Sales, Support, Android"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>DESIGNATION</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>👔</span>
+              <input
+                className="form-input"
+                value={designation}
+                onChange={(e) => {
+                  setDesignation(e.target.value);
+                  setJobTitle(e.target.value);
+                }}
+                placeholder="e.g. Sales Associate, Technician"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>DATE OF JOINING</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>📅</span>
+              <input
+                type="date"
+                className="form-input"
+                value={dateOfJoining}
+                onChange={(e) => setDateOfJoining(e.target.value)}
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: 14 }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>WORK SHIFT</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>⏰</span>
+              <select
+                className="form-input"
+                value={shift}
+                onChange={(e) => setShift(e.target.value)}
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
+              >
+                <option value="Full Day (9:00 AM - 7:00 PM)">Full Day (9:00 AM - 7:00 PM)</option>
+                <option value="Morning Shift (8:00 AM - 4:00 PM)">Morning Shift (8:00 AM - 4:00 PM)</option>
+                <option value="Evening Shift (1:00 PM - 9:00 PM)">Evening Shift (1:00 PM - 9:00 PM)</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>BRANCH ACCESS</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>🏛️</span>
+              <input
+                className="form-input"
+                value={branchAccess}
+                onChange={(e) => setBranchAccess(e.target.value)}
+                placeholder="e.g. Sangli, Pune, All Branches"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Tracking & Status Settings */}
+        <div style={{ fontSize: "11px", fontWeight: 800, color: "#7C3AED", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8, marginTop: 10 }}>
+          🔒 Settings & Status
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: 14 }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>LOCATION TRACKING</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>📍</span>
+              <select
+                className="form-input"
+                value={locationTracking}
+                onChange={(e) => setLocationTracking(e.target.value)}
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
+              >
+                <option value="Enabled">Enabled</option>
+                <option value="Disabled">Disabled</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>EMPLOYEE STATUS</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>✓</span>
+              <select
+                className="form-input"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
+              >
+                <option value="Active">Active / Verified</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Credentials & Address */}
+        <div style={{ fontSize: "11px", fontWeight: 800, color: "#7C3AED", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: 8, marginTop: 10 }}>
+          🔐 Credentials & Address
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: 10 }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>LOGIN PASSWORD</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>🔑</span>
+              <input
+                type="text"
+                className="form-input"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setIsPasswordEdited(true);
+                }}
+                placeholder="Set password"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>RESIDENTIAL ADDRESS</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
+              <span style={{ fontSize: 13 }}>🏠</span>
+              <input
+                className="form-input"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Residential Address"
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.2fr 1fr", gap: "10px", marginBottom: 8 }}>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PHONE NUMBER</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📱</span>
-            <input
-              className="form-input"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="9876543210"
-              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
-            />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ROLE</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>💼</span>
-            <select
-              className="form-input"
-              value={jobTitle}
-              onChange={(e) => setJobTitle(e.target.value)}
-              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
-            >
-              <option value="Sales Associate">Sales Associate</option>
-              <option value="Technician">Technician</option>
-              <option value="Support Specialist">Support Specialist</option>
-              <option value="Inventory Manager">Inventory Manager</option>
-              <option value="Delivery Agent">Delivery Agent</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>LOGIN PASSWORD</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🔐</span>
-            <input
-              type="text"
-              className="form-input"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setIsPasswordEdited(true);
-              }}
-              placeholder="Set password"
-              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="form-group" style={{ marginBottom: 8 }}>
-        <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ADDRESS</label>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "6px 10px" }}>
-          <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, marginTop: 2 }}>🏠</span>
-          <textarea
-            className="form-textarea"
-            rows={3}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Residential Address"
-            style={{ border: "none", background: "transparent", padding: "4px 8px", color: "#1E293B", fontWeight: 600, resize: "none", width: "100%", outline: "none" }}
-          />
-        </div>
-      </div>
-
-      <div className="form-group" style={{ marginBottom: 8 }}>
-        <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>EMAIL ADDRESS (OPTIONAL)</label>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-          <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📧</span>
-          <input
-            className="form-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="email@example.com"
-            style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
-          />
-        </div>
-      </div>
-
-      <div className="modal-actions" style={{ justifyContent: "flex-start", gap: 12, marginTop: 8 }}>
+      <div className="modal-actions" style={{ justifyContent: "flex-end", gap: 12, marginTop: 12, borderTop: "1px solid #F1F5F9", paddingTop: 10 }}>
+        <button className="btn btn-ghost" onClick={onClose} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B", fontWeight: 700 }}>
+          Cancel
+        </button>
         <button
           className="btn btn-primary"
           onClick={handleSave}
           disabled={isSaving}
-          style={{ opacity: isSaving ? 0.7 : 1 }}
+          style={{ opacity: isSaving ? 0.7 : 1, padding: "8px 20px" }}
         >
-          {isSaving ? "Saving..." : "💾 Save Employee"}
-        </button>
-        <button className="btn btn-ghost" onClick={onClose} style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", color: "#7C3AED", fontWeight: 700 }}>
-          Cancel
+          {isSaving ? "Saving..." : "💾 Save Employee Details"}
         </button>
       </div>
     </Modal>
+  );
+}
+
+export function EmployeeDetailsModal({ employee, onClose }: { employee: User; onClose: () => void }) {
+  if (!employee) return null;
+
+  const initials = (employee.name || "U")
+    .split(" ")
+    .filter(Boolean)
+    .map((s) => s[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
+  return (
+    <div
+      className="modal-backdrop"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        background: "rgba(15, 23, 42, 0.55)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px"
+      }}
+    >
+      <div
+        className="modal"
+        style={{
+          maxWidth: 860,
+          width: "100%",
+          maxHeight: "85vh",
+          display: "flex",
+          flexDirection: "column",
+          background: "#FFFFFF",
+          borderRadius: "24px",
+          boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
+          padding: "24px 28px",
+          color: "#1E293B",
+          fontFamily: "system-ui, -apple-system, sans-serif"
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid #F1F5F9", flexShrink: 0 }}>
+          <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#0F172A" }}>Employee Details</h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: "#F1F5F9",
+              border: "none",
+              fontSize: "18px",
+              color: "#64748B",
+              cursor: "pointer",
+              width: "36px",
+              height: "36px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "background 0.2s"
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Scrollable Content Body */}
+        <div style={{ overflowY: "auto", flex: 1, paddingRight: "4px", paddingBottom: "16px" }}>
+          {/* 2-Column Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }} className="emp-details-grid">
+            {/* Left Column */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* Top Profile Header */}
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "4px 0" }}>
+                <div
+                  style={{
+                    width: 70,
+                    height: 70,
+                    borderRadius: "50%",
+                    background: "#EEF2FF",
+                    color: "#4F46E5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "26px",
+                    fontWeight: 800,
+                    boxShadow: "0 4px 14px rgba(79, 70, 229, 0.15)",
+                    flexShrink: 0
+                  }}
+                >
+                  {initials}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#0F172A" }}>{employee.name}</h3>
+                  <span style={{ fontSize: "14px", color: "#64748B", fontWeight: 500 }}>
+                    {employee.designation || employee.jobTitle || (employee.role === "superadmin" ? "Super Admin" : employee.role === "manager" ? "Manager" : "Sales Associate")}
+                  </span>
+                  {employee.department && (
+                    <div>
+                      <span style={{ background: "#F3EEFF", color: "#7C3AED", fontSize: "11px", fontWeight: 700, padding: "3px 10px", borderRadius: "999px", display: "inline-block", marginTop: "2px" }}>
+                        {employee.department}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Personal Information Card */}
+              <div style={{ border: "1px solid #E2E8F0", borderRadius: "18px", padding: "18px", background: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", border: "2px solid #64748B", display: "inline-block" }}></span>
+                  PERSONAL INFORMATION
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#64748B", fontWeight: 500 }}>Full Name:</span>
+                    <strong style={{ color: "#0F172A", fontWeight: 700 }}>{employee.name || "N/A"}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#64748B", fontWeight: 500 }}>Email:</span>
+                    <span style={{ color: "#2563EB", fontWeight: 600 }}>{employee.email || employee.username || "N/A"}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#64748B", fontWeight: 500 }}>Mobile:</span>
+                    <strong style={{ color: "#0F172A", fontWeight: 700 }}>{employee.phone || "N/A"}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#64748B", fontWeight: 500 }}>Emergency Contact:</span>
+                    <strong style={{ color: "#0F172A", fontWeight: 700 }}>{employee.emergencyContact || employee.phone || "N/A"}</strong>
+                  </div>
+                </div>
+
+                {/* 2 Sub-Cards for Status & Location */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "16px" }}>
+                  <div style={{ border: "1px solid #E2E8F0", borderRadius: "14px", padding: "10px 4px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", gap: "6px", background: "#FFFFFF" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 800, color: "#475569", lineHeight: "1.2" }}>
+                      <span style={{ display: "block", marginBottom: 2 }}>✓</span>
+                      EMPLOYEE STATUS
+                    </div>
+                    <span style={{ background: "#DCFCE7", color: "#166534", fontSize: "11px", fontWeight: 700, padding: "3px 8px", borderRadius: "999px" }}>
+                      {employee.status || "Active"}
+                    </span>
+                  </div>
+
+                  <div style={{ border: "1px solid #E2E8F0", borderRadius: "14px", padding: "10px 4px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", gap: "6px", background: "#FFFFFF" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 800, color: "#475569", lineHeight: "1.2" }}>
+                      <span style={{ display: "block", marginBottom: 2 }}>📍</span>
+                      LOCATION TRACKING
+                    </div>
+                    <span style={{ background: "#DBEAFE", color: "#1E40AF", fontSize: "11px", fontWeight: 700, padding: "3px 8px", borderRadius: "999px" }}>
+                      {employee.locationTracking || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Work Information */}
+              <div style={{ border: "1px solid #E2E8F0", borderRadius: "18px", padding: "18px", background: "#FFFFFF" }}>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>💼</span> WORK INFORMATION
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#64748B" }}>Employee ID:</span>
+                    <strong style={{ color: "#0F172A", fontWeight: 700 }}>{employee.employeeId || employee.id || "N/A"}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#64748B" }}>Date of Joining:</span>
+                    <span style={{ color: "#334155", fontWeight: 600 }}>{employee.dateOfJoining || "N/A"}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#64748B" }}>Departments:</span>
+                    <span style={{ background: employee.department ? "#F3EEFF" : "transparent", color: employee.department ? "#7C3AED" : "#64748B", fontSize: "11px", fontWeight: 700, padding: employee.department ? "2px 8px" : 0, borderRadius: "999px" }}>
+                      {employee.department || "N/A"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#64748B" }}>Designation:</span>
+                    <span style={{ color: "#334155", fontWeight: 600 }}>{employee.designation || employee.jobTitle || "N/A"}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#64748B" }}>Role:</span>
+                    <strong style={{ color: "#0F172A" }}>{employee.role ? (employee.role.charAt(0).toUpperCase() + employee.role.slice(1)) : "Employee"}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#64748B" }}>Shift:</span>
+                    <span style={{ color: "#334155", fontWeight: 600 }}>{employee.shift || "N/A"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Branch Access */}
+              <div style={{ border: "1px solid #E2E8F0", borderRadius: "18px", padding: "16px", background: "#FFFFFF" }}>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>🏛️</span> BRANCH ACCESS
+                </div>
+                <div>
+                  {employee.branchAccess ? (
+                    <span style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#334155", fontSize: "12px", fontWeight: 600, padding: "4px 12px", borderRadius: "8px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981" }}></span>
+                      {employee.branchAccess}
+                    </span>
+                  ) : (
+                    <span style={{ color: "#94A3B8", fontSize: "13px" }}>N/A</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Access Permissions */}
+              <div style={{ border: "1px solid #E2E8F0", borderRadius: "18px", padding: "16px", background: "#FFFFFF" }}>
+                <div style={{ fontSize: "12px", fontWeight: 800, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>🔒</span> ACCESS PERMISSIONS
+                </div>
+                <div>
+                  <span style={{ color: "#334155", fontSize: "13px", fontWeight: 600 }}>
+                    {employee.role === "superadmin"
+                      ? "Super Admin (Full System Access)"
+                      : employee.role === "manager"
+                      ? "Manager Access (Dashboard & Team Control)"
+                      : "Standard Employee Access"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -985,6 +1360,7 @@ function EmployeesSection() {
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [viewingWork, setViewingWork] = useState<User | null>(null);
+  const [viewingDetails, setViewingDetails] = useState<User | null>(null);
 
   const remove = (id: string) => {
     if (!confirm("Delete this employee?")) return;
@@ -1049,8 +1425,11 @@ function EmployeesSection() {
                   transition: "transform 0.2s ease, boxShadow 0.2s ease"
                 }}
               >
-                {/* Header Row */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                {/* Header Row - Clickable to open Employee Details Card */}
+                <div 
+                  onClick={() => setViewingDetails(e)}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, cursor: "pointer" }}
+                >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{
                       width: "44px",
@@ -1134,11 +1513,19 @@ function EmployeesSection() {
                 <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", gap: "8px", marginTop: "auto", paddingTop: "4px" }}>
                   <button
                     className="btn btn-sm"
+                    onClick={() => setViewingDetails(e)}
+                    title="View Employee Card Details"
+                    style={{ background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE", fontWeight: 700, borderRadius: "10px", padding: "6px 12px", fontSize: "12px" }}
+                  >
+                    👤 Details
+                  </button>
+                  <button
+                    className="btn btn-sm"
                     onClick={() => setViewingWork(e)}
                     title="View Work Details"
                     style={{ background: "#F5F3FF", color: "#7C3AED", border: "1px solid #E9D8FD", fontWeight: 700, borderRadius: "10px", padding: "6px 12px", fontSize: "12px" }}
                   >
-                    📊 View Work
+                    📊 Work
                   </button>
                   <button
                     className="btn btn-sm"
@@ -1194,6 +1581,12 @@ function EmployeesSection() {
         <EmployeeWorkDetailsModal
           employee={viewingWork}
           onClose={() => setViewingWork(null)}
+        />
+      )}
+      {viewingDetails && (
+        <EmployeeDetailsModal
+          employee={viewingDetails}
+          onClose={() => setViewingDetails(null)}
         />
       )}
     </>
@@ -2739,7 +3132,7 @@ function OrderApprovalSection() {
                   )}
                   <div className="data-row"><span className="data-label">Assigned</span><span className="data-value">{o.assignedToName ?? "—"}</span></div>
                 </div>
-                <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
                   {o.status === "Pending" ? (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--biscuit-light)", padding: "8px 12px", borderRadius: "8px" }}>
                       <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--brown-dark)" }}>DISCOUNT (%)</span>
@@ -2763,26 +3156,78 @@ function OrderApprovalSection() {
                     ) : null
                   )}
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "6px" }}>
-                    <div style={{ display: "flex", flexDirection: "column" }}>
-                      <span style={{ fontWeight: 700, color: "var(--brown-dark)", fontSize: 16 }}>
-                        ₹{calculatedTotal.toLocaleString()}
-                      </span>
-                      {o.status === "Pending" && currentDiscount > 0 && (
-                        <span style={{ fontSize: "10px", color: "var(--brown)" }}>Includes discount</span>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <button className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", fontSize: 11, background: (!o.docType || o.docType === "Bill") ? "#e0f2fe" : undefined, borderColor: "#bae6fd", color: (!o.docType || o.docType === "Bill") ? "#0369a1" : undefined, fontWeight: (!o.docType || o.docType === "Bill") ? 700 : 500 }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 View Bill</button>
-                      <button className="btn btn-ghost btn-sm" style={{ padding: "4px 8px", fontSize: 11, background: o.docType === "Order Copy" ? "#f3e8ff" : undefined, borderColor: "#e9d5ff", color: o.docType === "Order Copy" ? "#6D28D9" : undefined, fontWeight: o.docType === "Order Copy" ? 700 : 500 }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 View Order Copy</button>
-                      {o.status === "Pending" ? (
-                        <div className="actions-row">
-                          <button className="btn btn-success btn-sm" onClick={() => decide(o.id, "Approved", editDiscounts[o.id])}>Approve</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => decide(o.id, "Rejected")}>Reject</button>
-                        </div>
-                      ) : null}
-                    </div>
+                  {/* Price Row */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", width: "100%" }}>
+                    <span style={{ fontWeight: 800, color: "var(--brown-dark)", fontSize: 18 }}>
+                      ₹{calculatedTotal.toLocaleString()}
+                    </span>
+                    {o.status === "Pending" && currentDiscount > 0 && (
+                      <span style={{ fontSize: "11px", color: "var(--brown)", fontWeight: 500 }}>Includes discount</span>
+                    )}
                   </div>
+
+                  {/* Document Buttons Row (Clean 50-50 equal width inside card) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", boxSizing: "border-box" }}>
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      style={{ 
+                        flex: "1 1 0px", 
+                        minWidth: 0,
+                        padding: "7px 8px", 
+                        fontSize: 11, 
+                        justifyContent: "center",
+                        borderRadius: "10px",
+                        background: (!o.docType || o.docType === "Bill") ? "#e0f2fe" : "#ffffff", 
+                        border: (!o.docType || o.docType === "Bill") ? "1px solid #bae6fd" : "1px solid #e2e8f0", 
+                        color: (!o.docType || o.docType === "Bill") ? "#0369a1" : "#475569", 
+                        fontWeight: (!o.docType || o.docType === "Bill") ? 700 : 500,
+                        whiteSpace: "nowrap",
+                        boxSizing: "border-box"
+                      }} 
+                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                    >
+                      🧾 View Bill
+                    </button>
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      style={{ 
+                        flex: "1 1 0px", 
+                        minWidth: 0,
+                        padding: "7px 8px", 
+                        fontSize: 11, 
+                        justifyContent: "center",
+                        borderRadius: "10px",
+                        background: o.docType === "Order Copy" ? "#f3e8ff" : "#ffffff", 
+                        border: o.docType === "Order Copy" ? "1px solid #e9d5ff" : "1px solid #e2e8f0", 
+                        color: o.docType === "Order Copy" ? "#6D28D9" : "#475569", 
+                        fontWeight: o.docType === "Order Copy" ? 700 : 500,
+                        whiteSpace: "nowrap",
+                        boxSizing: "border-box"
+                      }} 
+                      onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
+                    >
+                      📄 View Order Copy
+                    </button>
+                  </div>
+
+                  {o.status === "Pending" && (
+                    <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "4px" }}>
+                      <button 
+                        className="btn btn-success btn-sm" 
+                        style={{ flex: 1, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }} 
+                        onClick={() => decide(o.id, "Approved", editDiscounts[o.id])}
+                      >
+                        Approve
+                      </button>
+                      <button 
+                        className="btn btn-danger btn-sm" 
+                        style={{ flex: 1, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }} 
+                        onClick={() => decide(o.id, "Rejected")}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
