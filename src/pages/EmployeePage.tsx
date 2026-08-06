@@ -1781,13 +1781,15 @@ export function OrderDocumentModal({
       )}
 
       <div id="printable-order-document" style={{
-        padding: "20px",
+        padding: "16px",
         background: "#ffffff",
         borderRadius: "12px",
         border: "1px solid #E2E8F0",
         fontFamily: "'Inter', sans-serif",
         color: "#1e293b",
         maxWidth: "600px",
+        width: "100%",
+        boxSizing: "border-box",
         margin: "0 auto"
       }}>
         {/* Document Header */}
@@ -1797,12 +1799,14 @@ export function OrderDocumentModal({
           alignItems: "flex-start",
           borderBottom: "2px solid #334155",
           paddingBottom: "16px",
-          marginBottom: "20px"
+          marginBottom: "20px",
+          flexWrap: "wrap",
+          gap: "12px"
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
             <img src="/logo.png" alt="Star Home Logo" style={{ width: "48px", height: "48px", objectFit: "contain" }} />
             <div>
-              <h2 style={{ margin: 0, color: "#0f172a", fontSize: "20px", fontWeight: 800 }}>STAR HOME APPLIANCES</h2>
+              <h2 style={{ margin: 0, color: "#0f172a", fontSize: "18px", fontWeight: 800 }}>STAR HOME APPLIANCES</h2>
               <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#64748b" }}>
                 Sales & Services · Home & Electrical Appliances
               </p>
@@ -1832,7 +1836,7 @@ export function OrderDocumentModal({
         {/* Customer & Order Details */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
           gap: "16px",
           marginBottom: "20px",
           background: "#f8fafc",
@@ -1870,33 +1874,35 @@ export function OrderDocumentModal({
           </div>
         </div>
 
-        {/* Items Table */}
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "20px" }}>
-          <thead>
-            <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
-              <th style={{ padding: "8px 12px", fontSize: "12px", color: "#475569", borderBottom: "1px solid #cbd5e1" }}>Item Description</th>
-              <th style={{ padding: "8px 12px", fontSize: "12px", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "center" }}>Qty</th>
-              <th style={{ padding: "8px 12px", fontSize: "12px", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "right" }}>Unit Price</th>
-              <th style={{ padding: "8px 12px", fontSize: "12px", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "right" }}>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9" }}>
-                <div style={{ fontWeight: 600, fontSize: "13px", color: "#0f172a" }}>{order.productName}</div>
-                {product?.brand && <div style={{ fontSize: "11px", color: "#64748b" }}>Brand: {product.brand}</div>}
-                {product?.sku && <div style={{ fontSize: "11px", color: "#64748b" }}>SKU: {product.sku}</div>}
-              </td>
-              <td style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9", textAlign: "center", fontWeight: 600 }}>{order.qty}</td>
-              <td style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9", textAlign: "right" }}>₹{unitPrice.toLocaleString()}</td>
-              <td style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9", textAlign: "right", fontWeight: 600 }}>₹{orderBasePrice.toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
+        {/* Items Table with horizontal overflow wrapper */}
+        <div style={{ width: "100%", overflowX: "auto", WebkitOverflowScrolling: "touch", marginBottom: "20px" }}>
+          <table style={{ width: "100%", minWidth: "440px", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#f1f5f9", textAlign: "left" }}>
+                <th style={{ padding: "8px 12px", fontSize: "12px", color: "#475569", borderBottom: "1px solid #cbd5e1", whiteSpace: "nowrap" }}>Item Description</th>
+                <th style={{ padding: "8px 12px", fontSize: "12px", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "center", whiteSpace: "nowrap" }}>Qty</th>
+                <th style={{ padding: "8px 12px", fontSize: "12px", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "right", whiteSpace: "nowrap" }}>Unit Price</th>
+                <th style={{ padding: "8px 12px", fontSize: "12px", color: "#475569", borderBottom: "1px solid #cbd5e1", textAlign: "right", whiteSpace: "nowrap" }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9" }}>
+                  <div style={{ fontWeight: 600, fontSize: "13px", color: "#0f172a" }}>{order.productName}</div>
+                  {product?.brand && <div style={{ fontSize: "11px", color: "#64748b" }}>Brand: {product.brand}</div>}
+                  {product?.sku && <div style={{ fontSize: "11px", color: "#64748b" }}>SKU: {product.sku}</div>}
+                </td>
+                <td style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9", textAlign: "center", fontWeight: 600 }}>{order.qty}</td>
+                <td style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9", textAlign: "right", whiteSpace: "nowrap" }}>₹{unitPrice.toLocaleString()}</td>
+                <td style={{ padding: "10px 12px", borderBottom: "1px solid #f1f5f9", textAlign: "right", fontWeight: 600, whiteSpace: "nowrap" }}>₹{orderBasePrice.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         {/* Calculation Summary */}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "24px" }}>
-          <div style={{ width: "220px", display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "24px", width: "100%" }}>
+          <div style={{ width: "100%", maxWidth: "240px", display: "flex", flexDirection: "column", gap: "6px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#64748b" }}>
               <span>Subtotal:</span>
               <span>₹{orderBasePrice.toLocaleString()}</span>
@@ -1930,14 +1936,14 @@ export function OrderDocumentModal({
       </div>
 
       {/* Modal Actions */}
-      <div className="modal-actions" style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" }}>
-        <button className="btn btn-ghost" onClick={onClose}>
+      <div className="modal-actions" style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap", width: "100%" }}>
+        <button className="btn btn-ghost" onClick={onClose} style={{ flex: "1 1 auto" }}>
           Close
         </button>
         <button
           className="btn btn-primary"
           onClick={handlePrint}
-          style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", border: "none", color: "#fff" }}
+          style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)", border: "none", color: "#fff", flex: "1 1 auto" }}
         >
           🖨️ Print / Save PDF
         </button>
@@ -1946,7 +1952,7 @@ export function OrderDocumentModal({
             <button
               className="btn btn-success"
               disabled
-              style={{ background: "#16a34a", border: "none", color: "#fff", fontWeight: 700, cursor: "default" }}
+              style={{ background: "#16a34a", border: "none", color: "#fff", fontWeight: 700, cursor: "default", flex: "1 1 auto" }}
             >
               ✅ Sent to Admin
             </button>
@@ -1954,7 +1960,7 @@ export function OrderDocumentModal({
             <button
               className="btn btn-primary"
               onClick={handleSendToAdmin}
-              style={{ background: "linear-gradient(135deg, #16a34a, #15803d)", border: "none", color: "#fff", fontWeight: 700 }}
+              style={{ background: "linear-gradient(135deg, #16a34a, #15803d)", border: "none", color: "#fff", fontWeight: 700, flex: "1 1 auto" }}
             >
               📤 Send to Admin
             </button>

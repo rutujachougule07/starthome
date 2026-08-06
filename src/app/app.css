@@ -3615,17 +3615,35 @@ textarea:focus {
 }
 
 /* --- Tables ----------------------------------------------------- */
-.table-wrap {
-  overflow: hidden;
+.table-wrap,
+.Table-container {
+  overflow-x: auto !important;
+  overflow-y: hidden;
+  max-width: 100%;
+  width: 100%;
+  -webkit-overflow-scrolling: touch;
   padding: 0 !important;
+}
+
+.table-wrap::-webkit-scrollbar,
+.Table-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb,
+.Table-container::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.25);
+  border-radius: 999px;
 }
 
 .tbl,
 .data-table,
+.Data-table,
 table {
   border-collapse: separate !important;
   border-spacing: 0 !important;
   width: 100%;
+  min-width: 600px;
 }
 
 .tbl th,

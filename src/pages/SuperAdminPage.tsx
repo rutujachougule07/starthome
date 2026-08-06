@@ -1945,7 +1945,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
 
   return (
     <Modal title={modalTitle} onClose={onClose} className="modal-lg">
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px", marginBottom: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", marginBottom: 8 }}>
         <div className="form-group">
           <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PRODUCT NAME</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
@@ -5892,8 +5892,8 @@ export function SuperAdminGodownSection() {
   };
 
   const renderTable = (prods: Product[]) => (
-    <div className="table-wrap">
-      <table className="tbl">
+    <div className="table-wrap" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", width: "100%" }}>
+      <table className="tbl" style={{ minWidth: "650px" }}>
         <thead>
           <tr>
             <th>IMAGE</th>
@@ -6037,12 +6037,12 @@ export function SuperAdminGodownSection() {
       </div>
 
       <div className="panel" style={{ margin: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "20px", width: "100%", flexWrap: "nowrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "nowrap" }}>
-            <h3 className="panel-title" style={{ display: "flex", alignItems: "center", gap: 6, margin: 0, fontSize: "16px", fontWeight: 800, whiteSpace: "nowrap" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "20px", width: "100%", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <h3 className="panel-title" style={{ display: "flex", alignItems: "center", gap: 6, margin: 0, fontSize: "16px", fontWeight: 800 }}>
               <span>🏭 {activeTab} Inventory</span>
             </h3>
-            <span style={{ fontSize: 12, background: "#F3EEFF", color: "#7C3AED", padding: "4px 12px", borderRadius: "10px", fontWeight: 700, whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 12, background: "#F3EEFF", color: "#7C3AED", padding: "4px 12px", borderRadius: "10px", fontWeight: 700 }}>
               {activeProducts.length} Products | Total Qty: {activeTotalQty} | Value: ₹{activeTotalCost.toLocaleString()}
             </span>
           </div>

@@ -275,7 +275,7 @@ export function ProductDetailPage() {
           </h3>
 
           <div style={{ overflowX: "auto", borderRadius: "14px", border: "1px solid #E2E8F0", marginBottom: "24px" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "14px" }}>
+            <table style={{ width: "100%", minWidth: "550px", borderCollapse: "collapse", fontSize: "14px" }}>
               <thead>
                 <tr style={{ background: "#F0F5FF", borderBottom: "1px solid #E2E8F0" }}>
                   <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 700, fontSize: "11px", letterSpacing: "0.5px" }}>DATE ADDED</th>
