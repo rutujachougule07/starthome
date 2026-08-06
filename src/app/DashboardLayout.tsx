@@ -450,7 +450,7 @@ export function Modal({ title, onClose, children, className }: { title: string; 
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "16px",
+        padding: "10px",
         background: "rgba(15, 23, 42, 0.65)",
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)"
@@ -464,10 +464,10 @@ export function Modal({ title, onClose, children, className }: { title: string; 
         style={{
           background: "#FFFFFF",
           borderRadius: "24px",
-          padding: "22px 26px",
-          width: "92%",
+          padding: "clamp(14px, 3.5vw, 24px)",
+          width: "96%",
           maxWidth: maxWidth + "px",
-          maxHeight: "90vh",
+          maxHeight: "92vh",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
