@@ -219,12 +219,56 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
           75% { transform: rotate(5deg); }
           100% { transform: rotate(0); }
         }
+        .admin-notif-banner {
+          position: fixed;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(135deg, #ff416c, #ff4b2b);
+          color: white;
+          padding: 12px 18px 12px 24px;
+          border-radius: 100px;
+          z-index: 9999;
+          box-shadow: 0 12px 30px rgba(255, 65, 108, 0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          fontWeight: 500;
+          border: 1px solid rgba(255,255,255,0.25);
+          animation: popupSlideDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          max-width: 90vw;
+          box-sizing: border-box;
+        }
+        @media (max-width: 640px) {
+          .admin-notif-banner {
+            top: 10px;
+            width: calc(100vw - 20px);
+            max-width: 480px;
+            padding: 10px 12px 10px 16px;
+            border-radius: 50px;
+            gap: 10px;
+          }
+          .admin-notif-text-full {
+            display: none !important;
+          }
+          .admin-notif-text-short {
+            display: inline-block !important;
+          }
+        }
+        @media (min-width: 641px) {
+          .admin-notif-text-full {
+            display: inline-block !important;
+          }
+          .admin-notif-text-short {
+            display: none !important;
+          }
+        }
         .btn-review-now:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
         }
         .btn-dismiss-pop:hover {
-          background: rgba(255,255,255,0.2) !important;
+          background: rgba(255,255,255,0.3) !important;
         }
         .btn-success {
           background: linear-gradient(135deg, #7C3AED 0%, #EC4899 100%) !important;
@@ -240,49 +284,67 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
         }
       `}</style>
       {pendingApprovals > 0 && showNotification && (
-        <div style={{
-          position: "fixed",
-          top: "24px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          background: "linear-gradient(135deg, #ff416c, #ff4b2b)",
-          color: "white",
-          padding: "14px 14px 14px 28px",
-          borderRadius: "100px",
-          zIndex: 9999,
-          boxShadow: "0 15px 35px rgba(255, 65, 108, 0.4), inset 0 2px 0 rgba(255,255,255,0.3)",
-          display: "flex",
-          alignItems: "center",
-          gap: "24px",
-          fontWeight: 500,
-          border: "1px solid rgba(255,255,255,0.2)",
-          animation: "popupSlideDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards"
-        }}>
-          <span style={{ fontSize: "28px", display: "inline-block", animation: "bellRing 1.5s ease-in-out infinite", transformOrigin: "top center", filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.2))" }}>🔔</span>
-          <span style={{ fontSize: "16px", letterSpacing: "0.3px", fontWeight: 600 }}>You have <strong style={{ fontSize: "18px", background: "rgba(255,255,255,0.2)", padding: "2px 10px", borderRadius: "12px", margin: "0 4px" }}>{pendingApprovals}</strong> pending request(s) for approval!</span>
-          <button
-            className="btn-review-now"
-            onClick={() => {
-              setShowNotification(false);
-              setActive("orders");
-            }}
-            style={{
-              background: "#ffffff",
-              border: "none",
-              color: "#ff416c",
-              padding: "12px 28px",
-              borderRadius: "100px",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: "14px",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
-              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-            }}
-          >
-            Review Now
-          </button>
+        <div className="admin-notif-banner">
+          <span style={{ fontSize: "22px", display: "inline-block", animation: "bellRing 1.5s ease-in-out infinite", transformOrigin: "top center", flexShrink: 0 }}>🔔</span>
+          
+          <span className="admin-notif-text-full" style={{ fontSize: "15px", letterSpacing: "0.2px", fontWeight: 600, whiteSpace: "nowrap" }}>
+            You have <strong style={{ fontSize: "16px", background: "rgba(255,255,255,0.25)", padding: "3px 10px", borderRadius: "10px", margin: "0 2px" }}>{pendingApprovals}</strong> pending request(s) for approval!
+          </span>
+
+          <span className="admin-notif-text-short" style={{ fontSize: "13px", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <strong style={{ fontSize: "14px", background: "rgba(255,255,255,0.25)", padding: "2px 7px", borderRadius: "8px", marginRight: "4px" }}>{pendingApprovals}</strong>
+            Pending Approval(s)
+          </span>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, marginLeft: "auto" }}>
+            <button
+              className="btn-review-now"
+              onClick={() => {
+                setShowNotification(false);
+                setActive("orders");
+              }}
+              style={{
+                background: "#ffffff",
+                border: "none",
+                color: "#ff416c",
+                padding: "8px 16px",
+                borderRadius: "100px",
+                cursor: "pointer",
+                fontWeight: 800,
+                fontSize: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
+                whiteSpace: "nowrap",
+                transition: "all 0.2s ease"
+              }}
+            >
+              Review Now
+            </button>
+            <button
+              className="btn-dismiss-pop"
+              onClick={() => setShowNotification(false)}
+              title="Dismiss"
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                border: "none",
+                color: "#ffffff",
+                width: "28px",
+                height: "28px",
+                borderRadius: "50%",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "13px",
+                fontWeight: 700,
+                transition: "background 0.2s ease",
+                flexShrink: 0
+              }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
       <DashboardLayout role="superadmin" title="Super Admin" nav={NAV} active={active} onNav={setActive}>
