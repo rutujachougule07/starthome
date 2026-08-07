@@ -1010,243 +1010,6 @@ export function EmployeeForm({
   );
 }
 
-export function EmployeeDetailsModal({ employee, onClose }: { employee: User; onClose: () => void }) {
-  if (!employee) return null;
-
-  const initials = (employee.name || "U")
-    .split(" ")
-    .filter(Boolean)
-    .map((s) => s[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
-  return (
-    <div
-      className="modal-backdrop"
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        background: "rgba(15, 23, 42, 0.55)",
-        backdropFilter: "blur(6px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px"
-      }}
-    >
-      <div
-        className="modal"
-        style={{
-          maxWidth: 860,
-          width: "100%",
-          maxHeight: "85vh",
-          display: "flex",
-          flexDirection: "column",
-          background: "#FFFFFF",
-          borderRadius: "24px",
-          boxShadow: "0 25px 50px -12px rgba(15, 23, 42, 0.25)",
-          padding: "24px 28px",
-          color: "#1E293B",
-          fontFamily: "system-ui, -apple-system, sans-serif"
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, paddingBottom: 12, borderBottom: "1px solid #F1F5F9", flexShrink: 0 }}>
-          <h2 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#0F172A" }}>Employee Details</h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: "#F1F5F9",
-              border: "none",
-              fontSize: "18px",
-              color: "#64748B",
-              cursor: "pointer",
-              width: "36px",
-              height: "36px",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "background 0.2s"
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Scrollable Content Body */}
-        <div style={{ overflowY: "auto", flex: 1, paddingRight: "4px", paddingBottom: "16px" }}>
-          {/* 2-Column Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }} className="emp-details-grid">
-            {/* Left Column */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              {/* Top Profile Header */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", padding: "4px 0" }}>
-                <div
-                  style={{
-                    width: 70,
-                    height: 70,
-                    borderRadius: "50%",
-                    background: "#EEF2FF",
-                    color: "#4F46E5",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "26px",
-                    fontWeight: 800,
-                    boxShadow: "0 4px 14px rgba(79, 70, 229, 0.15)",
-                    flexShrink: 0
-                  }}
-                >
-                  {initials}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#0F172A" }}>{employee.name}</h3>
-                  <span style={{ fontSize: "14px", color: "#64748B", fontWeight: 500 }}>
-                    {employee.designation || employee.jobTitle || (employee.role === "superadmin" ? "Super Admin" : employee.role === "manager" ? "Manager" : "Sales Associate")}
-                  </span>
-                  {employee.department && (
-                    <div>
-                      <span style={{ background: "#F3EEFF", color: "#7C3AED", fontSize: "11px", fontWeight: 700, padding: "3px 10px", borderRadius: "999px", display: "inline-block", marginTop: "2px" }}>
-                        {employee.department}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Personal Information Card */}
-              <div style={{ border: "1px solid #E2E8F0", borderRadius: "18px", padding: "18px", background: "#FFFFFF", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
-                <div style={{ fontSize: "12px", fontWeight: 800, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", border: "2px solid #64748B", display: "inline-block" }}></span>
-                  PERSONAL INFORMATION
-                </div>
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#64748B", fontWeight: 500 }}>Full Name:</span>
-                    <strong style={{ color: "#0F172A", fontWeight: 700 }}>{employee.name || "N/A"}</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#64748B", fontWeight: 500 }}>Email:</span>
-                    <span style={{ color: "#2563EB", fontWeight: 600 }}>{employee.email || employee.username || "N/A"}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#64748B", fontWeight: 500 }}>Mobile:</span>
-                    <strong style={{ color: "#0F172A", fontWeight: 700 }}>{employee.phone || "N/A"}</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "#64748B", fontWeight: 500 }}>Emergency Contact:</span>
-                    <strong style={{ color: "#0F172A", fontWeight: 700 }}>{employee.emergencyContact || employee.phone || "N/A"}</strong>
-                  </div>
-                </div>
-
-                {/* 2 Sub-Cards for Status & Location */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "16px" }}>
-                  <div style={{ border: "1px solid #E2E8F0", borderRadius: "14px", padding: "10px 4px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", gap: "6px", background: "#FFFFFF" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 800, color: "#475569", lineHeight: "1.2" }}>
-                      <span style={{ display: "block", marginBottom: 2 }}>✓</span>
-                      EMPLOYEE STATUS
-                    </div>
-                    <span style={{ background: "#DCFCE7", color: "#166534", fontSize: "11px", fontWeight: 700, padding: "3px 8px", borderRadius: "999px" }}>
-                      {employee.status || "Active"}
-                    </span>
-                  </div>
-
-                  <div style={{ border: "1px solid #E2E8F0", borderRadius: "14px", padding: "10px 4px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-between", gap: "6px", background: "#FFFFFF" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 800, color: "#475569", lineHeight: "1.2" }}>
-                      <span style={{ display: "block", marginBottom: 2 }}>📍</span>
-                      LOCATION TRACKING
-                    </div>
-                    <span style={{ background: "#DBEAFE", color: "#1E40AF", fontSize: "11px", fontWeight: 700, padding: "3px 8px", borderRadius: "999px" }}>
-                      {employee.locationTracking || "N/A"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {/* Work Information */}
-              <div style={{ border: "1px solid #E2E8F0", borderRadius: "18px", padding: "18px", background: "#FFFFFF" }}>
-                <div style={{ fontSize: "12px", fontWeight: 800, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span>💼</span> WORK INFORMATION
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "13px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#64748B" }}>Employee ID:</span>
-                    <strong style={{ color: "#0F172A", fontWeight: 700 }}>{employee.employeeId || employee.id || "N/A"}</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#64748B" }}>Date of Joining:</span>
-                    <span style={{ color: "#334155", fontWeight: 600 }}>{employee.dateOfJoining || "N/A"}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#64748B" }}>Departments:</span>
-                    <span style={{ background: employee.department ? "#F3EEFF" : "transparent", color: employee.department ? "#7C3AED" : "#64748B", fontSize: "11px", fontWeight: 700, padding: employee.department ? "2px 8px" : 0, borderRadius: "999px" }}>
-                      {employee.department || "N/A"}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#64748B" }}>Designation:</span>
-                    <span style={{ color: "#334155", fontWeight: 600 }}>{employee.designation || employee.jobTitle || "N/A"}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#64748B" }}>Role:</span>
-                    <strong style={{ color: "#0F172A" }}>{employee.role ? (employee.role.charAt(0).toUpperCase() + employee.role.slice(1)) : "Employee"}</strong>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#64748B" }}>Shift:</span>
-                    <span style={{ color: "#334155", fontWeight: 600 }}>{employee.shift || "N/A"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Branch Access */}
-              <div style={{ border: "1px solid #E2E8F0", borderRadius: "18px", padding: "16px", background: "#FFFFFF" }}>
-                <div style={{ fontSize: "12px", fontWeight: 800, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span>🏛️</span> BRANCH ACCESS
-                </div>
-                <div>
-                  {employee.branchAccess ? (
-                    <span style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#334155", fontSize: "12px", fontWeight: 600, padding: "4px 12px", borderRadius: "8px", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10B981" }}></span>
-                      {employee.branchAccess}
-                    </span>
-                  ) : (
-                    <span style={{ color: "#94A3B8", fontSize: "13px" }}>N/A</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Access Permissions */}
-              <div style={{ border: "1px solid #E2E8F0", borderRadius: "18px", padding: "16px", background: "#FFFFFF" }}>
-                <div style={{ fontSize: "12px", fontWeight: 800, color: "#475569", letterSpacing: "0.05em", textTransform: "uppercase", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span>🔒</span> ACCESS PERMISSIONS
-                </div>
-                <div>
-                  <span style={{ color: "#334155", fontSize: "13px", fontWeight: 600 }}>
-                    {employee.role === "superadmin"
-                      ? "Super Admin (Full System Access)"
-                      : employee.role === "manager"
-                      ? "Manager Access (Dashboard & Team Control)"
-                      : "Standard Employee Access"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function EmployeeWorkDetailsModal({ employee, onClose }: { employee: User; onClose: () => void }) {
   const { tasks, orders, products } = useStore();
   const empTasks = tasks.filter((t) => t.assignedTo === employee.id);
@@ -3024,9 +2787,9 @@ function OrderApprovalSection() {
       <h2 className="page-title">Order Approvals</h2>
       <p className="page-sub">Approve or reject orders created by managers.</p>
       <div className="panel">
-        <div className="panel-head">
-          <h3 className="panel-title">Orders ({list.length})</h3>
-          <select className="form-select" style={{ maxWidth: 180 }} value={filter} onChange={(e) => setFilter(e.target.value as any)}>
+        <div className="panel-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginBottom: "16px" }}>
+          <h3 className="panel-title" style={{ margin: 0 }}>Orders ({list.length})</h3>
+          <select className="form-select" style={{ maxWidth: 180, width: "100%" }} value={filter} onChange={(e) => setFilter(e.target.value as any)}>
             <option value="all">All</option>
             <option value="Pending">Pending</option>
             <option value="Approved">Approved</option>
@@ -3050,12 +2813,12 @@ function OrderApprovalSection() {
             const creatorName = creatorUser ? `${creatorUser.name} (${creatorUser.role === "employee" ? "Employee" : creatorUser.role === "manager" ? "Manager" : "Admin"})` : (o.assignedToName ? `${o.assignedToName} (Employee)` : o.createdBy);
 
             return (
-              <div key={o.id} className="data-card">
-                <div className="data-card-header">
-                  <div>
-                    <h4 className="data-card-title">Order #{o.id}</h4>
+              <div key={o.id} className="data-card" style={{ width: "100%", boxSizing: "border-box", overflow: "hidden" }}>
+                <div className="data-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", width: "100%" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h4 className="data-card-title" style={{ wordBreak: "break-word" }}>Order #{o.id}</h4>
                     <span className="data-card-subtitle" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
-                      <span className="pill" style={{ background: "#f1f5f9", color: "#0f172a", border: "1px solid #cbd5e1", fontSize: "10px", padding: "2px 6px", fontWeight: 700 }}>
+                      <span className="pill" style={{ background: "#f1f5f9", color: "#0f172a", border: "1px solid #cbd5e1", fontSize: "10px", padding: "2px 6px", fontWeight: 700, wordBreak: "break-word", whiteSpace: "normal" }}>
                         👤 By: {creatorName}
                       </span>
                       {isIncentiveOrder ? (
@@ -3090,32 +2853,9 @@ function OrderApprovalSection() {
                       )}
                     </span>
                   </div>
-                  <div><Pill status={o.status} /></div>
+                  <div style={{ flexShrink: 0 }}><Pill status={o.status} /></div>
                 </div>
                 <div className="data-card-body">
-                  <div className="data-row">
-                    <span className="data-label">Placed By</span>
-                    <span className="data-value" style={{ fontWeight: 800, color: "var(--accent, #d97706)" }}>
-                      👤 {creatorName}
-                    </span>
-                  </div>
-                  <div className="data-row">
-                    <span className="data-label">Document Type</span>
-                    <span className="data-value">
-                      <span style={{
-                        display: "inline-block",
-                        background: o.docType === "Order Copy" ? "#f3e8ff" : "#e0f2fe",
-                        color: o.docType === "Order Copy" ? "#6D28D9" : "#0369a1",
-                        border: o.docType === "Order Copy" ? "1px solid #e9d5ff" : "1px solid #bae6fd",
-                        padding: "2px 8px",
-                        borderRadius: "6px",
-                        fontWeight: 700,
-                        fontSize: "11px"
-                      }}>
-                        {o.docType === "Order Copy" ? "📄 Order Copy" : "🧾 Bill / Invoice"}
-                      </span>
-                    </span>
-                  </div>
                   {o.bookingExpiryDate && (
                     <div className="data-row">
                       <span className="data-label">Booking Expiry</span>
@@ -3132,14 +2872,14 @@ function OrderApprovalSection() {
                   )}
                   <div className="data-row"><span className="data-label">Assigned</span><span className="data-value">{o.assignedToName ?? "—"}</span></div>
                 </div>
-                <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+                <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}>
                   {o.status === "Pending" ? (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--biscuit-light)", padding: "8px 12px", borderRadius: "8px" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--brown-dark)" }}>DISCOUNT (%)</span>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--biscuit-light)", padding: "8px 12px", borderRadius: "8px", width: "100%", boxSizing: "border-box", flexWrap: "wrap", gap: "6px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--brown-dark)", flexShrink: 0 }}>DISCOUNT (%)</span>
                       <input
                         type="number"
                         className="form-input"
-                        style={{ width: "80px", height: "30px", textAlign: "right" }}
+                        style={{ width: "80px", height: "30px", textAlign: "right", borderRadius: "6px" }}
                         value={currentDiscount}
                         onChange={(e) => setEditDiscounts({ ...editDiscounts, [o.id]: Number(e.target.value) })}
                         onWheel={(e) => (e.target as HTMLInputElement).blur()}
@@ -3149,7 +2889,7 @@ function OrderApprovalSection() {
                     </div>
                   ) : (
                     o.discount && o.discount > 0 ? (
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--brown)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--brown)", flexWrap: "wrap", gap: "4px" }}>
                         <span>Discount Applied:</span>
                         <span style={{ fontWeight: 600 }}>{o.discount}%</span>
                       </div>
@@ -3157,7 +2897,7 @@ function OrderApprovalSection() {
                   )}
 
                   {/* Price Row */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", width: "100%" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", width: "100%", boxSizing: "border-box", flexWrap: "wrap", gap: "4px" }}>
                     <span style={{ fontWeight: 800, color: "var(--brown-dark)", fontSize: 18 }}>
                       ₹{calculatedTotal.toLocaleString()}
                     </span>
@@ -3166,12 +2906,12 @@ function OrderApprovalSection() {
                     )}
                   </div>
 
-                  {/* Document Buttons Row (Clean 50-50 equal width inside card) */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", boxSizing: "border-box" }}>
+                  {/* Document Buttons Row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", boxSizing: "border-box", flexWrap: "wrap" }}>
                     <button 
                       className="btn btn-ghost btn-sm" 
                       style={{ 
-                        flex: "1 1 0px", 
+                        flex: "1 1 120px", 
                         minWidth: 0,
                         padding: "7px 8px", 
                         fontSize: 11, 
@@ -3181,7 +2921,6 @@ function OrderApprovalSection() {
                         border: (!o.docType || o.docType === "Bill") ? "1px solid #bae6fd" : "1px solid #e2e8f0", 
                         color: (!o.docType || o.docType === "Bill") ? "#0369a1" : "#475569", 
                         fontWeight: (!o.docType || o.docType === "Bill") ? 700 : 500,
-                        whiteSpace: "nowrap",
                         boxSizing: "border-box"
                       }} 
                       onClick={() => setActiveDoc({ order: o, type: "Bill" })}
@@ -3191,7 +2930,7 @@ function OrderApprovalSection() {
                     <button 
                       className="btn btn-ghost btn-sm" 
                       style={{ 
-                        flex: "1 1 0px", 
+                        flex: "1 1 120px", 
                         minWidth: 0,
                         padding: "7px 8px", 
                         fontSize: 11, 
@@ -3201,7 +2940,6 @@ function OrderApprovalSection() {
                         border: o.docType === "Order Copy" ? "1px solid #e9d5ff" : "1px solid #e2e8f0", 
                         color: o.docType === "Order Copy" ? "#6D28D9" : "#475569", 
                         fontWeight: o.docType === "Order Copy" ? 700 : 500,
-                        whiteSpace: "nowrap",
                         boxSizing: "border-box"
                       }} 
                       onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
@@ -3211,17 +2949,17 @@ function OrderApprovalSection() {
                   </div>
 
                   {o.status === "Pending" && (
-                    <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "4px" }}>
+                    <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "4px", flexWrap: "wrap" }}>
                       <button 
                         className="btn btn-success btn-sm" 
-                        style={{ flex: 1, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }} 
+                        style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }} 
                         onClick={() => decide(o.id, "Approved", editDiscounts[o.id])}
                       >
                         Approve
                       </button>
                       <button 
                         className="btn btn-danger btn-sm" 
-                        style={{ flex: 1, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }} 
+                        style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }} 
                         onClick={() => decide(o.id, "Rejected")}
                       >
                         Reject
