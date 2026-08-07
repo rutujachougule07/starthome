@@ -534,8 +534,20 @@ function OrderUpdates() {
     }
   };
 
-  const myOrders = orders.filter((o) => o.assignedTo === currentUser?.id && o.sentToEmployee && (o.status === "Approved" || o.status === "Delivered"));
-  const otherOrders = orders.filter((o) => o.assignedTo !== currentUser?.id && o.sentToEmployee && (o.status === "Approved" || o.status === "Delivered"));
+  const isMyOrder = (o: Order) => {
+    if (!o.sentToEmployee) return false;
+    if (o.status !== "Approved" && o.status !== "Delivered") return false;
+    return (
+      o.assignedTo === currentUser?.id ||
+      o.assignedTo === currentUser?.name ||
+      (o.assignedToName && o.assignedToName.toLowerCase() === currentUser?.name?.toLowerCase()) ||
+      (o.createdBy && o.createdBy.toLowerCase() === currentUser?.name?.toLowerCase())
+    );
+  };
+
+  const myOrders = orders.filter(isMyOrder);
+  const otherOrders = orders.filter((o) => o.sentToEmployee && (o.status === "Approved" || o.status === "Delivered") && !isMyOrder(o));
+
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
@@ -600,39 +612,57 @@ function OrderUpdates() {
                   </div>
                   <div><Pill status={o.status} /></div>
                 </div>
+
                 <div className="data-card-body">
                   <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
                   <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
                 </div>
-                <div className="data-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                    <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 Bill</button>
-                    <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
+
+                <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 20, cursor: "pointer", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                    >
+                      🧾 Bill
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 20, cursor: "pointer", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                      onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
+                    >
+                      📄 Order Copy
+                    </button>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                    {o.status === "Approved" ? (
-                      <button
-                        className="btn btn-success btn-sm"
-                        style={{ padding: "5px 12px", fontSize: 11, borderRadius: 8, background: "#10B981", color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 700 }}
-                        onClick={() => {
-                          if (confirm("Mark this order as delivered?")) {
-                            setState((s) => ({
-                              ...s,
-                              orders: s.orders.map((order) => order.id === o.id ? { ...order, status: "Delivered" } : order)
-                            }));
-                          }
-                        }}
-                      >
-                        🚚 Mark Delivered
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: 11, color: "#10B981", fontWeight: 700, background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "3px 10px", borderRadius: 999 }}>Completed</span>
-                    )}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%" }}>
+                    <div>
+                      {o.status === "Approved" ? (
+                        <button
+                          className="btn btn-success btn-sm"
+                          style={{ padding: "6px 14px", fontSize: 11, borderRadius: 20, background: "linear-gradient(135deg, #06B6D4 0%, #0D9488 100%)", color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 800, boxShadow: "0 3px 10px rgba(13, 148, 136, 0.25)" }}
+                          onClick={() => {
+                            if (confirm("Mark this order as delivered?")) {
+                              setState((s) => ({
+                                ...s,
+                                orders: s.orders.map((order) => order.id === o.id ? { ...order, status: "Delivered" } : order)
+                              }));
+                            }
+                          }}
+                        >
+                          🚚 Mark Delivered
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "#10B981", fontWeight: 700, background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "4px 12px", borderRadius: 20 }}>Completed</span>
+                      )}
+                    </div>
 
-                    <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
-                    <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                      <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -652,7 +682,6 @@ function OrderUpdates() {
             const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
             const brandStr = product?.brand ? ` (${product.brand})` : "";
             const isIncentiveOrder = product && (product.incentive ?? 0) > 0;
-
             const orderBasePrice = Math.round(o.total / (1 - ((o.discount || 0) / 100)));
             const orderUnitPrice = Math.round(orderBasePrice / o.qty);
 
@@ -688,20 +717,57 @@ function OrderUpdates() {
                   </div>
                   <div><Pill status={o.status} /></div>
                 </div>
+
                 <div className="data-card-body">
                   <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
-                  <div className="data-row"><span className="data-label">Assigned</span><span className="data-value">{o.assignedToName ?? "—"}</span></div>
                   <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
                 </div>
-                <div className="data-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px", borderTop: "1px solid #E2E8F0", padding: "12px 16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                    <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Bill" })}>🧾 Bill</button>
-                    <button className="btn btn-ghost btn-sm" style={{ padding: "5px 10px", fontSize: 11, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 8, cursor: "pointer", color: "#475569" }} onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}>📄 Order Copy</button>
+
+                <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 20, cursor: "pointer", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                    >
+                      🧾 Bill
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 20, cursor: "pointer", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                      onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
+                    >
+                      📄 Order Copy
+                    </button>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
-                    <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%" }}>
+                    <div>
+                      {o.status === "Approved" ? (
+                        <button
+                          className="btn btn-success btn-sm"
+                          style={{ padding: "6px 14px", fontSize: 11, borderRadius: 20, background: "linear-gradient(135deg, #06B6D4 0%, #0D9488 100%)", color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 800, boxShadow: "0 3px 10px rgba(13, 148, 136, 0.25)" }}
+                          onClick={() => {
+                            if (confirm("Mark this order as delivered?")) {
+                              setState((s) => ({
+                                ...s,
+                                orders: s.orders.map((order) => order.id === o.id ? { ...order, status: "Delivered" } : order)
+                              }));
+                            }
+                          }}
+                        >
+                          🚚 Mark Delivered
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "#10B981", fontWeight: 700, background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "4px 12px", borderRadius: 20 }}>Completed</span>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                      <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2099,10 +2165,41 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
     }, 1200);
   };
 
-  /* ── Styling Tokens ── */
-  const sectionLabel: React.CSSProperties = { fontSize: "10px", fontWeight: 800, letterSpacing: "1.4px", textTransform: "uppercase" as const, color: "#7C3AED", marginBottom: "6px", display: "flex", alignItems: "center", gap: "6px" };
-  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 14px", borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F3EEFF", fontSize: "13.5px", fontWeight: 600, color: "#1E293B", outline: "none", boxSizing: "border-box" as const };
-  const selectStyle: React.CSSProperties = { ...inputStyle, appearance: "none" as const, backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237C3AED' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center" };
+  /* ── Styling Tokens (Matches ManagerPage CreateOrderModal) ── */
+  const sectionLabel: React.CSSProperties = {
+    fontSize: "11px",
+    fontWeight: 800,
+    letterSpacing: "1.2px",
+    textTransform: "uppercase" as const,
+    color: "#7C3AED",
+    marginBottom: "6px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px"
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "13px 18px",
+    borderRadius: "50px",
+    border: "1.5px solid #E2E8F0",
+    background: "#FFFFFF",
+    fontSize: "14px",
+    fontWeight: 500,
+    color: "#1E293B",
+    outline: "none",
+    boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+    transition: "border-color .2s, box-shadow .2s",
+    boxSizing: "border-box" as const
+  };
+
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    appearance: "none" as const,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237C3AED' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 18px center"
+  };
 
   return createPortal(
     <div
@@ -2120,30 +2217,30 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
         style={{
           background: "#FFFFFF",
           borderRadius: "28px",
-          width: "100%", maxWidth: "540px",
+          width: "100%", maxWidth: "520px",
           maxHeight: "calc(100vh - 32px)",
           display: "flex", flexDirection: "column",
           overflow: "hidden",
-          boxShadow: "0 32px 72px rgba(124, 58, 237, 0.25)",
+          boxShadow: "0 32px 72px rgba(168, 85, 247, 0.25)",
           border: "1px solid #EDE4FF"
         }}
       >
         {/* ── Gradient Header ── */}
         <div style={{
-          background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
-          padding: "16px 22px",
+          background: "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)",
+          padding: "18px 24px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           flexShrink: 0
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{
-              width: "38px", height: "38px", borderRadius: "50%",
-              background: "rgba(255, 255, 255, 0.2)", backdropFilter: "blur(8px)",
+              width: "40px", height: "40px", borderRadius: "50%",
+              background: "rgba(255, 255, 255, 0.22)", backdropFilter: "blur(8px)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: "18px", boxShadow: "inset 0 1px 2px rgba(255, 255, 255, 0.4)"
             }}>{initial ? "✏️" : "🛒"}</div>
             <div>
-              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>
+              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>
                 {initial ? `Edit Order #${initial.id}` : "Add New Order"}
               </h3>
               <p style={{ margin: "2px 0 0", fontSize: "12px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500 }}>
@@ -2152,7 +2249,7 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
             </div>
           </div>
           <button type="button" onClick={onClose} style={{
-            width: "30px", height: "30px", borderRadius: "50%",
+            width: "32px", height: "32px", borderRadius: "50%",
             background: "rgba(255, 255, 255, 0.22)", backdropFilter: "blur(6px)",
             border: "1px solid rgba(255, 255, 255, 0.35)",
             display: "flex", alignItems: "center", justifyContent: "center",
