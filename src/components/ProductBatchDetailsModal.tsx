@@ -117,6 +117,33 @@ export function ProductBatchDetailsModal({
           </div>
         </div>
 
+        {/* Scanned Barcodes / Serial Numbers Section */}
+        {(() => {
+          const serialList: string[] = Array.isArray(product.serialNumbers) && product.serialNumbers.length > 0
+            ? product.serialNumbers
+            : (product.id ? (() => { try { return JSON.parse(localStorage.getItem(`sham_serials_${product.id}`) || "[]"); } catch { return []; } })() : []);
+          
+          const validSerials = serialList.filter(s => s && s.trim());
+          if (validSerials.length === 0) return null;
+
+          return (
+            <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: "16px", padding: "16px 20px", marginBottom: "24px" }}>
+              <h4 style={{ margin: "0 0 10px 0", fontSize: "14px", fontWeight: 800, color: "#6D28D9", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                🏷️ Scanned Barcodes / Serial Numbers ({validSerials.length} Items)
+              </h4>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                {serialList.map((sn, idx) => (
+                  sn && sn.trim() ? (
+                    <div key={idx} style={{ background: "#FFFFFF", border: "1.5px solid #C4B5FD", padding: "5px 14px", borderRadius: "20px", fontSize: "12.5px", fontWeight: 700, color: "#7C3AED", boxShadow: "0 2px 4px rgba(124, 58, 237, 0.08)" }}>
+                      Item #{idx + 1}: <span style={{ color: "#1E293B" }}>{sn}</span>
+                    </div>
+                  ) : null
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Batch History Section */}
         <h4 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 800, color: "#5B21B6" }}>
           Batch History

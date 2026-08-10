@@ -11,6 +11,8 @@ import { OrderDocumentModal } from "./EmployeePage";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { getAutoProductImage } from "../utils/autoProductImage";
+import { useIsMobile } from "../hooks/use-mobile";
+import { Html5Qrcode, Html5QrcodeScanner, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 const NAV: NavItem[] = [
   { key: "live", label: "Live Dashboard", icon: "📡" },
@@ -188,6 +190,7 @@ export function DownloadDropdown({
 }
 
 export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
+  const isMobile = useIsMobile();
   const store = useStore();
   const active = tab || "live";
   const navigate = useNavigate();
@@ -286,7 +289,7 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
       {pendingApprovals > 0 && showNotification && (
         <div className="admin-notif-banner">
           <span style={{ fontSize: "22px", display: "inline-block", animation: "bellRing 1.5s ease-in-out infinite", transformOrigin: "top center", flexShrink: 0 }}>🔔</span>
-          
+
           <span className="admin-notif-text-full" style={{ fontSize: "15px", letterSpacing: "0.2px", fontWeight: 600, whiteSpace: "nowrap" }}>
             You have <strong style={{ fontSize: "16px", background: "rgba(255,255,255,0.25)", padding: "3px 10px", borderRadius: "10px", margin: "0 2px" }}>{pendingApprovals}</strong> pending request(s) for approval!
           </span>
@@ -1251,7 +1254,7 @@ function EmployeesSection() {
                 }}
               >
                 {/* Header Row - Clickable to open Employee Details Card */}
-                <div 
+                <div
                   onClick={() => setViewingDetails(e)}
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, cursor: "pointer" }}
                 >
@@ -1930,7 +1933,24 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
   const [totalCost, setTotalCost] = useState(initial ? parseFloat((initial.qty * initial.cost).toFixed(2)) : 0);
   const { products, users } = useStore();
   const [assignedEmployeeId, setAssignedEmployeeId] = useState(initial?.assignedEmployeeId ?? "");
-  const [serialNumbers, setSerialNumbers] = useState<string[]>(() => Array(initial?.qty ?? 0).fill(""));
+  const [serialNumbers, setSerialNumbers] = useState<string[]>(() => {
+    let list: string[] = [];
+    if (initial?.serialNumbers && Array.isArray(initial.serialNumbers)) {
+      list = [...initial.serialNumbers];
+    } else if (initial?.id) {
+      try {
+        const cached = localStorage.getItem(`sham_serials_${initial.id}`);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) list = [...parsed];
+        }
+      } catch (_) {}
+    }
+    const targetQty = initial?.qty ?? initial?.stock ?? 0;
+    while (list.length < targetQty) list.push("");
+    if (list.length > targetQty && targetQty > 0) list = list.slice(0, targetQty);
+    return list;
+  });
   const [scanningIndex, setScanningIndex] = useState<number | null>(null);
   const [showSerials, setShowSerials] = useState(false);
   const [incentivePercent, setIncentivePercent] = useState(() => {
@@ -2136,9 +2156,19 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
     }
   };
 
+  const updateSerials = (next: string[]) => {
+    setSerialNumbers(next);
+    try {
+      if (initial?.id) localStorage.setItem(`sham_serials_${initial.id}`, JSON.stringify(next));
+      if (name) localStorage.setItem(`sham_serials_${name.toLowerCase().trim()}`, JSON.stringify(next));
+      if (sku) localStorage.setItem(`sham_serials_${sku}`, JSON.stringify(next));
+    } catch (_) {}
+  };
+
   const save = () => {
     if (!name) return;
     const autoImage = getAutoProductImage(name, brand, category, image);
+    updateSerials(serialNumbers);
     onSave({
       name,
       sku,
@@ -2155,7 +2185,8 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
       date,
       status,
       image: autoImage,
-      assignedEmployeeId
+      assignedEmployeeId,
+      serialNumbers
     });
   };
 
@@ -2483,7 +2514,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
                         onChange={(e) => {
                           const next = [...serialNumbers];
                           next[i] = e.target.value;
-                          setSerialNumbers(next);
+                          updateSerials(next);
                         }}
                         placeholder={`Serial #${i + 1}`}
                       />
@@ -2556,7 +2587,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
           onDetected={(code) => {
             const next = [...serialNumbers];
             next[scanningIndex] = code;
-            setSerialNumbers(next);
+            updateSerials(next);
             setScanningIndex(null);
           }}
           onClose={() => setScanningIndex(null)}
@@ -2567,119 +2598,147 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
   );
 }
 
-function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDetected: (code: string) => void; onClose: () => void; itemLabel: string }) {
+export function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDetected: (code: string) => void; onClose: () => void; itemLabel: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string>("");
-  const [scanning, setScanning] = useState(true);
   const [manualCode, setManualCode] = useState("");
-  const streamRef = useRef<MediaStream | null>(null);
-  const animFrameRef = useRef<number>(0);
+  const codeReaderRef = useRef<any>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     let active = true;
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then((stream) => {
-        streamRef.current = stream;
+
+    const startScanner = async () => {
+      try {
+        const zxing = await import("@zxing/library");
+        if (!active) return;
+
+        const hints = new Map();
+        const formats = [
+          zxing.BarcodeFormat.CODE_128,
+          zxing.BarcodeFormat.CODE_39,
+          zxing.BarcodeFormat.EAN_13,
+          zxing.BarcodeFormat.EAN_8,
+          zxing.BarcodeFormat.UPC_A,
+          zxing.BarcodeFormat.UPC_E,
+          zxing.BarcodeFormat.QR_CODE,
+          zxing.BarcodeFormat.ITF,
+          zxing.BarcodeFormat.DATA_MATRIX,
+          zxing.BarcodeFormat.CODABAR,
+        ];
+        hints.set(zxing.DecodeHintType.POSSIBLE_FORMATS, formats);
+        hints.set(zxing.DecodeHintType.TRY_HARDER, true);
+
+        const codeReader = new zxing.BrowserMultiFormatReader(hints, 200);
+        codeReaderRef.current = codeReader;
+
+        const videoInputDevices = await codeReader.listVideoInputDevices().catch(() => []);
+
+        let selectedDeviceId: string | undefined = undefined;
+        if (videoInputDevices.length > 0) {
+          const backCam = videoInputDevices.find(
+            (d: any) => d.label.toLowerCase().includes("back") || d.label.toLowerCase().includes("rear") || d.label.toLowerCase().includes("environment")
+          );
+          selectedDeviceId = backCam ? backCam.deviceId : videoInputDevices[0].deviceId;
+        }
+
         if (videoRef.current && active) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
-        // Start scanning using BarcodeDetector if available
-        if ("BarcodeDetector" in window) {
-          // @ts-ignore
-          const detector = new window.BarcodeDetector({ formats: ["qr_code", "ean_13", "ean_8", "code_128", "code_39", "upc_a", "upc_e", "itf", "codabar", "data_matrix", "aztec", "pdf417"] });
-          const scan = async () => {
-            if (!active || !videoRef.current) return;
-            try {
-              // @ts-ignore
-              const barcodes = await detector.detect(videoRef.current);
-              if (barcodes.length > 0) {
-                const code = barcodes[0].rawValue;
-                if (active) { onDetected(code); stop(); }
-                return;
+          await codeReader.decodeFromVideoDevice(
+            selectedDeviceId ?? null,
+            videoRef.current,
+            (result: any) => {
+              if (active && result) {
+                const text = result.getText();
+                if (text) {
+                  onDetected(text);
+                  stop();
+                }
               }
-            } catch (_) { }
-            if (active) animFrameRef.current = requestAnimationFrame(scan);
-          };
-          if (videoRef.current) {
-            videoRef.current.addEventListener("playing", () => { if (active) scan(); }, { once: true });
-          }
-        } else {
-          setError("Barcode scanner not supported in this browser. Please enter manually.");
+            }
+          );
         }
-      })
-      .catch(() => setError("Camera access denied. Please allow camera or enter manually."));
+      } catch (err: any) {
+        if (active) {
+          setError("Camera access error. Please allow camera permissions or type barcode manually.");
+        }
+      }
+    };
 
     const stop = () => {
       active = false;
-      cancelAnimationFrame(animFrameRef.current);
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
+      if (codeReaderRef.current) {
+        try {
+          codeReaderRef.current.reset();
+        } catch (_) {}
+        codeReaderRef.current = null;
+      }
     };
 
-    return stop;
-  }, []);
+    const timer = setTimeout(startScanner, 150);
+
+    return () => {
+      stop();
+      clearTimeout(timer);
+    };
+  }, [onDetected]);
 
   const handleManual = () => {
-    if (manualCode.trim()) { onDetected(manualCode.trim()); }
+    if (manualCode.trim()) {
+      onDetected(manualCode.trim());
+    }
   };
 
-  return (
+  return createPortal(
     <div style={{
-      position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 9999,
-      display: "flex", alignItems: "center", justifyContent: "center"
+      position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.85)", zIndex: 999999,
+      display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(6px)"
     }}>
       <div style={{
-        background: "#fff", borderRadius: 20, padding: "24px 22px", width: 340,
-        boxShadow: "0 24px 64px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", gap: 14
+        background: "#fff", borderRadius: 20, padding: "16px 18px", width: 360, maxWidth: "90vw",
+        boxShadow: "0 25px 60px rgba(0,0,0,0.4)", display: "flex", flexDirection: "column", gap: 10, border: "1px solid #E2E8F0"
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "var(--brown-dark)" }}>📷 Scan Barcode</div>
-            <div style={{ fontSize: 12, color: "var(--brown)", marginTop: 2 }}>Scanning for: <b>{itemLabel}</b></div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#1E293B" }}>📷 Live Camera Barcode Scanner</div>
+            <div style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>Scanning for: <b style={{ color: "#7C3AED" }}>{itemLabel}</b></div>
           </div>
-          <button onClick={onClose} style={{ background: "#f1f5f9", border: "none", borderRadius: 8, width: 30, height: 30, cursor: "pointer", fontSize: 16, fontWeight: 700, color: "#64748b" }}>✕</button>
+          <button onClick={onClose} style={{ background: "#F1F5F9", border: "none", borderRadius: "50%", width: 28, height: 28, cursor: "pointer", fontSize: 13, fontWeight: 800, color: "#64748B" }}>✕</button>
         </div>
 
         {error ? (
-          <div style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fca5a5", borderRadius: 10, padding: "10px 14px", fontSize: 13, fontWeight: 600 }}>
+          <div style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FCA5A5", borderRadius: 12, padding: "10px 12px", fontSize: 12, fontWeight: 600 }}>
             ⚠️ {error}
           </div>
         ) : (
-          <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", background: "#000", aspectRatio: "1" }}>
+          <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", background: "#000", border: "2px solid #7C3AED", aspectRatio: "1.333" }}>
             <video
               ref={videoRef}
               style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               playsInline
               muted
             />
-            {/* Scanner overlay */}
+            {/* Viewfinder overlay corners */}
             <div style={{
               position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none"
             }}>
               <div style={{
-                width: 180, height: 180, border: "3px solid #22c55e", borderRadius: 14,
-                boxShadow: "0 0 0 4000px rgba(0,0,0,0.35)"
-              }}>
-                <div style={{ position: "absolute", top: 0, left: 0, width: 24, height: 24, borderTop: "4px solid #22c55e", borderLeft: "4px solid #22c55e", borderRadius: "4px 0 0 0" }} />
-                <div style={{ position: "absolute", top: 0, right: 0, width: 24, height: 24, borderTop: "4px solid #22c55e", borderRight: "4px solid #22c55e", borderRadius: "0 4px 0 0" }} />
-                <div style={{ position: "absolute", bottom: 0, left: 0, width: 24, height: 24, borderBottom: "4px solid #22c55e", borderLeft: "4px solid #22c55e", borderRadius: "0 0 0 4px" }} />
-                <div style={{ position: "absolute", bottom: 0, right: 0, width: 24, height: 24, borderBottom: "4px solid #22c55e", borderRight: "4px solid #22c55e", borderRadius: "0 0 4px 0" }} />
-              </div>
+                width: "82%", height: "65%", border: "2.5px dashed #22C55E", borderRadius: 12,
+                boxShadow: "0 0 0 4000px rgba(0,0,0,0.3)"
+              }} />
             </div>
           </div>
         )}
 
-        <div style={{ fontSize: 11, color: "#64748b", textAlign: "center" }}>
-          Barcode camera frame madhe dhara — automatic detect hoil
+        <div style={{ fontSize: 11, color: "#64748B", textAlign: "center", fontWeight: 600 }}>
+          📷 Hold product barcode in front of camera — it will scan automatically
         </div>
 
-        <div style={{ borderTop: "1px dashed #E2E8F0", paddingTop: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--brown)", marginBottom: 6, textTransform: "uppercase" }}>Manually Enter</div>
+        <div style={{ borderTop: "1px dashed #CBD5E1", paddingTop: 8 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 800, color: "#7C3AED", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.5px" }}>Manually Enter Barcode / Serial</div>
           <div style={{ display: "flex", gap: 8 }}>
             <input
               className="form-input"
-              style={{ flex: 1, fontSize: 13 }}
+              style={{ flex: 1, fontSize: 12.5, height: 36, borderRadius: 10, border: "1.5px solid #CBD5E1", padding: "0 10px" }}
               value={manualCode}
               onChange={e => setManualCode(e.target.value)}
               placeholder="Type barcode / serial..."
@@ -2688,9 +2747,9 @@ function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDetected: (
             <button
               onClick={handleManual}
               style={{
-                background: "linear-gradient(135deg, var(--accent), var(--accent-dark))",
-                color: "#fff", border: "none", borderRadius: 8, padding: "0 14px",
-                fontWeight: 700, cursor: "pointer", fontSize: 13
+                background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+                color: "#fff", border: "none", borderRadius: 10, padding: "0 16px",
+                fontWeight: 800, cursor: "pointer", fontSize: 13, height: 36
               }}
             >
               ✓
@@ -2698,7 +2757,8 @@ function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDetected: (
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -2970,40 +3030,40 @@ function OrderApprovalSection() {
 
                   {/* Document Buttons Row */}
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", boxSizing: "border-box", flexWrap: "wrap" }}>
-                    <button 
-                      className="btn btn-ghost btn-sm" 
-                      style={{ 
-                        flex: "1 1 120px", 
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{
+                        flex: "1 1 120px",
                         minWidth: 0,
-                        padding: "7px 8px", 
-                        fontSize: 11, 
+                        padding: "7px 8px",
+                        fontSize: 11,
                         justifyContent: "center",
                         borderRadius: "10px",
-                        background: (!o.docType || o.docType === "Bill") ? "#e0f2fe" : "#ffffff", 
-                        border: (!o.docType || o.docType === "Bill") ? "1px solid #bae6fd" : "1px solid #e2e8f0", 
-                        color: (!o.docType || o.docType === "Bill") ? "#0369a1" : "#475569", 
+                        background: (!o.docType || o.docType === "Bill") ? "#e0f2fe" : "#ffffff",
+                        border: (!o.docType || o.docType === "Bill") ? "1px solid #bae6fd" : "1px solid #e2e8f0",
+                        color: (!o.docType || o.docType === "Bill") ? "#0369a1" : "#475569",
                         fontWeight: (!o.docType || o.docType === "Bill") ? 700 : 500,
                         boxSizing: "border-box"
-                      }} 
+                      }}
                       onClick={() => setActiveDoc({ order: o, type: "Bill" })}
                     >
                       🧾 View Bill
                     </button>
-                    <button 
-                      className="btn btn-ghost btn-sm" 
-                      style={{ 
-                        flex: "1 1 120px", 
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{
+                        flex: "1 1 120px",
                         minWidth: 0,
-                        padding: "7px 8px", 
-                        fontSize: 11, 
+                        padding: "7px 8px",
+                        fontSize: 11,
                         justifyContent: "center",
                         borderRadius: "10px",
-                        background: o.docType === "Order Copy" ? "#f3e8ff" : "#ffffff", 
-                        border: o.docType === "Order Copy" ? "1px solid #e9d5ff" : "1px solid #e2e8f0", 
-                        color: o.docType === "Order Copy" ? "#6D28D9" : "#475569", 
+                        background: o.docType === "Order Copy" ? "#f3e8ff" : "#ffffff",
+                        border: o.docType === "Order Copy" ? "1px solid #e9d5ff" : "1px solid #e2e8f0",
+                        color: o.docType === "Order Copy" ? "#6D28D9" : "#475569",
                         fontWeight: o.docType === "Order Copy" ? 700 : 500,
                         boxSizing: "border-box"
-                      }} 
+                      }}
                       onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
                     >
                       📄 View Order Copy
@@ -3012,16 +3072,16 @@ function OrderApprovalSection() {
 
                   {o.status === "Pending" && (
                     <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "4px", flexWrap: "wrap" }}>
-                      <button 
-                        className="btn btn-success btn-sm" 
-                        style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }} 
+                      <button
+                        className="btn btn-success btn-sm"
+                        style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
                         onClick={() => decide(o.id, "Approved", editDiscounts[o.id])}
                       >
                         Approve
                       </button>
-                      <button 
-                        className="btn btn-danger btn-sm" 
-                        style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }} 
+                      <button
+                        className="btn btn-danger btn-sm"
+                        style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
                         onClick={() => decide(o.id, "Rejected")}
                       >
                         Reject
@@ -4924,6 +4984,7 @@ export function DashboardLeadPipelineOverview({
 }
 
 export function LeadsSection() {
+  const isMobile = useIsMobile();
   const { leads, users, products, setState, uid, currentUser } = useStore();
   const [activeFilter, setActiveFilter] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -4992,8 +5053,6 @@ export function LeadsSection() {
     }
   }, [editingLead, showAddModal, products, currentUser]);
 
-
-
   const handleSave = () => {
     if (!formName || !formPhone) return;
 
@@ -5043,8 +5102,8 @@ export function LeadsSection() {
         ...s,
         leads: [newLead, ...s.leads],
       }));
-      setShowAddModal(false);
     }
+    setShowAddModal(false);
   };
 
   const handleDelete = (id: string) => {
@@ -5085,13 +5144,28 @@ export function LeadsSection() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+      <div style={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        alignItems: isMobile ? "flex-start" : "center",
+        justifyContent: "space-between",
+        gap: isMobile ? "12px" : "16px",
+        marginBottom: "20px"
+      }}>
         <div>
-          <h2 className="page-title">Lead Generation</h2>
-          <p className="page-sub">Track customer inquiries, status updates, and assign them to staff members.</p>
+          <h2 className="page-title" style={{ margin: 0 }}>Lead Generation</h2>
+          <p className="page-sub" style={{ margin: "4px 0 0 0" }}>Track customer inquiries, status updates, and assign them to staff members.</p>
         </div>
-        {(currentUser?.role === "employee" || currentUser?.role === "manager") && (
-          <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>
+        {(currentUser?.role === "employee" || currentUser?.role === "manager" || currentUser?.role === "superadmin") && (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowAddModal(true)}
+            style={{
+              marginTop: isMobile ? "2px" : "0",
+              whiteSpace: "nowrap",
+              alignSelf: isMobile ? "flex-start" : "center"
+            }}
+          >
             + Add New Lead
           </button>
         )}
@@ -5400,6 +5474,7 @@ export function LeadsSection() {
 
 
 export function SuperAdminIncentiveSection() {
+  const isMobile = useIsMobile();
   const { products, setState, users, currentUser } = useStore();
   const [editing, setEditing] = useState<Product | null>(null);
   const [incentiveMode, setIncentiveMode] = useState<boolean>(false);
@@ -5795,13 +5870,16 @@ export function SuperAdminIncentiveSection() {
           alignItems: "center",
           justifyContent: "center",
           zIndex: 9999,
-          padding: "20px"
+          padding: isMobile ? "8px" : "20px"
         }}>
           <div style={{
             background: "#FFFFFF",
-            borderRadius: "28px",
-            width: "100%",
-            maxWidth: "540px",
+            borderRadius: isMobile ? "22px" : "28px",
+            width: isMobile ? "92%" : "100%",
+            maxWidth: isMobile ? "390px" : "540px",
+            maxHeight: isMobile ? "96vh" : "94vh",
+            display: "flex",
+            flexDirection: "column",
             boxShadow: "0 25px 60px rgba(124, 58, 237, 0.25)",
             border: "1px solid rgba(221, 214, 254, 0.8)",
             overflow: "hidden",
@@ -5810,11 +5888,12 @@ export function SuperAdminIncentiveSection() {
             {/* Header (Matching Purple-to-Pink Gradient) */}
             <div style={{
               background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
-              padding: "14px 22px",
+              padding: isMobile ? "15px 18px" : "18px 24px",
               color: "#FFFFFF",
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center"
+              alignItems: "center",
+              flexShrink: 0
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                 <div style={{
@@ -5825,14 +5904,15 @@ export function SuperAdminIncentiveSection() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: "18px",
-                  boxShadow: "inset 0 1px 2px rgba(255, 255, 255, 0.4)"
+                  fontSize: "16px",
+                  boxShadow: "inset 0 1px 2px rgba(255, 255, 255, 0.4)",
+                  flexShrink: 0
                 }}>
                   💰
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>Assign Employee Incentive</h3>
-                  <p style={{ margin: "1px 0 0 0", fontSize: "12px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500 }}>Select employee to assign incentive</p>
+                  <h3 style={{ margin: 0, fontSize: isMobile ? "15px" : "17px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px" }}>Assign Employee Incentive</h3>
+                  <p style={{ margin: "1px 0 0 0", fontSize: "11px", color: "rgba(255, 255, 255, 0.9)", fontWeight: 500 }}>Select employee to assign incentive</p>
                 </div>
               </div>
               <button
@@ -5842,8 +5922,8 @@ export function SuperAdminIncentiveSection() {
                   background: "rgba(255, 255, 255, 0.22)",
                   border: "1px solid rgba(255, 255, 255, 0.35)",
                   color: "#FFFFFF",
-                  width: "30px",
-                  height: "30px",
+                  width: "28px",
+                  height: "28px",
                   borderRadius: "50%",
                   cursor: "pointer",
                   fontSize: "14px",
@@ -5851,17 +5931,17 @@ export function SuperAdminIncentiveSection() {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  transition: "all 0.2s ease"
+                  flexShrink: 0
                 }}
               >
                 ✕
               </button>
             </div>
 
-            {/* Form Content */}
-            <form onSubmit={handleAssignIncentiveSubmit} style={{ padding: "16px 20px" }}>
+            {/* Form Content (Scrolls internally if needed) */}
+            <form onSubmit={handleAssignIncentiveSubmit} style={{ padding: isMobile ? "18px 18px" : "22px 24px", overflowY: "auto", flex: 1 }}>
               {incentiveFormError && (
-                <div style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FCA5A5", padding: "8px 12px", borderRadius: "10px", fontSize: "12px", fontWeight: 700, marginBottom: "12px" }}>
+                <div style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FCA5A5", padding: "10px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: 700, marginBottom: "14px" }}>
                   ⚠️ {incentiveFormError}
                 </div>
               )}
@@ -5880,14 +5960,14 @@ export function SuperAdminIncentiveSection() {
                       background: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)",
                       border: "1px solid #DDD6FE",
                       borderRadius: "14px",
-                      padding: "10px 14px",
-                      marginBottom: "12px",
+                      padding: "12px 14px",
+                      marginBottom: "14px",
                       display: "flex",
                       alignItems: "center",
                       gap: "12px",
                       boxShadow: "inset 0 1px 3px rgba(255, 255, 255, 0.9)"
                     }}>
-                      <div className="product-img-platform" style={{ width: 50, height: 44, flexShrink: 0 }}>
+                      <div className="product-img-platform" style={{ width: 44, height: 40, flexShrink: 0 }}>
                         <img
                           src={getAutoProductImage(selectedProductForIncentive.name, selectedProductForIncentive.brand, selectedProductForIncentive.category, selectedProductForIncentive.image)}
                           alt={selectedProductForIncentive.name}
@@ -5895,22 +5975,22 @@ export function SuperAdminIncentiveSection() {
                             e.currentTarget.onerror = null;
                             e.currentTarget.src = getAutoProductImage(selectedProductForIncentive.name, selectedProductForIncentive.brand, selectedProductForIncentive.category);
                           }}
-                          style={{ width: 36, height: 36, objectFit: "contain" }}
+                          style={{ width: 32, height: 32, objectFit: "contain" }}
                         />
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 800, fontSize: "15px", color: "#1E2937", textTransform: "lowercase" }}>{selectedProductForIncentive.name}</div>
-                        <div style={{ fontSize: "12px", color: "#64748B", marginTop: 2, fontWeight: 500 }}>
-                          SKU: <strong style={{ color: "#334155" }}>{selectedProductForIncentive.sku || "—"}</strong> &nbsp;|&nbsp;
-                          Location: <strong style={{ color: "#7C3AED", fontWeight: 800 }}>{selectedProductForIncentive.location || "Shop"}</strong> &nbsp;|&nbsp;
-                          Price: <strong style={{ color: "#059669", fontWeight: 800 }}>₹{baseUnitPrice.toLocaleString()} / unit</strong>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: "14px", color: "#1E2937", textTransform: "capitalize" }}>{selectedProductForIncentive.name}</div>
+                        <div style={{ fontSize: "11px", color: "#64748B", marginTop: 2, fontWeight: 500, display: "flex", flexWrap: "wrap", gap: "2px 8px" }}>
+                          <span>SKU: <strong style={{ color: "#334155" }}>{selectedProductForIncentive.sku || "—"}</strong></span>
+                          <span>Loc: <strong style={{ color: "#7C3AED", fontWeight: 800 }}>{selectedProductForIncentive.location || "Shop"}</strong></span>
+                          <span>Price: <strong style={{ color: "#059669", fontWeight: 800 }}>₹{baseUnitPrice.toLocaleString()}</strong></span>
                         </div>
                       </div>
                     </div>
 
                     {/* 1. Select Employee / Manager */}
-                    <div style={{ marginBottom: "12px" }}>
-                      <label className="form-label" style={{ fontSize: 10, marginBottom: 2, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                    <div style={{ marginBottom: "14px" }}>
+                      <label className="form-label" style={{ fontSize: 10, marginBottom: 4, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", display: "block" }}>
                         👤 SELECT EMPLOYEE / MANAGER <span style={{ color: "#EF4444" }}>*</span>
                       </label>
                       <select
@@ -5921,10 +6001,10 @@ export function SuperAdminIncentiveSection() {
                         }}
                         style={{
                           width: "100%",
-                          padding: "10px 14px",
+                          padding: "11px 14px",
                           borderRadius: "12px",
                           border: "1px solid #C4B5FD",
-                          fontSize: "14px",
+                          fontSize: "13px",
                           fontWeight: 700,
                           color: "#2E1065",
                           background: "#F5F3FF",
@@ -5944,15 +6024,15 @@ export function SuperAdminIncentiveSection() {
                     </div>
 
                     {/* 2. Quantity & Incentive (%) (Side by Side) */}
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
                       <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                          <label className="form-label" style={{ fontSize: 10, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", height: "22px", marginBottom: "4px" }}>
+                          <span style={{ fontSize: 10, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" }}>
                             📦 QUANTITY <span style={{ color: "#EF4444" }}>*</span>
-                          </label>
+                          </span>
                           {selectedProductForIncentive && (
-                            <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
-                              Max: <strong>{selectedProductForIncentive.qty ?? selectedProductForIncentive.stock ?? 1} units</strong>
+                            <span style={{ fontSize: "10px", fontWeight: 700, color: "#64748B", whiteSpace: "nowrap" }}>
+                              Max: <strong style={{ color: "#7C3AED", fontWeight: 800 }}>{selectedProductForIncentive.qty ?? selectedProductForIncentive.stock ?? 1}</strong>
                             </span>
                           )}
                         </div>
@@ -5967,7 +6047,7 @@ export function SuperAdminIncentiveSection() {
                           }}
                           style={{
                             width: "100%",
-                            padding: "10px 14px",
+                            padding: "11px 14px",
                             borderRadius: "12px",
                             border: "1px solid #C4B5FD",
                             fontSize: "14px",
@@ -5983,9 +6063,11 @@ export function SuperAdminIncentiveSection() {
                       </div>
 
                       <div>
-                        <label className="form-label" style={{ fontSize: 10, marginBottom: 2, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em" }}>
-                          💰 INCENTIVE (%) <span style={{ color: "#EF4444" }}>*</span>
-                        </label>
+                        <div style={{ display: "flex", alignItems: "center", height: "22px", marginBottom: "4px" }}>
+                          <span style={{ fontSize: 10, color: "#7C3AED", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.03em", whiteSpace: "nowrap" }}>
+                            💰 INCENTIVE (%) <span style={{ color: "#EF4444" }}>*</span>
+                          </span>
+                        </div>
                         <div style={{ position: "relative" }}>
                           <input
                             type="number"
@@ -6004,7 +6086,7 @@ export function SuperAdminIncentiveSection() {
                             }}
                             style={{
                               width: "100%",
-                              padding: "10px 34px 10px 14px",
+                              padding: "11px 32px 11px 14px",
                               borderRadius: "12px",
                               border: "1px solid #C4B5FD",
                               fontSize: "14px",
@@ -6017,7 +6099,7 @@ export function SuperAdminIncentiveSection() {
                             }}
                             placeholder="e.g. 10"
                           />
-                          <span style={{ position: "absolute", right: "14px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, fontSize: "16px", color: "#7C3AED" }}>%</span>
+                          <span style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", fontWeight: 800, fontSize: "14px", color: "#7C3AED" }}>%</span>
                         </div>
                       </div>
                     </div>
@@ -6026,29 +6108,29 @@ export function SuperAdminIncentiveSection() {
                     <div style={{
                       background: "linear-gradient(135deg, #ECFDF5 0%, #F0FDF4 100%)",
                       border: "1px solid #A7F3D0",
-                      borderRadius: "12px",
-                      padding: "10px 14px",
-                      marginBottom: "16px",
+                      borderRadius: "14px",
+                      padding: "12px 16px",
+                      marginBottom: "18px",
                       boxShadow: "0 3px 10px rgba(16, 185, 129, 0.06)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      gap: "12px"
+                      gap: "10px"
                     }}>
-                      <div>
-                        <div style={{ fontSize: "10px", color: "#047857", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: "10px", color: "#047857", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.03em" }}>
                           💰 INCENTIVE BREAKDOWN
                         </div>
                         <div style={{ fontSize: "12px", color: "#065F46", marginTop: "2px", fontWeight: 600 }}>
-                          1 Unit Price: <strong>₹{baseUnitPrice.toLocaleString()}</strong> &nbsp;×&nbsp; {qtyNum} {qtyNum === 1 ? "unit" : "units"}
+                          1 Unit Price: <strong>₹{baseUnitPrice.toLocaleString()}</strong> × {qtyNum} {qtyNum === 1 ? "unit" : "units"}
                         </div>
                       </div>
 
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: "10px", color: "#047857", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: "10px", color: "#047857", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.03em" }}>
                           EMPLOYEE EARNS ({pctNum}%)
                         </div>
-                        <div style={{ fontSize: "18px", color: "#059669", fontWeight: 900, lineHeight: 1.1, marginTop: "1px" }}>
+                        <div style={{ fontSize: "17px", color: "#059669", fontWeight: 900, lineHeight: 1.1, marginTop: "1px" }}>
                           ₹{totalIncentiveCalculated.toLocaleString()}
                         </div>
                         <div style={{ fontSize: "10px", color: "#065F46", fontWeight: 600, marginTop: "1px" }}>
@@ -6061,7 +6143,7 @@ export function SuperAdminIncentiveSection() {
               })()}
 
               {/* Form Action Buttons */}
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", alignItems: "center", marginTop: "4px" }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -6069,7 +6151,7 @@ export function SuperAdminIncentiveSection() {
                     setIncentiveFormError("");
                   }}
                   style={{
-                    padding: "9px 22px",
+                    padding: "9px 20px",
                     borderRadius: "30px",
                     border: "1px solid #CBD5E1",
                     background: "#FFFFFF",
@@ -6078,7 +6160,8 @@ export function SuperAdminIncentiveSection() {
                     fontSize: "13px",
                     cursor: "pointer",
                     boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                    transition: "all 0.2s ease"
+                    transition: "all 0.2s ease",
+                    flex: isMobile ? 1 : "initial"
                   }}
                 >
                   Cancel
@@ -6086,22 +6169,24 @@ export function SuperAdminIncentiveSection() {
                 <button
                   type="submit"
                   style={{
-                    padding: "9px 26px",
+                    padding: "9px 22px",
                     borderRadius: "30px",
                     border: "none",
                     background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
                     color: "#FFFFFF",
                     fontWeight: 800,
+                    fontSize: "13px",
                     cursor: "pointer",
                     boxShadow: "0 10px 25px rgba(124, 58, 237, 0.4)",
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: "8px",
-                    transition: "all 0.2s ease"
+                    justifyContent: "center",
+                    gap: "6px",
+                    transition: "all 0.2s ease",
+                    flex: isMobile ? 1 : "initial"
                   }}
                 >
-                  <span>✓</span>
-                  <span>Assign Incentive</span>
+                  ✓ Assign Incentive
                 </button>
               </div>
             </form>

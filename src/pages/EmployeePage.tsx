@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useStore, loadCurrentUser, Customer, Product, Order, Task } from "../app/store";
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
-import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm } from "./SuperAdminPage";
+import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm, BarcodeScannerModal } from "./SuperAdminPage";
 import { getAutoProductImage } from "../utils/autoProductImage";
 
 const NAV: NavItem[] = [
@@ -555,13 +555,6 @@ function OrderUpdates() {
           <h2 className="page-title">Order Updates</h2>
           <p className="page-sub">Live order statuses from Super Admin approvals.</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowAddOrder(true)}
-          style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dark))", fontWeight: 700, borderRadius: 10, padding: "8px 18px", fontSize: "14px" }}
-        >
-          ➕ Add Order
-        </button>
       </div>
 
       {/* My Assigned Orders */}
@@ -803,6 +796,7 @@ function ProductsSection() {
   const navigate = useNavigate();
   const [categoryFilter] = useState("All");
   const [showAdd, setShowAdd] = useState(false);
+  const [selectedProductForOrder, setSelectedProductForOrder] = useState<Product | null>(null);
 
   const [sellingProduct, setSellingProduct] = useState<Product | null>(null);
   const [customerName, setCustomerName] = useState("");
@@ -937,8 +931,10 @@ function ProductsSection() {
 
   return (
     <>
-      <h2 className="page-title">Products</h2>
-      <p className="page-sub">View active and available products.</p>
+      <div style={{ marginBottom: 16 }}>
+        <h2 className="page-title">Products</h2>
+        <p className="page-sub">View active and available products.</p>
+      </div>
 
       <div className="stat-grid" style={{ marginBottom: 24 }}>
         <StatCard icon="🛍️" label="Products Sold" value={productsSold} onClick={() => goTo("orders")} />
@@ -959,6 +955,7 @@ function ProductsSection() {
                 <th>Stock</th>
                 <th>Status</th>
                 <th>Brand</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -1004,25 +1001,32 @@ function ProductsSection() {
                   <td>₹{p.price.toLocaleString()}</td>
                   <td>{p.qty ?? p.stock}</td>
                   <td><Pill status={p.status} /></td>
+                  <td><span style={{ fontWeight: 600, color: "var(--brown-dark)" }}>{p.brand || "—"}</span></td>
                   <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontWeight: 600, color: "var(--brown-dark)" }}>{p.brand || "—"}</span>
-                      {p.incentive > 0 && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id) && (
-                        <button
-                          className="btn btn-success btn-sm"
-                          style={{ padding: "3px 8px", fontSize: "11px", fontWeight: 600 }}
-                          onClick={() => setSellingProduct(p)}
-                        >
-                          🏷️ Sell
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => setSelectedProductForOrder(p)}
+                      style={{
+                        background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+                        fontWeight: 800,
+                        borderRadius: "20px",
+                        padding: "6px 14px",
+                        fontSize: "12px",
+                        border: "none",
+                        color: "#FFFFFF",
+                        cursor: "pointer",
+                        boxShadow: "0 3px 10px rgba(124, 58, 237, 0.25)",
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      🛒 Add to Sell
+                    </button>
                   </td>
                 </tr>
               ))}
               {filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="empty">No products available.</td>
+                  <td colSpan={7} className="empty">No products available.</td>
                 </tr>
               )}
             </tbody>
@@ -1031,6 +1035,13 @@ function ProductsSection() {
       </div>
 
       {showAdd && <ProductForm title="Add Product" onClose={() => setShowAdd(false)} onSave={(d) => { const nextId = uid("p"); setState((s) => ({ ...s, products: [...s.products, { id: nextId, ...d }] })); setShowAdd(false); }} />}
+
+      {selectedProductForOrder && (
+        <EmployeeCreateOrderModal
+          selectedProductId={selectedProductForOrder.id}
+          onClose={() => setSelectedProductForOrder(null)}
+        />
+      )}
 
       {sellingProduct && (
         <Modal title={`🏷️ Sell Product`} onClose={() => setSellingProduct(null)} className="sell-modal">
@@ -1264,26 +1275,9 @@ function ProductsSection() {
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
-            <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
-              Discount (%)
-            </label>
-            <input
-              type="number"
-              className="form-input"
-              style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #EDE4FF", background: "#F8FAFC", color: "#1E293B", width: "100%", boxSizing: "border-box" }}
-              value={discountAmount}
-              onChange={(e) => setDiscountAmount(e.target.value === "" ? "" : Number(e.target.value))}
-              onWheel={(e) => (e.target as HTMLInputElement).blur()}
-              placeholder="Enter discount percentage (e.g. 10)"
-              min={0}
-              max={100}
-            />
-          </div>
-
           <div style={{ padding: "14px 18px", background: "linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)", borderRadius: "16px", border: "1.5px solid #DDD6FE", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "14px", fontWeight: 700, color: "#6D28D9" }}>Final Total:</span>
-            <span style={{ fontSize: "20px", fontWeight: 900, color: "#2E1065" }}>₹{Math.max(0, (unitPrice * sellQty) - Math.round(((Number(discountAmount) || 0) / 100) * (unitPrice * sellQty))).toLocaleString()}</span>
+            <span style={{ fontSize: "20px", fontWeight: 900, color: "#2E1065" }}>₹{(unitPrice * sellQty).toLocaleString()}</span>
           </div>
 
           <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "20px" }}>
@@ -2037,14 +2031,14 @@ export function OrderDocumentModal({
   );
 }
 
-export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => void; initial?: Order }) {
+export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId }: { onClose: () => void; initial?: Order; selectedProductId?: string }) {
   const { customers, products, setState, uid, currentUser } = useStore();
   const activeProducts = products.filter(p => p.status === "Active" || p.status === "Verified");
   const initialCust = initial ? customers.find(c => c.id === initial.customerId || c.name === initial.customerName) : undefined;
   const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
   const [customerPhone, setCustomerPhone] = useState(initialCust?.phone ?? "");
   const [customerAddress, setCustomerAddress] = useState(initialCust?.address ?? "");
-  const [productId, setProductId] = useState(initial?.productId ?? activeProducts[0]?.id ?? "");
+  const [productId, setProductId] = useState(initial?.productId ?? selectedProductId ?? activeProducts[0]?.id ?? "");
   const [qty, setQty] = useState(initial?.qty ?? 1);
   const [discountPct, setDiscountPct] = useState<number | "">(initial?.discount ?? "");
   const [docType, setDocType] = useState<"Bill" | "Order Copy">(initial?.docType ?? "Bill");
@@ -2052,12 +2046,45 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
   const [customerBargain, setCustomerBargain] = useState(initial?.customerBargain ?? "");
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
+  const [selectedSerial, setSelectedSerial] = useState(initial?.serialNumber ?? "");
 
   const selectedProduct = activeProducts.find(p => p.id === productId);
   const unitPrice = selectedProduct ? selectedProduct.price : 0;
   const baseTotal = unitPrice * qty;
   const discountVal = discountPct ? Math.round(((Number(discountPct) || 0) / 100) * baseTotal) : 0;
   const finalTotal = Math.max(0, baseTotal - discountVal);
+
+  const availableSerials: string[] = useMemo(() => {
+    if (!selectedProduct) return [];
+    
+    // 1. Check direct product property
+    if (selectedProduct.serialNumbers && Array.isArray(selectedProduct.serialNumbers)) {
+      const filled = selectedProduct.serialNumbers.filter(s => s && s.trim());
+      if (filled.length > 0) return filled;
+    }
+
+    // Keys to search in localStorage
+    const searchKeys = [
+      `sham_serials_${selectedProduct.id}`,
+      `sham_serials_${(selectedProduct.name || "").toLowerCase().trim()}`,
+      selectedProduct.sku ? `sham_serials_${selectedProduct.sku}` : null,
+    ].filter(Boolean) as string[];
+
+    for (const key of searchKeys) {
+      try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            const filled = parsed.filter((s: string) => s && typeof s === "string" && s.trim());
+            if (filled.length > 0) return filled;
+          }
+        }
+      } catch (_) {}
+    }
+    return [];
+  }, [selectedProduct]);
 
   const handleSubmit = () => {
     setErrorMsg("");
@@ -2316,7 +2343,29 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
 
             {/* Select Product */}
             <div>
-              <div style={sectionLabel}>📦 Select Product *</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                <div style={{ ...sectionLabel, marginBottom: 0 }}>📦 Select Product *</div>
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  style={{
+                    background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: "14px",
+                    padding: "4px 12px",
+                    fontSize: "11.5px",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    boxShadow: "0 2px 6px rgba(124, 58, 237, 0.25)"
+                  }}
+                >
+                  📷 Scan Barcode
+                </button>
+              </div>
               <select style={selectStyle} value={productId} onChange={(e) => setProductId(e.target.value)}>
                 {activeProducts.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -2343,100 +2392,92 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
                   }}>
                     📦 Stock: {selectedProduct.qty ?? selectedProduct.stock ?? 0}
                   </div>
+                  {selectedSerial ? (
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: "6px",
+                      background: "#FEF3C7", padding: "6px 16px",
+                      borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#B45309",
+                      border: "1px solid #FDE68A",
+                      boxShadow: "0 2px 6px rgba(180, 83, 9, 0.12)"
+                    }}>
+                      🏷️ Barcode: {selectedSerial}
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
 
-            {/* Quantity & Discount */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <div>
+            {/* Quantity & Document Type (Side-by-Side) */}
+            <div style={{ display: "flex", gap: "16px", alignItems: "flex-start", flexWrap: "wrap" }}>
+              <div style={{ width: "130px", flexShrink: 0 }}>
                 <div style={sectionLabel}>🔢 Quantity *</div>
                 <input
                   type="number"
-                  style={inputStyle}
+                  style={{ ...inputStyle, width: "100%" }}
                   min={1}
                   value={qty}
                   onChange={(e) => setQty(Math.max(1, Number(e.target.value)))}
                 />
               </div>
 
-              <div>
-                <div style={sectionLabel}>💰 Discount (%)</div>
-                <input
-                  type="number"
-                  style={inputStyle}
-                  min={0}
-                  max={100}
-                  value={discountPct}
-                  onChange={(e) => setDiscountPct(e.target.value === "" ? "" : Number(e.target.value))}
-                  placeholder="0%"
-                />
-              </div>
-            </div>
-
-            {/* Document Type */}
-            <div>
-              <div style={sectionLabel}>📋 Document Type *</div>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <label onClick={() => setDocType("Bill")} style={{
-                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                  padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
-                  fontWeight: 700, fontSize: "13px", transition: "all .2s",
-                  background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                  color: docType === "Bill" ? "#fff" : "#475569",
-                  border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
-                  boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
-                }}>
-                  <input
-                    type="radio"
-                    name="empModalDocType"
-                    value="Bill"
-                    checked={docType === "Bill"}
-                    onChange={() => setDocType("Bill")}
-                    style={{ display: "none" }}
-                  />
-                  🧾 Bill
-                </label>
-                <label onClick={() => setDocType("Order Copy")} style={{
-                  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                  padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
-                  fontWeight: 700, fontSize: "13px", transition: "all .2s",
-                  background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                  color: docType === "Order Copy" ? "#fff" : "#475569",
-                  border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
-                  boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
-                }}>
-                  <input
-                    type="radio"
-                    name="empModalDocType"
-                    value="Order Copy"
-                    checked={docType === "Order Copy"}
-                    onChange={() => setDocType("Order Copy")}
-                    style={{ display: "none" }}
-                  />
-                  📄 Order Copy
-                </label>
+              <div style={{ flex: 1, minWidth: "220px" }}>
+                <div style={sectionLabel}>📋 Document Type *</div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <label onClick={() => setDocType("Bill")} style={{
+                    flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                    padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
+                    fontWeight: 700, fontSize: "13px", transition: "all .2s",
+                    background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                    color: docType === "Bill" ? "#fff" : "#475569",
+                    border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
+                    boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
+                  }}>
+                    <input
+                      type="radio"
+                      name="empModalDocType"
+                      value="Bill"
+                      checked={docType === "Bill"}
+                      onChange={() => setDocType("Bill")}
+                      style={{ display: "none" }}
+                    />
+                    🧾 Bill
+                  </label>
+                  <label onClick={() => setDocType("Order Copy")} style={{
+                    flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                    padding: "10px 14px", borderRadius: "30px", cursor: "pointer",
+                    fontWeight: 700, fontSize: "13px", transition: "all .2s",
+                    background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                    color: docType === "Order Copy" ? "#fff" : "#475569",
+                    border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
+                    boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
+                  }}>
+                    <input
+                      type="radio"
+                      name="empModalDocType"
+                      value="Order Copy"
+                      checked={docType === "Order Copy"}
+                      onChange={() => setDocType("Order Copy")}
+                      style={{ display: "none" }}
+                    />
+                    📄 Order Copy
+                  </label>
+                </div>
               </div>
             </div>
 
             {/* Booking Expiry Date */}
             {docType === "Order Copy" && (
-              <div style={{
-                background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)", padding: "16px",
-                borderRadius: "16px", border: "1.5px solid #DDD6FE",
-                display: "flex", flexDirection: "column", gap: "10px"
-              }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)", padding: "16px", borderRadius: "16px", border: "1.5px solid #DDD6FE" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "11px", fontWeight: 800, letterSpacing: "1px", textTransform: "uppercase", color: "#6D28D9" }}>⏳ Booking Expiry Date *</span>
-                  <span style={{
-                    fontSize: "12px", fontWeight: 700, color: "#7C3AED",
-                    background: "rgba(124, 58, 237, 0.1)", padding: "4px 10px", borderRadius: "8px"
-                  }}>
+                  <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#6D28D9", letterSpacing: "1px" }}>
+                    ⏳ Booking Expiry Date *
+                  </label>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#7C3AED", background: "rgba(124, 58, 237, 0.1)", padding: "4px 10px", borderRadius: "8px" }}>
                     📅 {bookingExpiryDate ? new Date(bookingExpiryDate + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "Select Date"}
                   </span>
                 </div>
 
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", margin: "2px 0" }}>
                   <span style={{ fontSize: "10px", fontWeight: 700, color: "#6D28D9", alignSelf: "center", letterSpacing: "0.5px" }}>Quick Set:</span>
                   {[
                     { label: "+7 Days", days: 7 },
@@ -2448,28 +2489,41 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
                     targetDate.setDate(targetDate.getDate() + preset.days);
                     const iso = targetDate.toISOString().slice(0, 10);
                     const isSelected = bookingExpiryDate === iso;
+
                     return (
-                      <button key={preset.days} type="button" onClick={() => setBookingExpiryDate(iso)} style={{
-                        padding: "5px 12px", borderRadius: "10px",
-                        border: isSelected ? "none" : "1px solid #C4B5FD",
-                        background: isSelected ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#fff",
-                        color: isSelected ? "#fff" : "#6D28D9",
-                        fontSize: "11px", fontWeight: 700, cursor: "pointer",
-                        boxShadow: isSelected ? "0 3px 8px rgba(124, 58, 237, 0.3)" : "none",
-                        transition: "all .2s"
-                      }}>{preset.label}</button>
+                      <button
+                        key={preset.days}
+                        type="button"
+                        onClick={() => setBookingExpiryDate(iso)}
+                        style={{
+                          padding: "5px 12px",
+                          borderRadius: "10px",
+                          border: isSelected ? "none" : "1px solid #C4B5FD",
+                          background: isSelected ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                          color: isSelected ? "#FFFFFF" : "#6D28D9",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          boxShadow: isSelected ? "0 3px 8px rgba(124, 58, 237, 0.3)" : "none"
+                        }}
+                      >
+                        {preset.label}
+                      </button>
                     );
                   })}
                 </div>
 
                 <input
-                  type="date" value={bookingExpiryDate}
+                  type="date"
+                  className="form-input"
+                  style={{ height: "42px", padding: "10px 14px", fontSize: "13.5px", fontWeight: 600, borderRadius: "14px", border: "1.5px solid #C4B5FD", width: "100%", boxSizing: "border-box", background: "#FFFFFF", color: "#1E293B" }}
+                  value={bookingExpiryDate}
                   min={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => setBookingExpiryDate(e.target.value)}
-                  style={{ ...inputStyle, background: "#fff", border: "1.5px solid #C4B5FD" }}
                 />
+
                 <span style={{ fontSize: "11px", color: "#7C3AED", fontWeight: 500 }}>
-                  💡 Expiration alert will be sent to Admin if not fulfilled by this date.
+                  💡 If booking is not fulfilled by this date, an expiration alert will be sent to Admin.
                 </span>
               </div>
             )}
@@ -2529,6 +2583,27 @@ export function EmployeeCreateOrderModal({ onClose, initial }: { onClose: () => 
             transition: "transform .15s, box-shadow .15s"
           }}>🚀 Submit Order for Approval</button>
         </div>
+
+        {showScanner && (
+          <BarcodeScannerModal
+            itemLabel="Product Barcode / SKU"
+            onClose={() => setShowScanner(false)}
+            onDetected={(code) => {
+              setShowScanner(false);
+              const match = activeProducts.find(
+                (p) =>
+                  (p.sku && p.sku.toLowerCase() === code.toLowerCase()) ||
+                  p.id.toLowerCase() === code.toLowerCase() ||
+                  p.name.toLowerCase().includes(code.toLowerCase())
+              );
+              if (match) {
+                setProductId(match.id);
+              } else {
+                alert(`Scanned barcode: "${code}". No matching product found.`);
+              }
+            }}
+          />
+        )}
       </div>
     </div>,
     document.body

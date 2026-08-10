@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useStore } from "../app/store";
 import { ProductForm } from "./SuperAdminPage";
 import { getAutoProductImage } from "../utils/autoProductImage";
+import { useIsMobile } from "../hooks/use-mobile";
 
 interface Batch {
   id?: string;
@@ -28,6 +29,7 @@ interface ProductData extends Batch {
 }
 
 export function ProductDetailPage() {
+  const isMobile = useIsMobile();
   const [data, setData] = useState<ProductData | null>(null);
   const [role, setRole] = useState<string>("superadmin");
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
@@ -168,7 +170,6 @@ export function ProductDetailPage() {
   return (
     <div style={{ height: "100vh", maxHeight: "100vh", overflowY: "auto", background: "#F1F5F9", fontFamily: "'Work Sans', system-ui, sans-serif", padding: "32px 20px 60px", boxSizing: "border-box" }}>
       <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-        {/* Main Card (Styled exact like image 2 modal card) */}
         <div
           style={{
             background: "#FFFFFF",
@@ -178,103 +179,156 @@ export function ProductDetailPage() {
             border: "1px solid #E2E8F0"
           }}
         >
-          {/* Header Bar with Back Button */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <button
-                onClick={handleBack}
-                style={{
-                  background: "#F5F3FF",
-                  border: "1px solid #E9D8FD",
-                  borderRadius: "12px",
-                  color: "#7C3AED",
-                  padding: "8px 16px",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                  fontSize: "14px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px"
-                }}
-              >
-                ← Back
-              </button>
-              <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#5B21B6" }}>
+          {isMobile ? (
+            <div style={{ marginBottom: "24px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                <button
+                  onClick={handleBack}
+                  style={{
+                    background: "#F5F3FF",
+                    border: "1px solid #E9D8FD",
+                    borderRadius: "12px",
+                    color: "#7C3AED",
+                    padding: "8px 16px",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  ← Back
+                </button>
+                {isAdmin && (
+                  <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                    👑 Admin Mode
+                  </span>
+                )}
+              </div>
+              <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: "#5B21B6", lineHeight: 1.3 }}>
                 Product & Batch Details
               </h1>
             </div>
-            {isAdmin && (
-              <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                👑 Admin Mode
-              </span>
-            )}
-          </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <button
+                  onClick={handleBack}
+                  style={{
+                    background: "#F5F3FF",
+                    border: "1px solid #E9D8FD",
+                    borderRadius: "12px",
+                    color: "#7C3AED",
+                    padding: "8px 16px",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  ← Back
+                </button>
+                <h1 style={{ margin: 0, fontSize: "24px", fontWeight: 800, color: "#5B21B6" }}>
+                  Product & Batch Details
+                </h1>
+              </div>
+              {isAdmin && (
+                <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                  👑 Admin Mode
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Top Product Summary Card (Light Blue) */}
-          {/* Summary Card (Light Blue) */}
           <div
             style={{
               background: "#F8FAFC",
               border: "1px solid #F3EEFF",
               borderRadius: "16px",
-              padding: "24px",
+              padding: isMobile ? "18px 16px" : "24px",
               marginBottom: "24px",
               display: "flex",
-              alignItems: "center",
-              gap: "24px"
+              flexDirection: isMobile ? "column" : "row",
+              alignItems: isMobile ? "stretch" : "center",
+              gap: isMobile ? "16px" : "24px"
             }}
           >
-            <div style={{ width: "90px", height: "90px", borderRadius: "16px", stroke: "#E9D8FD", flexShrink: 0, background: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <img
-                src={getAutoProductImage(data.name, data.brand, data.category, data.image)}
-                alt={data.name}
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = getAutoProductImage(data.name, data.brand, data.category);
-                }}
-                style={{ width: "100%", height: "100%", objectFit: "contain" }}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <h2 style={{ margin: "0 0 12px 0", fontSize: "24px", fontWeight: 900, color: "#5B21B6", textTransform: "capitalize" }}>
-                {data.name}
-              </h2>
+            {isMobile ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                <div style={{ width: "70px", height: "70px", borderRadius: "14px", stroke: "#E9D8FD", flexShrink: 0, background: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <img
+                    src={getAutoProductImage(data.name, data.brand, data.category, data.image)}
+                    alt={data.name}
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = getAutoProductImage(data.name, data.brand, data.category);
+                    }}
+                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  />
+                </div>
+                <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 900, color: "#5B21B6", textTransform: "capitalize" }}>
+                  {data.name}
+                </h2>
+              </div>
+            ) : (
+              <div style={{ width: "90px", height: "90px", borderRadius: "16px", stroke: "#E9D8FD", flexShrink: 0, background: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <img
+                  src={getAutoProductImage(data.name, data.brand, data.category, data.image)}
+                  alt={data.name}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = getAutoProductImage(data.name, data.brand, data.category);
+                  }}
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                />
+              </div>
+            )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "12px 20px", fontSize: "14px" }}>
+            <div style={{ flex: 1, width: "100%" }}>
+              {!isMobile && (
+                <h2 style={{ margin: "0 0 12px 0", fontSize: "24px", fontWeight: 900, color: "#5B21B6", textTransform: "capitalize" }}>
+                  {data.name}
+                </h2>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(130px, 1fr))", gap: isMobile ? "10px 14px" : "12px 20px", fontSize: "14px" }}>
                 <div>
-                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 8 }}>SKU</span>
+                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>SKU</span>
                   <strong style={{ color: "#5B21B6" }}>{data.sku || "—"}</strong>
                 </div>
                 <div>
-                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 8 }}>Brand</span>
+                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Brand</span>
                   <strong style={{ color: "#5B21B6" }}>{data.brand || "—"}</strong>
                 </div>
                 <div>
-                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 8 }}>Category</span>
+                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Category</span>
                   <strong style={{ color: "#5B21B6" }}>{data.category || "Electronics"}</strong>
                 </div>
                 <div>
-                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 8 }}>Warranty</span>
+                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Warranty</span>
                   <strong style={{ color: "#5B21B6" }}>{data.warranty || "—"}</strong>
                 </div>
                 <div>
-                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 8 }}>Location</span>
+                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Location</span>
                   <strong style={{ color: "#5B21B6" }}>{data.location || "Shop"}</strong>
                 </div>
                 <div>
-                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 8 }}>Total Stock</span>
-                  <strong style={{ fontSize: "26px", color: "#7C3AED", fontWeight: 900 }}>{totalStock}</strong>
+                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Total Stock</span>
+                  <strong style={{ fontSize: isMobile ? "22px" : "26px", color: "#7C3AED", fontWeight: 900 }}>{totalStock}</strong>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Batch History */}
           <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 800, color: "#5B21B6" }}>
             Batch History
           </h3>
 
-          <div style={{ overflowX: "auto", borderRadius: "14px", border: "1px solid #E2E8F0", marginBottom: "24px" }}>
+          <div style={{ overflowX: "auto", borderRadius: "14px", border: "1px solid #E2E8F0", marginBottom: "24px", WebkitOverflowScrolling: "touch" }}>
             <table style={{ width: "100%", minWidth: "550px", borderCollapse: "collapse", fontSize: "14px" }}>
               <thead>
                 <tr style={{ background: "#F0F5FF", borderBottom: "1px solid #E2E8F0" }}>
@@ -377,47 +431,46 @@ export function ProductDetailPage() {
               background: "linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%)",
               border: "1px solid #BBF7D0",
               borderRadius: "16px",
-              padding: "20px",
+              padding: isMobile ? "14px 16px" : "20px",
               display: "flex",
-              alignItems: "center",
+              flexDirection: isMobile ? "column" : "row",
+              alignItems: isMobile ? "stretch" : "center",
               justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: "16px",
+              gap: "14px",
               boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)"
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <span style={{ fontSize: "24px" }}>📊</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ fontSize: "20px" }}>📊</span>
               <div>
-                <h4 style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#166534" }}>Pricing & Cost Analysis</h4>
-                <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#15803D", fontWeight: 500 }}>
+                <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#166534" }}>Pricing & Cost Analysis</h4>
+                <p style={{ margin: "2px 0 0 0", fontSize: "11px", color: "#15803D", fontWeight: 500 }}>
                   Calculated across {costs.length} active batch{costs.length > 1 ? "es" : ""}.
                 </p>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
-              <div style={{ background: "#FFFFFF", padding: "10px 18px", borderRadius: "12px", border: "1px solid #DCFCE7", minWidth: "120px" }}>
-                <span style={{ fontSize: "11px", color: "#15803D", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Average Cost</span>
-                <div style={{ fontSize: "20px", fontWeight: 900, color: "#166534", marginTop: "2px" }}>
+            <div style={{ display: "flex", gap: "12px", width: isMobile ? "100%" : "auto" }}>
+              <div style={{ background: "#FFFFFF", padding: "10px 14px", borderRadius: "12px", border: "1px solid #DCFCE7", flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: "10px", color: "#15803D", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", display: "block" }}>Average Cost</span>
+                <div style={{ fontSize: isMobile ? "16px" : "18px", fontWeight: 900, color: "#166534", marginTop: "2px" }}>
                   ₹{averageCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                 </div>
               </div>
 
               {costs.length > 1 && (
-                <div style={{ background: "#FFFFFF", padding: "10px 18px", borderRadius: "12px", border: "1px solid #DCFCE7", minWidth: "120px" }}>
-                  <span style={{ fontSize: "11px", color: "#B91C1C", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>Price Difference</span>
-                  <div style={{ fontSize: "20px", fontWeight: 900, color: "#B91C1C", marginTop: "2px" }}>
+                <div style={{ background: "#FFFFFF", padding: "10px 14px", borderRadius: "12px", border: "1px solid #DCFCE7", flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: "10px", color: "#B91C1C", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px", display: "block" }}>Price Difference</span>
+                  <div style={{ fontSize: isMobile ? "16px" : "18px", fontWeight: 900, color: "#B91C1C", marginTop: "2px" }}>
                     ₹{costDifference.toLocaleString()}
                   </div>
-                  <span style={{ fontSize: "10px", color: "#991B1B", fontWeight: 600 }}>
+                  <span style={{ fontSize: "10px", color: "#991B1B", fontWeight: 600, display: "block", marginTop: "1px" }}>
                     ({minCost.toLocaleString()} - {maxCost.toLocaleString()})
                   </span>
                 </div>
               )}
             </div>
           </div>
-
         </div>
       </div>
 
