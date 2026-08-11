@@ -122,7 +122,7 @@ export function ProductBatchDetailsModal({
           const serialList: string[] = Array.isArray(product.serialNumbers) && product.serialNumbers.length > 0
             ? product.serialNumbers
             : (product.id ? (() => { try { return JSON.parse(localStorage.getItem(`sham_serials_${product.id}`) || "[]"); } catch { return []; } })() : []);
-          
+
           const validSerials = serialList.filter(s => s && s.trim());
           if (validSerials.length === 0) return null;
 

@@ -2590,11 +2590,26 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId }
             onClose={() => setShowScanner(false)}
             onDetected={(code) => {
               setShowScanner(false);
+              const cleanCode = code.toLowerCase().trim();
               const match = activeProducts.find(
                 (p) =>
-                  (p.sku && p.sku.toLowerCase() === code.toLowerCase()) ||
-                  p.id.toLowerCase() === code.toLowerCase() ||
-                  p.name.toLowerCase().includes(code.toLowerCase())
+                  (p.sku && p.sku.toLowerCase().trim() === cleanCode) ||
+                  p.id.toLowerCase().trim() === cleanCode ||
+                  p.name.toLowerCase().includes(cleanCode) ||
+                  (Array.isArray(p.serialNumbers) && p.serialNumbers.some((sn: any) => sn && typeof sn === "string" && sn.toLowerCase().trim() === cleanCode)) ||
+                  (() => {
+                    try {
+                      const keys = [`sham_serials_${p.id}`, `sham_serials_${(p.name || "").toLowerCase().trim()}`, p.sku ? `sham_serials_${p.sku}` : null].filter(Boolean) as string[];
+                      for (const k of keys) {
+                        const raw = localStorage.getItem(k);
+                        if (raw) {
+                          const parsed = JSON.parse(raw);
+                          if (Array.isArray(parsed) && parsed.some((sn: string) => sn && typeof sn === "string" && sn.toLowerCase().trim() === cleanCode)) return true;
+                        }
+                      }
+                    } catch (_) {}
+                    return false;
+                  })()
               );
               if (match) {
                 setProductId(match.id);

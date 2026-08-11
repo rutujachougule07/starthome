@@ -38,6 +38,11 @@ export function ErrorComponent({ error, reset }: { error: Error; reset: () => vo
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
+        {error?.message && (
+          <div style={{ marginTop: "16px", padding: "12px", background: "#FEF2F2", color: "#991B1B", fontSize: "12px", borderRadius: "8px", textAlign: "left", fontFamily: "monospace", overflowX: "auto", border: "1px solid #FCA5A5" }}>
+            <strong>Error Details:</strong> {error.message}
+          </div>
+        )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {

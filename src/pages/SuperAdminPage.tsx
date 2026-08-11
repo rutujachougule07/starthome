@@ -1944,7 +1944,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed)) list = [...parsed];
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     const targetQty = initial?.qty ?? initial?.stock ?? 0;
     while (list.length < targetQty) list.push("");
@@ -2162,7 +2162,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
       if (initial?.id) localStorage.setItem(`sham_serials_${initial.id}`, JSON.stringify(next));
       if (name) localStorage.setItem(`sham_serials_${name.toLowerCase().trim()}`, JSON.stringify(next));
       if (sku) localStorage.setItem(`sham_serials_${sku}`, JSON.stringify(next));
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const save = () => {
@@ -2669,7 +2669,7 @@ export function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDete
       if (codeReaderRef.current) {
         try {
           codeReaderRef.current.reset();
-        } catch (_) {}
+        } catch (_) { }
         codeReaderRef.current = null;
       }
     };

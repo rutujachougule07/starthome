@@ -4,17 +4,17 @@ import { db, auth } from "../pages/firebase";
 
 export type Role = "superadmin" | "manager" | "employee";
 
-export interface User { 
-  id: string; 
-  name: string; 
-  username: string; 
-  role: Role; 
-  email?: string; 
-  phone?: string; 
-  employeeId?: string; 
-  jobTitle?: string; 
-  password?: string; 
-  address?: string; 
+export interface User {
+  id: string;
+  name: string;
+  username: string;
+  role: Role;
+  email?: string;
+  phone?: string;
+  employeeId?: string;
+  jobTitle?: string;
+  password?: string;
+  address?: string;
   status?: string;
   department?: string;
   designation?: string;
