@@ -2,6 +2,8 @@ import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useStore, loadCurrentUser, Product, User, Order, Lead, Task } from "../app/store";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "./firebase";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { ProductBatchDetailsModal } from "../components/ProductBatchDetailsModal";
 import { EmployeeDetailsModal } from "../components/EmployeeDetailsModal";
@@ -1722,12 +1724,32 @@ function ProductsSection() {
           onClose={() => setShowAdd(false)}
           onSave={(d) => {
             const nextId = uid("p");
-            setState((s) => ({ ...s, products: [...s.products, { id: nextId, ...d }] }));
+            const newProd = { id: nextId, ...d };
+            setState((s) => ({ ...s, products: [...s.products, newProd] }));
+            setDoc(doc(db, "products", nextId), newProd, { merge: true }).catch(() => {});
+            if (d.serialNumbers) {
+              try { localStorage.setItem(`sham_serials_${nextId}`, JSON.stringify(d.serialNumbers)); } catch (_) {}
+            }
             setShowAdd(false);
           }}
         />
       )}
-      {editing && <ProductForm title="Edit Product" initial={editing} onClose={() => setEditing(null)} onSave={(d) => { setState((s) => ({ ...s, products: s.products.map((p) => p.id === editing.id ? { ...p, ...d } : p) })); setEditing(null); }} />}
+      {editing && (
+        <ProductForm
+          title="Edit Product"
+          initial={editing}
+          onClose={() => setEditing(null)}
+          onSave={(d) => {
+            const updated = { ...editing, ...d };
+            setState((s) => ({ ...s, products: s.products.map((p) => (p.id === editing.id ? updated : p)) }));
+            setDoc(doc(db, "products", editing.id), updated, { merge: true }).catch(() => {});
+            if (d.serialNumbers) {
+              try { localStorage.setItem(`sham_serials_${editing.id}`, JSON.stringify(d.serialNumbers)); } catch (_) {}
+            }
+            setEditing(null);
+          }}
+        />
+      )}
 
       {viewingBatches && (
         <ProductBatchDetailsModal
@@ -1931,7 +1953,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [totalCost, setTotalCost] = useState(initial ? parseFloat((initial.qty * initial.cost).toFixed(2)) : 0);
-  const { products, users } = useStore();
+  const { products, users, setState } = useStore();
   const [assignedEmployeeId, setAssignedEmployeeId] = useState(initial?.assignedEmployeeId ?? "");
   const [serialNumbers, setSerialNumbers] = useState<string[]>(() => {
     let list: string[] = [];
@@ -2163,6 +2185,14 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
       if (name) localStorage.setItem(`sham_serials_${name.toLowerCase().trim()}`, JSON.stringify(next));
       if (sku) localStorage.setItem(`sham_serials_${sku}`, JSON.stringify(next));
     } catch (_) { }
+
+    if (initial?.id) {
+      setState((s: any) => ({
+        ...s,
+        products: s.products.map((p: any) => (p.id === initial.id ? { ...p, serialNumbers: next } : p))
+      }));
+      setDoc(doc(db, "products", initial.id), { serialNumbers: next }, { merge: true }).catch(() => {});
+    }
   };
 
   const save = () => {

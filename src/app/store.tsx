@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
-import { collection, doc, onSnapshot, writeBatch, getDocs } from "firebase/firestore";
+import { collection, doc, onSnapshot, writeBatch, getDocs, setDoc } from "firebase/firestore";
 import { db, auth } from "../pages/firebase";
 
 export type Role = "superadmin" | "manager" | "employee";
@@ -263,7 +263,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (snap.docs.length > 0) updateCollectionState("users", list);
       }),
       onSnapshot(collection(db, "products"), (snap) => {
-        const list = snap.docs.map((d) => d.data() as Product);
+        const list = snap.docs.map((d) => {
+          const item = d.data() as Product;
+          if (!item.serialNumbers || !Array.isArray(item.serialNumbers) || item.serialNumbers.length === 0 || !item.serialNumbers.some(s => s && typeof s === "string" && s.trim())) {
+            try {
+              const searchKeys = [
+                `sham_serials_${item.id}`,
+                `sham_serials_${(item.name || "").toLowerCase().trim()}`,
+                item.sku ? `sham_serials_${item.sku}` : null,
+              ].filter(Boolean) as string[];
+              for (const k of searchKeys) {
+                const cached = localStorage.getItem(k);
+                if (cached) {
+                  const parsed = JSON.parse(cached);
+                  if (Array.isArray(parsed) && parsed.some((s: string) => s && typeof s === "string" && s.trim())) {
+                    item.serialNumbers = parsed;
+                    // Push to Firebase Firestore so Vercel deployment gets serialNumbers in real time!
+                    setDoc(doc(db, "products", item.id), sanitizeDoc(item), { merge: true }).catch((err) =>
+                      console.error(`Error pushing serialNumbers to Firestore for ${item.id}:`, err)
+                    );
+                    break;
+                  }
+                }
+              }
+            } catch (_) {}
+          }
+          return item;
+        });
         if (snap.docs.length > 0) updateCollectionState("products", list);
       }),
       onSnapshot(collection(db, "customers"), (snap) => {
