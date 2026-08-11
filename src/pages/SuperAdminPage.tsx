@@ -2633,13 +2633,27 @@ export function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDete
   const [error, setError] = useState<string>("");
   const [manualCode, setManualCode] = useState("");
   const codeReaderRef = useRef<any>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     let active = true;
 
     const startScanner = async () => {
+      setError("");
       try {
+        // 1. Explicitly prompt user for camera permission using navigator.mediaDevices.getUserMedia first
+        if (typeof navigator !== "undefined" && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: "environment" } }
+            });
+            stream.getTracks().forEach((t) => t.stop());
+          } catch (permErr: any) {
+            console.warn("Camera getUserMedia pre-check error:", permErr);
+          }
+        }
+
         const zxing = await import("@zxing/library");
         if (!active) return;
 
@@ -2673,23 +2687,39 @@ export function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDete
         }
 
         if (videoRef.current && active) {
-          await codeReader.decodeFromVideoDevice(
-            selectedDeviceId ?? null,
-            videoRef.current,
-            (result: any) => {
-              if (active && result) {
-                const text = result.getText();
-                if (text) {
-                  onDetected(text);
-                  stop();
+          if (selectedDeviceId) {
+            await codeReader.decodeFromVideoDevice(
+              selectedDeviceId,
+              videoRef.current,
+              (result: any) => {
+                if (active && result) {
+                  const text = result.getText();
+                  if (text) {
+                    onDetected(text);
+                    stop();
+                  }
                 }
               }
-            }
-          );
+            );
+          } else {
+            await codeReader.decodeFromConstraints(
+              { video: { facingMode: { ideal: "environment" } } },
+              videoRef.current,
+              (result: any) => {
+                if (active && result) {
+                  const text = result.getText();
+                  if (text) {
+                    onDetected(text);
+                    stop();
+                  }
+                }
+              }
+            );
+          }
         }
       } catch (err: any) {
         if (active) {
-          setError("Camera access error. Please allow camera permissions or type barcode manually.");
+          setError("Camera permission denied or unavailable. Please allow camera access in your browser address bar or enter barcode manually below.");
         }
       }
     };
@@ -2710,7 +2740,7 @@ export function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDete
       stop();
       clearTimeout(timer);
     };
-  }, [onDetected]);
+  }, [onDetected, retryCount]);
 
   const handleManual = () => {
     if (manualCode.trim()) {
@@ -2736,8 +2766,18 @@ export function BarcodeScannerModal({ onDetected, onClose, itemLabel }: { onDete
         </div>
 
         {error ? (
-          <div style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FCA5A5", borderRadius: 12, padding: "10px 12px", fontSize: 12, fontWeight: 600 }}>
-            ⚠️ {error}
+          <div style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FCA5A5", borderRadius: 12, padding: "12px", fontSize: 12, fontWeight: 600, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div>⚠️ {error}</div>
+            <button
+              type="button"
+              onClick={() => setRetryCount((c) => c + 1)}
+              style={{
+                background: "#7C3AED", color: "#FFFFFF", border: "none", borderRadius: 8, padding: "8px 12px",
+                fontSize: 12, fontWeight: 800, cursor: "pointer", alignSelf: "center"
+              }}
+            >
+              🔄 Allow & Retry Camera
+            </button>
           </div>
         ) : (
           <div style={{ position: "relative", borderRadius: 14, overflow: "hidden", background: "#000", border: "2px solid #7C3AED", aspectRatio: "1.333" }}>
