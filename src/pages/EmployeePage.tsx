@@ -609,7 +609,7 @@ function OrderUpdates() {
                 <div className="data-card-body">
                   <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
-                  <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
+                  <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{(o.total || 0).toLocaleString()}</span></div>
                 </div>
 
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
@@ -714,7 +714,7 @@ function OrderUpdates() {
                 <div className="data-card-body">
                   <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
-                  <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
+                  <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{(o.total || 0).toLocaleString()}</span></div>
                 </div>
 
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
@@ -998,7 +998,7 @@ function ProductsSection() {
                     </div>
                   </td>
                   <td>{p.category}</td>
-                  <td>₹{p.price.toLocaleString()}</td>
+                  <td>₹{(p.price || 0).toLocaleString()}</td>
                   <td>{p.qty ?? p.stock}</td>
                   <td><Pill status={p.status} /></td>
                   <td><span style={{ fontWeight: 600, color: "var(--brown-dark)" }}>{p.brand || "—"}</span></td>
@@ -1984,7 +1984,7 @@ export function OrderDocumentModal({
               marginTop: "4px"
             }}>
               <span>Total Payable:</span>
-              <span>₹{order.total.toLocaleString()}</span>
+              <span>₹{(order.total || 0).toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -2381,7 +2381,7 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId }
                     borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#7C3AED",
                     boxShadow: "0 2px 6px rgba(124, 58, 237, 0.12)"
                   }}>
-                    💰 ₹{selectedProduct.price.toLocaleString()}
+                    💰 ₹{(selectedProduct.price || 0).toLocaleString()}
                   </div>
                   <div style={{
                     display: "inline-flex", alignItems: "center", gap: "6px",

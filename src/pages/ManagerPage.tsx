@@ -388,7 +388,7 @@ function OrdersMgmt() {
                   <div className="data-row"><span className="data-label">Assigned</span><span className="data-value">{o.assignedToName ?? "—"}</span></div>
                 </div>
                 <div className="data-card-footer" style={{ justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 700, color: "var(--brown-dark)", fontSize: 16 }}>₹{o.total.toLocaleString()}</span>
+                  <span style={{ fontWeight: 700, color: "var(--brown-dark)", fontSize: 16 }}>₹{(o.total || 0).toLocaleString()}</span>
                   <div className="actions-row">
                     {o.status === "Approved" && (
                       o.sentToEmployee ? (
@@ -802,7 +802,7 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
                   borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#7C3AED",
                   boxShadow: "0 2px 6px rgba(124, 58, 237, 0.12)"
                 }}>
-                  💰 ₹{selectedProduct.price.toLocaleString()}
+                  💰 ₹{(selectedProduct.price || 0).toLocaleString()}
                 </div>
                 <div style={{
                   display: "inline-flex", alignItems: "center", gap: "6px",
@@ -1204,7 +1204,7 @@ function ProductsAvail() {
                     <td>
                       <span style={{ fontWeight: 800, fontSize: 15, color: "#1E293B" }}>{p.qty ?? p.stock ?? 0}</span>
                     </td>
-                    <td>₹{p.cost.toLocaleString()}</td>
+                    <td>₹{(p.cost || 0).toLocaleString()}</td>
                     <td style={{ fontWeight: 600 }}>₹{totalValue.toLocaleString()}</td>
                     <td>{p.supplier}</td>
                     <td>{formattedDate}</td>

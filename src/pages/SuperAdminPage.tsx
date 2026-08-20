@@ -1684,8 +1684,8 @@ function ProductsSection() {
                     <td>
                       <span style={{ fontWeight: 800, fontSize: 15, color: "#1E293B" }}>{p.qty ?? p.stock ?? 0}</span>
                     </td>
-                    <td>₹{p.cost.toLocaleString()}</td>
-                    <td style={{ fontWeight: 600 }}>₹{totalValue.toLocaleString()}</td>
+                    <td>₹{(p.cost || 0).toLocaleString()}</td>
+                    <td style={{ fontWeight: 600 }}>₹{(totalValue || 0).toLocaleString()}</td>
                     <td>{p.supplier}</td>
                     <td>{formattedDate}</td>
                     <td><span style={{ fontWeight: 600 }}>{p.status}</span></td>
@@ -2894,7 +2894,7 @@ export function OrdersTable() {
             </div>
             <div className="data-card-footer" style={{ justifyContent: "space-between" }}>
               <span className="data-label" style={{ alignSelf: "center" }}>Total</span>
-              <span style={{ fontWeight: 700, color: "var(--brown-dark)", fontSize: 16 }}>₹{o.total.toLocaleString()}</span>
+              <span style={{ fontWeight: 700, color: "var(--brown-dark)", fontSize: 16 }}>₹{(o.total || 0).toLocaleString()}</span>
             </div>
           </div>
         );
@@ -6311,7 +6311,7 @@ export function SuperAdminGodownSection() {
         <tbody>
           {prods.map(p => {
             const qty = p.qty ?? p.stock ?? 0;
-            const totalValue = qty * p.cost;
+            const totalValue = qty * (p.cost || 0);
             return (
               <tr key={p.id}>
                 <td>
@@ -6331,8 +6331,8 @@ export function SuperAdminGodownSection() {
                 <td>{p.sku || "—"}</td>
                 <td>{p.category}</td>
                 <td style={{ fontWeight: 600, color: qty < 20 ? "var(--danger)" : "inherit" }}>{qty}</td>
-                <td>₹{p.cost.toLocaleString()}</td>
-                <td style={{ fontWeight: 600 }}>₹{totalValue.toLocaleString()}</td>
+                <td>₹{(p.cost || 0).toLocaleString()}</td>
+                <td style={{ fontWeight: 600 }}>₹{(totalValue || 0).toLocaleString()}</td>
               </tr>
             );
           })}
@@ -7724,7 +7724,7 @@ export function SuperAdminReportsSection() {
                         <td>{o.customerName}</td>
                         <td>{o.productName}</td>
                         <td>{o.qty}</td>
-                        <td style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</td>
+                        <td style={{ fontWeight: 700 }}>₹{(o.total || 0).toLocaleString()}</td>
                         <td>{o.docType || "Bill"}</td>
                         <td><Pill status={o.status} /></td>
                         <td>{o.assignedToName || "—"}</td>
@@ -7785,7 +7785,7 @@ export function SuperAdminReportsSection() {
                           <td>{p.sku || "—"}</td>
                           <td>{p.location || "Unassigned"}</td>
                           <td>{p.qty ?? p.stock}</td>
-                          <td style={{ color: "var(--green)", fontWeight: 700 }}>₹{p.incentive.toLocaleString()}</td>
+                          <td style={{ color: "var(--green)", fontWeight: 700 }}>₹{(p.incentive || 0).toLocaleString()}</td>
                           <td style={{ fontWeight: 700 }}>₹{((p.qty ?? p.stock ?? 0) * (p.incentive || 0)).toLocaleString()}</td>
                           <td>{assignedName}</td>
                         </tr>
