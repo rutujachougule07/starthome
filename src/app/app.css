@@ -2401,9 +2401,24 @@ button.btn-circle-danger:hover {
   }
 
   /* Target inline grid styles inside modals/forms */
+  div[style*="grid-template-columns"],
   div[style*="gridTemplateColumns"] {
     grid-template-columns: 1fr !important;
     gap: 10px !important;
+  }
+
+  .upcoming-panel {
+    padding: 16px !important;
+    border-radius: 16px !important;
+  }
+
+  .upcoming-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .upcoming-card {
+    padding: 14px !important;
   }
 
   .modal-actions {

@@ -3747,8 +3747,8 @@ export function UpcomingFollowUps() {
   upcoming.sort((a, b) => new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime());
 
   return (
-    <div className="panel" style={{ padding: "24px", background: "rgba(255, 255, 255, 0.72)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 15px 40px rgba(0, 0, 0, 0.06)" }}>
-      <div className="panel-head" style={{ marginBottom: upcoming.length ? "16px" : "0" }}>
+    <div className="panel upcoming-panel" style={{ padding: "24px", background: "rgba(255, 255, 255, 0.72)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 15px 40px rgba(0, 0, 0, 0.06)" }}>
+      <div className="panel-head" style={{ marginBottom: upcoming.length ? "16px" : "0", flexWrap: "wrap", gap: "10px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <span style={{ fontSize: "20px", color: "#1E293B" }}>🔔</span>
           <h3 className="panel-title" style={{ fontSize: "22px", color: "#1F1F1F", fontWeight: 700 }}>Upcoming Follow-ups</h3>
@@ -3768,11 +3768,12 @@ export function UpcomingFollowUps() {
           No upcoming follow-ups scheduled.
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginTop: "16px" }}>
+        <div className="upcoming-cards-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "16px", marginTop: "16px" }}>
           {upcoming.map(l => {
             return (
               <div
                 key={l.id}
+                className="upcoming-card"
                 style={{
                   display: "flex",
                   flexDirection: "column",
@@ -3785,8 +3786,8 @@ export function UpcomingFollowUps() {
                 }}
               >
                 {/* Header Row */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", alignItems: "center", minWidth: 0, flex: 1 }}>
                     <span
                       style={{
                         width: "8px",
@@ -3794,12 +3795,13 @@ export function UpcomingFollowUps() {
                         borderRadius: "50%",
                         background: getStatusColor(l.status),
                         marginRight: "10px",
-                        display: "inline-block"
+                        display: "inline-block",
+                        flexShrink: 0
                       }}
                     />
-                    <strong style={{ fontSize: "15px", fontWeight: 700, color: "#5c4115" }}>{l.name}</strong>
+                    <strong style={{ fontSize: "15px", fontWeight: 700, color: "#5c4115", wordBreak: "break-word" }}>{l.name}</strong>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
                     <span
                       style={{
                         background: "#F5F3FF",
@@ -3807,7 +3809,8 @@ export function UpcomingFollowUps() {
                         fontSize: "12px",
                         fontWeight: 600,
                         padding: "4px 10px",
-                        borderRadius: "99px"
+                        borderRadius: "99px",
+                        whiteSpace: "nowrap"
                       }}
                     >
                       {getRelativeDays(l.followUpDate!)}
@@ -3836,20 +3839,20 @@ export function UpcomingFollowUps() {
 
                 {/* Details Section */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632" }}>
-                    <Briefcase size={14} style={{ color: "#a8a29e" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632", overflowWrap: "anywhere" }}>
+                    <Briefcase size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
                     <span>{l.product || "N/A"}{l.brand ? ` - ${l.brand}` : ""}</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632" }}>
-                    <Calendar size={14} style={{ color: "#a8a29e" }} />
+                    <Calendar size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
                     <span>{formatFollowUpDate(l.followUpDate!)}</span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632" }}>
-                    <Phone size={14} style={{ color: "#a8a29e" }} />
+                    <Phone size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
                     <span>{l.phone}</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632" }}>
-                    <UserIcon size={14} style={{ color: "#a8a29e" }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632", overflowWrap: "anywhere" }}>
+                    <UserIcon size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
                     <span>Added By: <strong style={{ color: "#5c4115" }}>
                       {l.createdBy || "System"}
                       {(() => {
