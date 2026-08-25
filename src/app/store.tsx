@@ -290,27 +290,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           return item;
         });
-        if (snap.docs.length > 0) updateCollectionState("products", list);
+        updateCollectionState("products", list);
       }),
       onSnapshot(collection(db, "customers"), (snap) => {
         const list = snap.docs.map((d) => d.data() as Customer);
-        if (snap.docs.length > 0) updateCollectionState("customers", list);
+        updateCollectionState("customers", list);
       }),
       onSnapshot(collection(db, "orders"), (snap) => {
         const list = snap.docs.map((d) => d.data() as Order);
-        if (snap.docs.length > 0) updateCollectionState("orders", list);
+        updateCollectionState("orders", list);
       }),
       onSnapshot(collection(db, "tasks"), (snap) => {
         const list = snap.docs.map((d) => d.data() as Task);
-        if (snap.docs.length > 0) updateCollectionState("tasks", list);
+        updateCollectionState("tasks", list);
       }),
       onSnapshot(collection(db, "notifications"), (snap) => {
         const list = snap.docs.map((d) => d.data() as Notification);
-        if (snap.docs.length > 0) updateCollectionState("notifications", list);
+        updateCollectionState("notifications", list);
       }),
       onSnapshot(collection(db, "leads"), (snap) => {
         const list = snap.docs.map((d) => d.data() as Lead);
-        if (snap.docs.length > 0) updateCollectionState("leads", list);
+        updateCollectionState("leads", list);
       }),
     ];
 

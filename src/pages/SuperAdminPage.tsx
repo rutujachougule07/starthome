@@ -2,7 +2,7 @@ import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useStore, loadCurrentUser, Product, User, Order, Lead, Task } from "../app/store";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { ProductBatchDetailsModal } from "../components/ProductBatchDetailsModal";
@@ -1491,6 +1491,7 @@ function ProductsSection() {
 
   const remove = (id: string) => {
     if (!confirm("Delete this product?")) return;
+    deleteDoc(doc(db, "products", id)).catch((err) => console.error("Error deleting product from Firestore:", err));
     setState((s) => ({ ...s, products: s.products.filter((p) => p.id !== id) }));
   };
 
@@ -5700,6 +5701,7 @@ export function SuperAdminIncentiveSection() {
 
   const remove = (id: string) => {
     if (!confirm("Delete this product?")) return;
+    deleteDoc(doc(db, "products", id)).catch((err) => console.error("Error deleting product from Firestore:", err));
     setState((s) => ({ ...s, products: s.products.filter((p) => p.id !== id) }));
   };
 

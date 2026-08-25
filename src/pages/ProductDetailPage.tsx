@@ -3,6 +3,8 @@ import { useStore } from "../app/store";
 import { ProductForm } from "./SuperAdminPage";
 import { getAutoProductImage } from "../utils/autoProductImage";
 import { useIsMobile } from "../hooks/use-mobile";
+import { doc, deleteDoc, setDoc } from "firebase/firestore";
+import { db } from "./firebase";
 
 interface Batch {
   id?: string;
@@ -104,17 +106,77 @@ export function ProductDetailPage() {
     setEditProductWarranty(data?.warranty || "");
   };
 
-  const handleDeleteBatch = (idx: number) => {
+  const handleDeleteEntireProduct = async () => {
+    if (!confirm(`Are you sure you want to permanently delete product "${data.name}" and all its batches?`)) return;
+
+    const idsToDelete = new Set<string>();
+    if (data.id) idsToDelete.add(data.id);
+    if (Array.isArray(data.batches)) {
+      data.batches.forEach(b => {
+        if (b.id) idsToDelete.add(b.id);
+      });
+    }
+
+    try {
+      for (const id of idsToDelete) {
+        await deleteDoc(doc(db, "products", id));
+      }
+    } catch (err) {
+      console.error("Error deleting product from Firestore:", err);
+    }
+
+    setState((s) => ({
+      ...s,
+      products: s.products.filter(
+        (p) =>
+          !idsToDelete.has(p.id) &&
+          !(data.sku && p.sku && p.sku.toLowerCase() === data.sku.toLowerCase()) &&
+          !(data.name && p.name && p.name.toLowerCase().trim() === data.name.toLowerCase().trim())
+      )
+    }));
+
+    localStorage.removeItem("product_detail_preview");
+    alert("Product deleted successfully.");
+    handleBack();
+  };
+
+  const handleDeleteBatch = async (idx: number) => {
     if (!confirm("Are you sure you want to delete this batch?")) return;
 
+    const targetBatch = batchList[idx];
+    const targetBatchId = targetBatch?.id;
     const updatedBatches = [...batchList];
     updatedBatches.splice(idx, 1);
 
     if (updatedBatches.length === 0) {
+      const idsToDelete = new Set<string>();
+      if (data.id) idsToDelete.add(data.id);
+      if (targetBatchId) idsToDelete.add(targetBatchId);
+      if (Array.isArray(data.batches)) {
+        data.batches.forEach((b) => {
+          if (b.id) idsToDelete.add(b.id);
+        });
+      }
+
+      try {
+        for (const id of idsToDelete) {
+          await deleteDoc(doc(db, "products", id));
+        }
+      } catch (err) {
+        console.error("Error deleting batch from Firestore:", err);
+      }
+
       setState((s) => ({
         ...s,
-        products: s.products.filter((p) => p.id !== data.id)
+        products: s.products.filter(
+          (p) =>
+            !idsToDelete.has(p.id) &&
+            !(data.sku && p.sku && p.sku.toLowerCase() === data.sku.toLowerCase()) &&
+            !(data.name && p.name && p.name.toLowerCase().trim() === data.name.toLowerCase().trim())
+        )
       }));
+
+      localStorage.removeItem("product_detail_preview");
       alert("Product deleted successfully.");
       handleBack();
       return;
@@ -123,16 +185,38 @@ export function ProductDetailPage() {
     const newQty = updatedBatches.reduce((acc, item) => acc + (item.qty ?? item.stock ?? 0), 0);
     const updatedData = { ...data, qty: newQty, stock: newQty, batches: updatedBatches };
 
+    if (targetBatchId && targetBatchId !== data.id) {
+      try {
+        await deleteDoc(doc(db, "products", targetBatchId));
+      } catch (err) {
+        console.error("Error deleting batch document from Firestore:", err);
+      }
+    }
+
+    if (data.id) {
+      try {
+        const clean: any = {};
+        Object.keys(updatedData).forEach((key) => {
+          if ((updatedData as any)[key] !== undefined) clean[key] = (updatedData as any)[key];
+        });
+        await setDoc(doc(db, "products", data.id), clean, { merge: true });
+      } catch (err) {
+        console.error("Error updating product in Firestore:", err);
+      }
+    }
+
     setState((s) => ({
       ...s,
-      products: s.products.map((p) => (p.id === data.id ? ({ ...p, ...updatedData } as any) : p))
+      products: s.products
+        .filter((p) => (targetBatchId && targetBatchId !== data.id ? p.id !== targetBatchId : true))
+        .map((p) => (p.id === data.id ? ({ ...p, ...updatedData } as any) : p))
     }));
 
     setData(updatedData);
     localStorage.setItem("product_detail_preview", JSON.stringify(updatedData));
   };
 
-  const handleSaveBatchEdit = (e: React.FormEvent) => {
+  const handleSaveBatchEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingBatch || editingBatch._index === undefined) return;
 
@@ -156,6 +240,18 @@ export function ProductDetailPage() {
       stock: newQty,
       batches: updatedBatches
     };
+
+    if (data.id) {
+      try {
+        const clean: any = {};
+        Object.keys(updatedData).forEach((key) => {
+          if ((updatedData as any)[key] !== undefined) clean[key] = (updatedData as any)[key];
+        });
+        await setDoc(doc(db, "products", data.id), clean, { merge: true });
+      } catch (err) {
+        console.error("Error updating product in Firestore:", err);
+      }
+    }
 
     setState((s) => ({
       ...s,
@@ -201,9 +297,30 @@ export function ProductDetailPage() {
                   ← Back
                 </button>
                 {isAdmin && (
-                  <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                    👑 Admin Mode
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button
+                      onClick={handleDeleteEntireProduct}
+                      title="Delete Product"
+                      style={{
+                        background: "#FEF2F2",
+                        border: "1px solid #FECACA",
+                        borderRadius: "10px",
+                        color: "#DC2626",
+                        padding: "6px 12px",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}
+                    >
+                      🗑️ Delete
+                    </button>
+                    <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                      👑 Admin Mode
+                    </span>
+                  </div>
                 )}
               </div>
               <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: "#5B21B6", lineHeight: 1.3 }}>
@@ -236,9 +353,37 @@ export function ProductDetailPage() {
                 </h1>
               </div>
               {isAdmin && (
-                <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                  👑 Admin Mode
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <button
+                    onClick={handleDeleteEntireProduct}
+                    title="Delete this product and all its batches"
+                    style={{
+                      background: "#FEF2F2",
+                      border: "1px solid #FECACA",
+                      borderRadius: "10px",
+                      color: "#DC2626",
+                      padding: "7px 14px",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      fontSize: "13px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      transition: "all 0.2s"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "#FEE2E2";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "#FEF2F2";
+                    }}
+                  >
+                    🗑️ Delete Product
+                  </button>
+                  <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
+                    👑 Admin Mode
+                  </span>
+                </div>
               )}
             </div>
           )}
