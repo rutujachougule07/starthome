@@ -2,6 +2,7 @@
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { Plus } from "lucide-react";
 import { useStore, loadCurrentUser, Customer, Product, Order, Task } from "../app/store";
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm, BarcodeScannerModal } from "./SuperAdminPage";
@@ -944,6 +945,36 @@ function ProductsSection() {
       <div className="panel">
         <div className="panel-head">
           <h3 className="panel-title">Catalog ({filteredProducts.length})</h3>
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "9999px",
+              padding: "8px 20px",
+              fontWeight: 700,
+              fontSize: "13px",
+              boxShadow: "0 4px 14px rgba(139, 92, 246, 0.35)",
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 6px 20px rgba(236, 72, 153, 0.45)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 4px 14px rgba(139, 92, 246, 0.35)";
+            }}
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>Add Product</span>
+          </button>
         </div>
         <div className="table-wrap">
           <table className="tbl">
