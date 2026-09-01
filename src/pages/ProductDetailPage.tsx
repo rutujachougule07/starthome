@@ -25,6 +25,7 @@ interface ProductData extends Batch {
   brand?: string;
   category?: string;
   warranty?: string;
+  model?: string;
   image?: string;
   price?: number;
   batches?: Batch[];
