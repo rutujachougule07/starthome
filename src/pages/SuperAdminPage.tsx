@@ -1,7 +1,7 @@
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useStore, loadCurrentUser, Product, User, Order, Lead, Task, Quotation } from "../app/store";
+import { useStore, loadCurrentUser, Product, User, Order, Lead, Task, Quotation, normalizeQuotationDoc } from "../app/store";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
@@ -8564,7 +8564,7 @@ export function QuotationsSection() {
     const myEmpId = currentUser?.employeeId;
     const myName = currentUser?.name?.toLowerCase().trim();
 
-    return (quotations || []).filter((q) => {
+    return (quotations || []).map((q) => normalizeQuotationDoc(q)).filter((q) => {
       if (!q) return false;
 
       // Rule: Admin sees ALL; Employee/Manager sees ONLY quotations added by themselves!

@@ -318,7 +318,102 @@ const seedDatabase = async () => {
   } catch (err) {
     console.error("Error seeding Firestore:", err);
   }
-};
+export function normalizeQuotationDoc(d: any): Quotation {
+  if (!d) {
+    return {
+      id: `qt_${Date.now()}`,
+      customerName: "Unknown",
+      productName: "Product",
+      qty: 1,
+      unitPrice: 0,
+      totalPrice: 0,
+      finalPrice: 0,
+      date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      createdBy: "—",
+      status: "Draft"
+    };
+  }
+  const data = typeof d.data === "function" ? d.data() : d;
+  const id = d.id || data.id || `qt_${Date.now()}`;
+
+  // Customer details
+  const customerName = data.customerName || data.name || data.clientName || data.customer_name || "Unknown Customer";
+  const customerPhone = data.customerPhone || data.phone || data.mobile || data.customer_phone || "";
+
+  // Product details
+  let productName = data.productName || data.product || data.product_name || data.itemName || data.item_name || data.item || data.title || "";
+  let brand = data.brand || data.productBrand || "";
+  let size = data.size || data.warranty || "";
+  let model = data.model || "";
+  let qty = Number(data.qty ?? data.quantity ?? data.count ?? 1);
+  let unitPrice = Number(data.unitPrice ?? data.price ?? data.rate ?? data.cost ?? data.unit_price ?? 0);
+
+  // If products are stored as an array (items: [{ productName, qty, unitPrice }])
+  if (!productName && Array.isArray(data.items) && data.items.length > 0) {
+    const firstItem = data.items[0];
+    productName = firstItem.productName || firstItem.name || firstItem.product || firstItem.title || "Product";
+    brand = firstItem.brand || brand;
+    size = firstItem.size || size;
+    model = firstItem.model || model;
+    qty = Number(firstItem.qty ?? firstItem.quantity ?? qty);
+    unitPrice = Number(firstItem.unitPrice ?? firstItem.price ?? firstItem.rate ?? unitPrice);
+  }
+
+  // Price calculations
+  const totalPrice = Number(data.totalPrice ?? data.total ?? data.amount ?? data.subtotal ?? (qty * unitPrice));
+  const discount = Number(data.discount ?? data.discountAmount ?? 0);
+  const discountType = data.discountType || (data.isPercent ? "percent" : undefined);
+  const finalPrice = Number(data.finalPrice ?? data.grandTotal ?? data.netTotal ?? data.final_price ?? Math.max(0, totalPrice - discount));
+
+  // Date parsing (Timestamp, Date string, or millis)
+  let dateStr = "";
+  if (data.date) {
+    dateStr = String(data.date);
+  } else if (data.createdAt) {
+    if (typeof data.createdAt.toDate === "function") {
+      dateStr = data.createdAt.toDate().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    } else if (typeof data.createdAt === "string") {
+      dateStr = data.createdAt;
+    } else if (typeof data.createdAt === "number") {
+      dateStr = new Date(data.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    }
+  } else if (data.timestamp) {
+    if (typeof data.timestamp.toDate === "function") {
+      dateStr = data.timestamp.toDate().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    } else if (typeof data.timestamp === "number") {
+      dateStr = new Date(data.timestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    }
+  }
+  if (!dateStr) {
+    dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
+  // Creator details
+  const createdBy = data.createdBy || data.userName || data.employeeName || data.created_by || data.addedBy || data.userName || "—";
+  const createdById = data.createdById || data.userId || data.employeeId || data.created_by_id || data.user_id || "";
+
+  return {
+    id,
+    customerName,
+    customerPhone,
+    productId: data.productId || data.product_id || "",
+    productName: productName || "Appliance Product",
+    brand,
+    size,
+    model,
+    qty: qty || 1,
+    unitPrice: unitPrice || 0,
+    totalPrice: totalPrice || (qty * unitPrice),
+    discount,
+    discountType,
+    finalPrice: finalPrice || Math.max(0, totalPrice - discount),
+    date: dateStr,
+    createdBy,
+    createdById,
+    status: data.status || "Draft",
+    notes: data.notes || data.specialTerms || data.remark || ""
+  };
+}
 
 export const StoreContext = createContext<(State & { login: (username: string, password: string) => Promise<Role | null>; logout: () => void; setState: (updater: (s: State) => State) => void; uid: (prefix: string) => string; }) | null>(null);
 
@@ -434,7 +529,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         updateCollectionState("leads", list);
       }),
       onSnapshot(collection(db, "quotations"), (snap) => {
-        const list = snap.docs.map((d) => d.data() as Quotation);
+        const list = snap.docs.map((d) => normalizeQuotationDoc({ id: d.id, ...d.data() }));
         updateCollectionState("quotations", list);
       }),
     ];
