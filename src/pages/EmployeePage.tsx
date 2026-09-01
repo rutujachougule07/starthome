@@ -1106,18 +1106,8 @@ function ProductsSection() {
               {filteredProducts.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <div className="product-cell-flex">
-                      <img
-                        src={getAutoProductImage(p.name, p.brand, p.category, p.image)}
-                        className="product-image-cell"
-                        alt={p.name}
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = getAutoProductImage(p.name, p.brand, p.category);
-                        }}
-                      />
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{p.name}</div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: "14px" }}>{p.name}</div>
                         <div style={{ fontSize: 11, color: "var(--brown)", marginTop: 2 }}>
                           {p.sku && <span>SKU: {p.sku}</span>}
                           {p.warranty && <span>{p.sku && " · "}Size: {p.warranty}</span>}
@@ -1592,7 +1582,6 @@ export function EmployeeIncentiveSection() {
           <table className="tbl">
             <thead>
               <tr>
-                <th>IMAGE</th>
                 <th>PRODUCT</th>
                 <th>SKU</th>
                 <th>INCENTIVE</th>
@@ -1605,19 +1594,6 @@ export function EmployeeIncentiveSection() {
                 const canSell = isEmployee && p.incentive > 0 && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id);
                 return (
                   <tr key={p.id}>
-                    <td>
-                      <div style={{ width: 40, height: 40, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)" }}>
-                        <img
-                          src={getAutoProductImage(p.name, p.brand, p.category, p.image)}
-                          alt={p.name}
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = getAutoProductImage(p.name, p.brand, p.category);
-                          }}
-                          style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                        />
-                      </div>
-                    </td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{p.name}</div>
                       <div style={{ fontSize: 11, color: "var(--brown)", marginTop: 2 }}>

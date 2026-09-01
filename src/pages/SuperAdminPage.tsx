@@ -6829,7 +6829,6 @@ export function SuperAdminGodownSection() {
       <table className="tbl" style={{ minWidth: "650px" }}>
         <thead>
           <tr>
-            <th>IMAGE</th>
             <th>PRODUCT</th>
             <th>SKU</th>
             <th>CATEGORY</th>
@@ -6844,19 +6843,6 @@ export function SuperAdminGodownSection() {
             const totalValue = qty * (p.cost || 0);
             return (
               <tr key={p.id}>
-                <td>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, overflow: "hidden", border: "1px solid #EAE2D5", background: "#F5EFE6" }}>
-                    <img
-                      src={getAutoProductImage(p.name, p.brand, p.category, p.image)}
-                      alt={p.name}
-                      onError={(e) => {
-                        e.currentTarget.onerror = null;
-                        e.currentTarget.src = getAutoProductImage(p.name, p.brand, p.category);
-                      }}
-                      style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                    />
-                  </div>
-                </td>
                 <td style={{ fontWeight: 600 }}>{p.name}</td>
                 <td>{p.sku || "—"}</td>
                 <td>{p.category}</td>
