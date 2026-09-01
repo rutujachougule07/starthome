@@ -4,13 +4,14 @@ import { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useStore, loadCurrentUser, Customer, Product, Order, Task } from "../app/store";
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
-import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm, BarcodeScannerModal } from "./SuperAdminPage";
+import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm, BarcodeScannerModal, QuotationsSection } from "./SuperAdminPage";
 import { getAutoProductImage } from "../utils/autoProductImage";
 
 const NAV: NavItem[] = [
   { key: "overview", label: "Live Dashboard", icon: "📡" },
-  { key: "products", label: "Products", icon: "📦" },
+  { key: "products", label: "Stocking Inventory", icon: "📦" },
   { key: "leads", label: "Lead Generation", icon: "🧲" },
+  { key: "quotations", label: "Quotations", icon: "📑" },
   { key: "tasks", label: "Assigned Tasks", icon: "📝" },
   { key: "orders", label: "Order Updates", icon: "🧾" },
   { key: "profile", label: "Profile", icon: "⚙" },
@@ -39,6 +40,7 @@ export function EmployeePage({ tab = "overview" }: EmployeePageProps) {
       {active === "overview" && <Overview />}
       {active === "tasks" && <TasksSection />}
       {active === "leads" && <LeadsSection />}
+      {active === "quotations" && <QuotationsSection />}
       {active === "orders" && <OrderUpdates />}
       {active === "products" && <ProductsSection />}
       {active === "incentive" && <EmployeeIncentiveSection />}
@@ -534,9 +536,7 @@ function OrderUpdates() {
     }
   };
 
-  const isMyOrder = (o: Order) => {
-    if (!o.sentToEmployee) return false;
-    if (o.status !== "Approved" && o.status !== "Delivered") return false;
+  const isMyOrderMatch = (o: Order) => {
     return (
       o.assignedTo === currentUser?.id ||
       o.assignedTo === currentUser?.name ||
@@ -545,6 +545,13 @@ function OrderUpdates() {
     );
   };
 
+  const isMyOrder = (o: Order) => {
+    if (!o.sentToEmployee) return false;
+    if (o.status !== "Approved" && o.status !== "Delivered") return false;
+    return isMyOrderMatch(o);
+  };
+
+  const myPendingOrders = orders.filter((o) => o.status === "Pending" && isMyOrderMatch(o));
   const myOrders = orders.filter(isMyOrder);
   const otherOrders = orders.filter((o) => o.sentToEmployee && (o.status === "Approved" || o.status === "Delivered") && !isMyOrder(o));
 
@@ -553,9 +560,115 @@ function OrderUpdates() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div>
           <h2 className="page-title">Order Updates</h2>
-          <p className="page-sub">Live order statuses from Super Admin approvals.</p>
+          <p className="page-sub">Live order statuses and pending approvals from Super Admin.</p>
         </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowAddOrder(true)}
+          style={{
+            background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+            fontWeight: 800,
+            borderRadius: "20px",
+            padding: "8px 18px",
+            fontSize: "13px",
+            border: "none",
+            color: "#FFFFFF",
+            cursor: "pointer",
+            boxShadow: "0 3px 12px rgba(124, 58, 237, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px"
+          }}
+        >
+          🛒 + Create / Sell Order
+        </button>
       </div>
+
+      {/* My Pending Orders (Awaiting Approval) */}
+      {myPendingOrders.length > 0 && (
+        <div className="panel" style={{ marginBottom: 24, borderLeft: "4px solid #F59E0B" }}>
+          <div className="panel-head">
+            <h3 className="panel-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              ⏳ My Pending Orders (Awaiting Admin Approval)
+              <span className="pill" style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE047" }}>{myPendingOrders.length}</span>
+            </h3>
+          </div>
+          <div className="card-grid">
+            {myPendingOrders.map((o) => {
+              const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
+              const brandStr = product?.brand ? ` (${product.brand})` : "";
+              const isIncentiveOrder = product && (product.incentive ?? 0) > 0;
+              const orderBasePrice = Math.round(o.total / (1 - ((o.discount || 0) / 100)));
+              const orderUnitPrice = Math.round(orderBasePrice / o.qty);
+
+              return (
+                <div key={o.id} className="data-card" style={{ borderLeft: "4px solid #F59E0B", background: "#FFFBEB" }}>
+                  <div className="data-card-header">
+                    <div>
+                      <h4 className="data-card-title">Order #{o.id}</h4>
+                      <span className="data-card-subtitle" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
+                        <span>{o.customerName}</span>
+                        {isIncentiveOrder ? (
+                          <span className="pill" style={{ background: "#fef3c7", color: "#d97706", border: "1px solid #fde047", fontSize: "10px", padding: "2px 6px" }}>
+                            ✨ Incentive
+                          </span>
+                        ) : (
+                          <span className="pill" style={{ background: "#f3f4f6", color: "#4b5563", border: "1px solid #e5e7eb", fontSize: "10px", padding: "2px 6px" }}>
+                            Regular
+                          </span>
+                        )}
+                        {o.docType && (
+                          <span className="pill" style={{
+                            background: o.docType === "Bill" ? "#e0f2fe" : "#f3e8ff",
+                            color: o.docType === "Bill" ? "#0369a1" : "#6D28D9",
+                            border: o.docType === "Bill" ? "1px solid #bae6fd" : "1px solid #e9d5ff",
+                            fontSize: "10px",
+                            padding: "2px 6px",
+                            fontWeight: 600
+                          }}>
+                            {o.docType === "Bill" ? "🧾 Bill" : "📄 Order Copy"}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div><Pill status="Pending" /></div>
+                  </div>
+
+                  <div className="data-card-body">
+                    <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
+                    <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
+                    <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
+                    <div className="data-row"><span className="data-label">Status</span><span className="data-value" style={{ color: "#D97706", fontWeight: 700 }}>⏳ Submitted for Approval</span></div>
+                  </div>
+
+                  <div className="data-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #FDE68A" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: "6px 10px", fontSize: 11, fontWeight: 700, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 20, cursor: "pointer", color: "#475569" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                      >
+                        🧾 Bill
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: "6px 10px", fontSize: 11, fontWeight: 700, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 20, cursor: "pointer", color: "#475569" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
+                      >
+                        📄 Order Copy
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                      <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* My Assigned Orders */}
       <div className="panel" style={{ marginBottom: 24 }}>
@@ -976,7 +1089,8 @@ function ProductsSection() {
                         <div style={{ fontWeight: 600 }}>{p.name}</div>
                         <div style={{ fontSize: 11, color: "var(--brown)", marginTop: 2 }}>
                           {p.sku && <span>SKU: {p.sku}</span>}
-                          {p.warranty && <span>{p.sku && " · "}Warranty: {p.warranty}</span>}
+                          {p.warranty && <span>{p.sku && " · "}Size: {p.warranty}</span>}
+                          {p.model && <span> · Model: {p.model}</span>}
                           {p.assignedEmployeeId && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id) && (
                             <>
                               <span> · </span>
@@ -1477,7 +1591,8 @@ export function EmployeeIncentiveSection() {
                       <div style={{ fontWeight: 600 }}>{p.name}</div>
                       <div style={{ fontSize: 11, color: "var(--brown)", marginTop: 2 }}>
                         <span>Brand: {p.brand || "—"}</span>
-                        {p.warranty && <span> · Warranty: {p.warranty}</span>}
+                        {p.warranty && <span> · Size: {p.warranty}</span>}
+                        {p.model && <span> · Model: {p.model}</span>}
                       </div>
                       {p.assignedEmployeeId && (
                         <div style={{ fontSize: 11, color: "var(--brown)", marginTop: 2 }}>

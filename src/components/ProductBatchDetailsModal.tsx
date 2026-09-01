@@ -102,9 +102,15 @@ export function ProductBatchDetailsModal({
                 <strong style={{ color: "#5B21B6" }}>{product.category || "Electronics"}</strong>
               </div>
               <div>
-                <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Warranty</span>
+                <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Size</span>
                 <strong style={{ color: "#5B21B6" }}>{product.warranty || "—"}</strong>
               </div>
+              {product.model && (
+                <div>
+                  <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Model</span>
+                  <strong style={{ color: "#5B21B6" }}>{product.model}</strong>
+                </div>
+              )}
               <div>
                 <span style={{ color: "#64748B", fontWeight: 500, marginRight: 6 }}>Location</span>
                 <strong style={{ color: "#5B21B6" }}>{product.location || "Shop"}</strong>

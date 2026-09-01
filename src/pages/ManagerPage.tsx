@@ -4,14 +4,15 @@ import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useStore, loadCurrentUser, User, Customer, Order, Product } from "../app/store";
 import { DashboardLayout, StatCard, Pill, Modal, NavItem, BarChart } from "../app/DashboardLayout";
-import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview } from "./SuperAdminPage";
+import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection } from "./SuperAdminPage";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { Search, Download, Plus, SlidersHorizontal } from "lucide-react";
 
 const NAV: NavItem[] = [
   { key: "overview", label: "Live Dashboard", icon: "📡" },
-  { key: "products", label: "Product Availability", icon: "📦" },
+  { key: "products", label: "Stocking Inventory", icon: "📦" },
   { key: "leads", label: "Lead Generation", icon: "🧲" },
+  { key: "quotations", label: "Quotations", icon: "📑" },
   { key: "assign", label: "Add Employee", icon: "📋" },
   { key: "task-assign", label: "Task Assign", icon: "📝" },
   { key: "orders", label: "Orders", icon: "🧾" },
@@ -41,6 +42,7 @@ export function ManagerPage({ tab = "overview" }: ManagerPageProps) {
       {active === "task-assign" && <TaskAssignmentSection />}
       {active === "customers" && <CustomersMgmt />}
       {active === "leads" && <LeadsSection />}
+      {active === "quotations" && <QuotationsSection />}
       {active === "orders" && <OrdersMgmt />}
       {active === "products" && <ProductsAvail />}
       {active === "incentive" && <SuperAdminIncentiveSection />}
@@ -1165,7 +1167,8 @@ function ProductsAvail() {
                       <div style={{ fontWeight: 600 }}>{p.name}</div>
                       <div style={{ fontSize: 11, color: "var(--brown)", marginTop: 2 }}>
                         <span>Brand: {p.brand || "—"}</span>
-                        {p.warranty && <span> · Warranty: {p.warranty}</span>}
+                        {p.warranty && <span> · Size: {p.warranty}</span>}
+                        {p.model && <span> · Model: {p.model}</span>}
                       </div>
                     </td>
                     <td>{p.sku}</td>

@@ -1,8 +1,8 @@
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useStore, loadCurrentUser, Product, User, Order, Lead, Task } from "../app/store";
-import { doc, setDoc } from "firebase/firestore";
+import { useStore, loadCurrentUser, Product, User, Order, Lead, Task, Quotation } from "../app/store";
+import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { ProductBatchDetailsModal } from "../components/ProductBatchDetailsModal";
@@ -21,6 +21,7 @@ const NAV: NavItem[] = [
   { key: "products", label: "Stocking Inventory", icon: "📦" },
   { key: "godown", label: "Godowns", icon: "🏭" },
   { key: "leads", label: "Lead Generation", icon: "🧲" },
+  { key: "quotations", label: "Quotations", icon: "📑" },
   { key: "assign", label: "Add Employee / manager", icon: "📋" },
   { key: "task-assign", label: "Task Assign", icon: "📝" },
   { key: "orders", label: "Order Approvals", icon: "✅" },
@@ -355,6 +356,7 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
       <DashboardLayout role="superadmin" title="Super Admin" nav={NAV} active={active} onNav={setActive}>
         {active === "live" && <LiveDashboard />}
         {active === "leads" && <LeadsSection />}
+        {active === "quotations" && <QuotationsSection />}
         {active === "assign" && <TasksAssignSection />}
         {active === "task-assign" && <TaskAssignmentSection />}
         {active === "managers" && <ManagersSection />}
@@ -1645,7 +1647,8 @@ function ProductsSection() {
                       <div style={{ fontWeight: 600 }}>{p.name}</div>
                       <div style={{ fontSize: 11, color: "var(--brown)", marginTop: 2 }}>
                         <span>Brand: {p.brand || "—"}</span>
-                        {p.warranty && <span> · Warranty: {p.warranty}</span>}
+                        {p.warranty && <span> · Size: {p.warranty}</span>}
+                        {p.model && <span> · Model: {p.model}</span>}
                       </div>
                     </td>
                     <td>{p.sku}</td>
@@ -1855,6 +1858,99 @@ const PRODUCT_BRAND_MAP: { keywords: string[]; brands: string[] }[] = [
   }
 ];
 
+const PRODUCT_SIZE_MAP: { keywords: string[]; sizes: string[] }[] = [
+  {
+    keywords: ["tv", "television", "smart tv", "led tv"],
+    sizes: ["32 Inch", "43 Inch", "50 Inch", "55 Inch", "65 Inch", "75 Inch", "85 Inch"]
+  },
+  {
+    keywords: ["ac", "air conditioner", "aircon", "split ac"],
+    sizes: ["0.8 Ton", "1.0 Ton", "1.5 Ton", "2.0 Ton", "3 Star Inverter", "5 Star Inverter"]
+  },
+  {
+    keywords: ["refrigerator", "fridge", "freezer"],
+    sizes: ["190 Litre", "240 Litre", "260 Litre", "300 Litre", "350 Litre", "Single Door", "Double Door", "Side-by-Side"]
+  },
+  {
+    keywords: ["washing", "machine", "washer"],
+    sizes: ["6.0 kg", "6.5 kg", "7.0 kg", "7.5 kg", "8.0 kg", "9.0 kg", "Top Load", "Front Load"]
+  },
+  {
+    keywords: ["fan", "ceiling fan"],
+    sizes: ["600 mm", "900 mm", "1200 mm (48 Inch)", "1400 mm", "BLDC Motor"]
+  },
+  {
+    keywords: ["microwave", "oven"],
+    sizes: ["20 Litre Solo", "23 Litre Grill", "28 Litre Convection", "30 Litre Convection"]
+  },
+  {
+    keywords: ["water purifier", "purifier"],
+    sizes: ["6 Litre", "7 Litre", "8 Litre", "10 Litre", "RO + UV + UF"]
+  },
+  {
+    keywords: ["geyser", "heater", "water heater"],
+    sizes: ["3 Litre Instant", "10 Litre Storage", "15 Litre Storage", "25 Litre Storage"]
+  }
+];
+
+const PRODUCT_BRAND_MODEL_MAP: { productKw: string[]; brandKw: string[]; models: string[] }[] = [
+  {
+    productKw: ["tv", "television"],
+    brandKw: ["samsung"],
+    models: ["Crystal 4K iSmart", "Crystal 4K Vivid", "Neo QLED 4K", "The Frame QLED 4K", "OLED 4K Ultra HD", "Wondertainment Series"]
+  },
+  {
+    productKw: ["tv", "television"],
+    brandKw: ["lg"],
+    models: ["UR7500 4K Smart LED", "OLED C3 4K Smart", "QNED 4K Ultra HD", "Nanocell 4K Smart", "LQ6300 Full HD"]
+  },
+  {
+    productKw: ["tv", "television"],
+    brandKw: ["sony"],
+    models: ["Bravia X74L 4K Ultra HD", "Bravia X80L 4K LED", "Bravia XR OLED A80L", "Bravia W830K HD Ready"]
+  },
+  {
+    productKw: ["tv", "television"],
+    brandKw: ["xiaomi", "mi", "redmi"],
+    models: ["Smart TV X Series 4K", "Smart TV 5A Series", "Q1 Series 4K QLED", "Horizon Edition"]
+  },
+  {
+    productKw: ["tv", "television"],
+    brandKw: ["oneplus"],
+    models: ["Y1S Pro 4K Ultra HD", "Y1S Smart Android TV", "U1S 4K LED Smart TV"]
+  },
+  {
+    productKw: ["ac", "air conditioner"],
+    brandKw: ["voltas"],
+    models: ["Adjustable Inverter AC", "Vectra 4 in 1 AC", "Maha Adjustable AC"]
+  },
+  {
+    productKw: ["ac", "air conditioner"],
+    brandKw: ["daikin"],
+    models: ["Dew Clean Inverter AC", "FTKG Series 5 Star", "FTKL Series 3 Star"]
+  },
+  {
+    productKw: ["refrigerator", "fridge"],
+    brandKw: ["lg"],
+    models: ["Smart Inverter Double Door", "Direct Cool Single Door", "InstaView Door-in-Door"]
+  },
+  {
+    productKw: ["refrigerator", "fridge"],
+    brandKw: ["samsung"],
+    models: ["Digital Inverter Double Door", "Direct Cool Single Door", "Side by Side Twin Cooling"]
+  },
+  {
+    productKw: ["washing", "washer"],
+    brandKw: ["samsung"],
+    models: ["Ecobubble Front Load", "AI Control Washer", "Diamond Drum Top Load"]
+  },
+  {
+    productKw: ["washing", "washer"],
+    brandKw: ["lg"],
+    models: ["AI Direct Drive Front Load", "Smart Inverter Top Load", "TurboWash Washer"]
+  }
+];
+
 function CustomSelect({
   value,
   options,
@@ -2005,12 +2101,42 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
   const [localCustomCategories, setLocalCustomCategories] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("sham_custom_categories") || "[]"); } catch { return []; }
   });
+  const [localCustomNames, setLocalCustomNames] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sham_custom_product_names") || "[]"); } catch { return []; }
+  });
   const [localDeletedBrands, setLocalDeletedBrands] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("sham_deleted_brands") || "[]"); } catch { return []; }
   });
   const [localDeletedCategories, setLocalDeletedCategories] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("sham_deleted_categories") || "[]"); } catch { return []; }
   });
+  const [localDeletedNames, setLocalDeletedNames] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sham_deleted_product_names") || "[]"); } catch { return []; }
+  });
+
+  const addLocalProductName = (n: string) => {
+    if (!n || n === "Other") return;
+    setLocalCustomNames(prev => {
+      if (prev.includes(n)) return prev;
+      const next = [...prev, n];
+      localStorage.setItem("sham_custom_product_names", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const hideProductName = (n: string) => {
+    setLocalDeletedNames(prev => {
+      if (prev.includes(n)) return prev;
+      const next = [...prev, n];
+      localStorage.setItem("sham_deleted_product_names", JSON.stringify(next));
+      return next;
+    });
+    setLocalCustomNames(prev => {
+      const next = prev.filter(x => x !== n);
+      localStorage.setItem("sham_custom_product_names", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const addLocalBrand = (b: string) => {
     if (!b || b === "Other") return;
@@ -2060,6 +2186,50 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
     });
   };
 
+  const defaultProductNames = useMemo(() => [
+    "TV",
+    "Smart TV",
+    "Refrigerator",
+    "Washing Machine",
+    "AC Units",
+    "Microwave Oven",
+    "Air Purifier",
+    "Water Purifier",
+    "Electric Kettle",
+    "Mixer Grinder",
+    "Vacuum Cleaner",
+    "Ceiling Fan",
+    "Geyser",
+    "CCTV Camera",
+    "Smart Speaker",
+    "Smart Lock",
+    "Lighting / LED Bulb"
+  ], []);
+
+  const productNameOptions = useMemo(() => {
+    const storeNames = products.map((p) => p.name).filter(Boolean);
+    const map = new Map<string, string>();
+    [...defaultProductNames, ...storeNames, ...localCustomNames].forEach((str) => {
+      const trimmed = str.trim();
+      if (trimmed) {
+        const key = trimmed.toLowerCase();
+        if (!map.has(key)) {
+          map.set(key, trimmed);
+        }
+      }
+    });
+    return Array.from(map.values())
+      .filter((n) => !localDeletedNames.includes(n))
+      .sort((a, b) => a.localeCompare(b));
+  }, [products, defaultProductNames, localCustomNames, localDeletedNames]);
+
+  const [isCustomName, setIsCustomName] = useState(() => {
+    if (initial?.name) {
+      return !productNameOptions.includes(initial.name);
+    }
+    return false;
+  });
+
   const lowercaseName = name.toLowerCase().trim();
 
   const brandOptions = useMemo(() => {
@@ -2067,21 +2237,150 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
     const match = PRODUCT_BRAND_MAP.find((item) =>
       item.keywords.some((kw) => lowercaseName.includes(kw))
     );
-    if (!match) return null;
 
+    const storeBrands = products
+      .filter((p) => p.brand && (p.name.toLowerCase().includes(lowercaseName) || lowercaseName.includes(p.name.toLowerCase())))
+      .map((p) => p.brand as string);
+
+    if (!match && storeBrands.length === 0) return null;
+
+    const baseBrands = match ? match.brands : [];
     const customBrands = products
-      .filter((p) => p.brand && match.keywords.some((kw) => p.name.toLowerCase().includes(kw)))
-      .map((p) => p.brand as string)
-      .filter((b) => b && !match.brands.includes(b));
+      .filter((p) => p.brand && match?.keywords.some((kw) => p.name.toLowerCase().includes(kw)))
+      .map((p) => p.brand as string);
 
-    const uniqueCustomBrands = Array.from(new Set([...customBrands, ...localCustomBrands]));
+    const combined = Array.from(new Set([...baseBrands, ...customBrands, ...storeBrands, ...localCustomBrands]));
 
-    return ([...match.brands, ...uniqueCustomBrands].filter((b): b is string => !!b && !localDeletedBrands.includes(b)));
+    return (combined.filter((b): b is string => !!b && !localDeletedBrands.includes(b)));
   }, [lowercaseName, products, localCustomBrands, localDeletedBrands]);
 
   useEffect(() => {
     setIsCustomBrand(false);
   }, [brandOptions]);
+
+  const [localCustomSizes, setLocalCustomSizes] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sham_custom_sizes") || "[]"); } catch { return []; }
+  });
+  const [localDeletedSizes, setLocalDeletedSizes] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sham_deleted_sizes") || "[]"); } catch { return []; }
+  });
+
+  const addLocalSize = (s: string) => {
+    if (!s || s === "Other") return;
+    setLocalCustomSizes(prev => {
+      if (prev.includes(s)) return prev;
+      const next = [...prev, s];
+      localStorage.setItem("sham_custom_sizes", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const hideSize = (s: string) => {
+    setLocalDeletedSizes(prev => {
+      if (prev.includes(s)) return prev;
+      const next = [...prev, s];
+      localStorage.setItem("sham_deleted_sizes", JSON.stringify(next));
+      return next;
+    });
+    setLocalCustomSizes(prev => {
+      const next = prev.filter(x => x !== s);
+      localStorage.setItem("sham_custom_sizes", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const sizeOptions = useMemo(() => {
+    if (!lowercaseName) return null;
+    const match = PRODUCT_SIZE_MAP.find((item) =>
+      item.keywords.some((kw) => lowercaseName.includes(kw))
+    );
+
+    const storeSizes = products
+      .filter((p) => p.warranty && (p.name.toLowerCase().includes(lowercaseName) || lowercaseName.includes(p.name.toLowerCase())))
+      .map((p) => p.warranty as string);
+
+    if (!match && storeSizes.length === 0) return null;
+
+    const baseSizes = match ? match.sizes : [];
+    const combined = Array.from(new Set([...baseSizes, ...storeSizes, ...localCustomSizes]));
+    return (combined.filter((s): s is string => !!s && !localDeletedSizes.includes(s)));
+  }, [lowercaseName, products, localCustomSizes, localDeletedSizes]);
+
+  const [isCustomSize, setIsCustomSize] = useState(() => {
+    if (initial?.warranty) {
+      if (!sizeOptions) return true;
+      return !sizeOptions.includes(initial.warranty);
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    setIsCustomSize(false);
+  }, [sizeOptions]);
+
+  const [model, setModel] = useState(initial?.model ?? "");
+  const [localCustomModels, setLocalCustomModels] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sham_custom_models") || "[]"); } catch { return []; }
+  });
+  const [localDeletedModels, setLocalDeletedModels] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("sham_deleted_models") || "[]"); } catch { return []; }
+  });
+
+  const addLocalModel = (m: string) => {
+    if (!m || m === "Other") return;
+    setLocalCustomModels(prev => {
+      if (prev.includes(m)) return prev;
+      const next = [...prev, m];
+      localStorage.setItem("sham_custom_models", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const hideModel = (m: string) => {
+    setLocalDeletedModels(prev => {
+      if (prev.includes(m)) return prev;
+      const next = [...prev, m];
+      localStorage.setItem("sham_deleted_models", JSON.stringify(next));
+      return next;
+    });
+    setLocalCustomModels(prev => {
+      const next = prev.filter(x => x !== m);
+      localStorage.setItem("sham_custom_models", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const lowercaseBrand = brand.toLowerCase().trim();
+
+  const modelOptions = useMemo(() => {
+    if (!lowercaseName) return null;
+    const match = PRODUCT_BRAND_MODEL_MAP.find((item) =>
+      item.productKw.some((kw) => lowercaseName.includes(kw)) &&
+      (!lowercaseBrand || item.brandKw.some((bkw) => lowercaseBrand.includes(bkw)))
+    );
+
+    const storeModels = products
+      .filter((p) => p.model && (p.name.toLowerCase().includes(lowercaseName) || lowercaseName.includes(p.name.toLowerCase())))
+      .map((p) => p.model as string);
+
+    if (!match && storeModels.length === 0) return null;
+
+    const baseModels = match ? match.models : [];
+    const combined = Array.from(new Set([...baseModels, ...storeModels, ...localCustomModels]));
+    return (combined.filter((m): m is string => !!m && !localDeletedModels.includes(m)));
+  }, [lowercaseName, lowercaseBrand, products, localCustomModels, localDeletedModels]);
+
+  const [isCustomModel, setIsCustomModel] = useState(() => {
+    if (initial?.model) {
+      if (!modelOptions) return true;
+      return !modelOptions.includes(initial.model);
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    setIsCustomModel(false);
+  }, [modelOptions]);
 
   const defaultCategories = useMemo(() => ["Electronics", "Lighting", "Climate", "Cleaning", "Security", "Hub"], []);
   const [isCustomCategory, setIsCustomCategory] = useState(() => {
@@ -2204,6 +2503,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
       sku,
       brand,
       warranty,
+      model,
       category,
       qty,
       stock: qty,
@@ -2224,36 +2524,67 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
 
   return (
     <Modal title={modalTitle} onClose={onClose} className="modal-lg">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", marginBottom: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px", marginBottom: 8 }}>
+        {/* PRODUCT NAME */}
         <div className="form-group">
           <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>PRODUCT NAME</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📦</span>
-            <input
-              className="form-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Wireless Headset X200"
-              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
-            />
-          </div>
+          {!isCustomName ? (
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <CustomSelect
+                value={productNameOptions.includes(name) || (name && name !== "Other") ? name : ""}
+                options={productNameOptions}
+                placeholder="Select Product Name"
+                onChange={(val) => {
+                  if (val === "Other") {
+                    setIsCustomName(true);
+                    setName("");
+                  } else {
+                    setName(val);
+                    const matched = products.find(p => p.name.toLowerCase() === val.toLowerCase().trim());
+                    if (matched) {
+                      if (matched.category) setCategory(matched.category);
+                      if (matched.brand) setBrand(matched.brand);
+                      if (matched.warranty && !warranty) setWarranty(matched.warranty);
+                    }
+                  }
+                }}
+                onDelete={hideProductName}
+              />
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 6, width: "100%" }}>
+              <div style={{ position: "relative", flex: 1, display: "flex", alignItems: "center" }}>
+                <input
+                  className="form-input"
+                  value={name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setName(val);
+                    const matched = products.find(p => p.name.toLowerCase() === val.toLowerCase().trim());
+                    if (matched) {
+                      if (matched.category) setCategory(matched.category);
+                      if (matched.brand) setBrand(matched.brand);
+                      if (matched.warranty && !warranty) setWarranty(matched.warranty);
+                    }
+                  }}
+                  placeholder="Type custom product name..."
+                  style={{ width: "100%", background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, color: "#1E293B", fontWeight: 600 }}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => { addLocalProductName(name); setIsCustomName(false); }}
+                style={{ padding: "4px 8px", fontSize: 11, background: "#F5F3FF", height: "36px", alignSelf: "center", border: "1px solid #E9D8FD", color: "#7C3AED", borderRadius: 10, flexShrink: 0 }}
+                title="Show suggestions list"
+              >
+                📋 List
+              </button>
+            </div>
+          )}
         </div>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>SKU</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🏷️</span>
-            <input
-              className="form-input"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              placeholder="WH-X200-BLK"
-              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
-            />
-          </div>
-        </div>
-      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "10px", marginBottom: 8 }}>
+        {/* BRAND */}
         <div className="form-group">
           <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>BRAND</label>
           {brandOptions && !isCustomBrand ? (
@@ -2298,16 +2629,8 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
             </div>
           )}
         </div>
-        <div className="form-group">
-          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>WARRANTY</label>
-          <input
-            className="form-input"
-            value={warranty}
-            onChange={(e) => setWarranty(e.target.value)}
-            placeholder="e.g. 1 Year, 6 Months"
-            style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, color: "#1E293B", fontWeight: 600 }}
-          />
-        </div>
+
+        {/* CATEGORY */}
         <div className="form-group">
           <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>CATEGORY</label>
           {categoryOptions && !isCustomCategory ? (
@@ -2351,6 +2674,115 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px", marginBottom: 8 }}>
+        {/* SIZE */}
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>SIZE</label>
+          {sizeOptions && !isCustomSize ? (
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <CustomSelect
+                value={sizeOptions.includes(warranty) || (warranty && warranty !== "Other") ? warranty : ""}
+                options={sizeOptions}
+                placeholder="Select Size"
+                onChange={(val) => {
+                  if (val === "Other") {
+                    setIsCustomSize(true);
+                    setWarranty("");
+                  } else {
+                    setWarranty(val);
+                  }
+                }}
+                onDelete={hideSize}
+              />
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 6, width: "100%" }}>
+              <div style={{ position: "relative", flex: 1, display: "flex", alignItems: "center" }}>
+                <input
+                  className="form-input"
+                  value={warranty}
+                  onChange={(e) => setWarranty(e.target.value)}
+                  placeholder={lowercaseName.includes("tv") ? "e.g. 32 Inch, 43 Inch, 55 Inch..." : "e.g. 32 Inch, 1.5 Ton..."}
+                  style={{ width: "100%", background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, color: "#1E293B", fontWeight: 600 }}
+                />
+              </div>
+              {sizeOptions && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => { addLocalSize(warranty); setIsCustomSize(false); }}
+                  style={{ padding: "4px 8px", fontSize: 11, background: "#F5F3FF", height: "36px", alignSelf: "center", border: "1px solid #E9D8FD", color: "#7C3AED", borderRadius: 10, flexShrink: 0 }}
+                  title="Show suggestions list"
+                >
+                  📋 List
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* MODEL NAME / NO. */}
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>MODEL NAME / NO.</label>
+          {modelOptions && !isCustomModel ? (
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <CustomSelect
+                value={modelOptions.includes(model) || (model && model !== "Other") ? model : ""}
+                options={modelOptions}
+                placeholder="Select Model"
+                onChange={(val) => {
+                  if (val === "Other") {
+                    setIsCustomModel(true);
+                    setModel("");
+                  } else {
+                    setModel(val);
+                  }
+                }}
+                onDelete={hideModel}
+              />
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 6, width: "100%" }}>
+              <div style={{ position: "relative", flex: 1, display: "flex", alignItems: "center" }}>
+                <input
+                  className="form-input"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder={lowercaseName.includes("tv") ? "e.g. Crystal 4K iSmart, UA75CUE60..." : "e.g. Model No. / Series..."}
+                  style={{ width: "100%", background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, color: "#1E293B", fontWeight: 600 }}
+                />
+              </div>
+              {modelOptions && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => { addLocalModel(model); setIsCustomModel(false); }}
+                  style={{ padding: "4px 8px", fontSize: 11, background: "#F5F3FF", height: "36px", alignSelf: "center", border: "1px solid #E9D8FD", color: "#7C3AED", borderRadius: 10, flexShrink: 0 }}
+                  title="Show suggestions list"
+                >
+                  📋 List
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* SKU */}
+        <div className="form-group">
+          <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>SKU</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+            <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🏷️</span>
+            <input
+              className="form-input"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              placeholder="WH-X200-BLK"
+              style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+            />
+          </div>
         </div>
       </div>
 
@@ -2913,6 +3345,17 @@ function OrderApprovalSection() {
   }, [orders]);
 
   const list = filter === "all" ? approvalOrders : approvalOrders.filter((o) => o.status === filter);
+  useEffect(() => {
+    const dummyOrder = orders.find(o => o.id === "onn8y0b" || o.id.includes("onn8y0b"));
+    if (dummyOrder) {
+      setState((s: any) => ({
+        ...s,
+        orders: s.orders.filter((o: any) => o.id !== dummyOrder.id)
+      }));
+      deleteDoc(doc(db, "orders", dummyOrder.id)).catch(() => {});
+    }
+  }, [orders, setState]);
+
   const [editDiscounts, setEditDiscounts] = useState<Record<string, number>>({});
   const [activeDoc, setActiveDoc] = useState<{ order: Order; type: "Bill" | "Order Copy" } | null>(null);
 
@@ -3140,24 +3583,38 @@ function OrderApprovalSection() {
                     </button>
                   </div>
 
-                  {o.status === "Pending" && (
-                    <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "4px", flexWrap: "wrap" }}>
-                      <button
-                        className="btn btn-success btn-sm"
-                        style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
-                        onClick={() => decide(o.id, "Approved", editDiscounts[o.id])}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm"
-                        style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
-                        onClick={() => decide(o.id, "Rejected")}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
+                  <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                    {o.status === "Pending" && (
+                      <>
+                        <button
+                          className="btn btn-success btn-sm"
+                          style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
+                          onClick={() => decide(o.id, "Approved", editDiscounts[o.id])}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
+                          onClick={() => decide(o.id, "Rejected")}
+                        >
+                          Reject
+                        </button>
+                      </>
+                    )}
+                    <button
+                      className="btn btn-sm"
+                      style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid #FECACA", padding: "6px 12px", fontWeight: 700, fontSize: "12px", borderRadius: "8px", cursor: "pointer", marginLeft: "auto" }}
+                      onClick={() => {
+                        if (!confirm(`Delete Order #${o.id}?`)) return;
+                        setState((s: any) => ({ ...s, orders: s.orders.filter((ord: any) => ord.id !== o.id) }));
+                        deleteDoc(doc(db, "orders", o.id)).catch(() => {});
+                      }}
+                      title="Delete Order from Firebase"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -3191,14 +3648,21 @@ export function NotificationsSection({ role }: { role: "superadmin" | "manager" 
 
     const msg = n.message.toLowerCase();
     if (msg.includes("pending")) {
-      const match = n.message.match(/pending for\s+(.+)/i);
-      if (match) {
-        const customerName = match[1].trim().toLowerCase();
-        const hasPending = orders.some(o => o.customerName.toLowerCase() === customerName && o.status === "Pending");
+      const orderIdMatch = n.message.match(/order\s*#?([a-z0-9]+)/i);
+      if (orderIdMatch) {
+        const orderId = orderIdMatch[1];
+        const hasPending = orders.some(o => o.id.toLowerCase() === orderId.toLowerCase() && o.status === "Pending");
         if (!hasPending) return false;
-      } else if (msg.includes("pending for approval")) {
-        const hasPending = orders.some(o => o.status === "Pending");
-        if (!hasPending) return false;
+      } else {
+        const match = n.message.match(/pending for\s+([^(]+)/i);
+        if (match) {
+          const customerName = match[1].trim().toLowerCase();
+          const hasPending = orders.some(o => o.customerName.toLowerCase() === customerName && o.status === "Pending");
+          if (!hasPending) return false;
+        } else if (msg.includes("pending for approval") || msg.includes("order pending")) {
+          const hasPending = orders.some(o => o.status === "Pending");
+          if (!hasPending) return false;
+        }
       }
     }
     return true;
@@ -3747,14 +4211,14 @@ export function UpcomingFollowUps() {
   upcoming.sort((a, b) => new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime());
 
   return (
-    <div className="panel" style={{ padding: "24px", background: "rgba(255, 255, 255, 0.72)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 15px 40px rgba(0, 0, 0, 0.06)" }}>
-      <div className="panel-head" style={{ marginBottom: upcoming.length ? "16px" : "0" }}>
+    <div className="panel p-4 sm:p-6" style={{ background: "rgba(255, 255, 255, 0.72)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 15px 40px rgba(0, 0, 0, 0.06)" }}>
+      <div className="panel-head flex flex-wrap items-center justify-between gap-2" style={{ marginBottom: upcoming.length ? "16px" : "0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <span style={{ fontSize: "20px", color: "#1E293B" }}>🔔</span>
-          <h3 className="panel-title" style={{ fontSize: "22px", color: "#1F1F1F", fontWeight: 700 }}>Upcoming Follow-ups</h3>
+          <h3 className="panel-title" style={{ fontSize: "20px", color: "#1F1F1F", fontWeight: 700 }}>Upcoming Follow-ups</h3>
         </div>
         {currentUser?.role !== "superadmin" && (
-          <button className="btn btn-secondary btn-sm" style={{ padding: "8px 16px" }} onClick={handleViewAll}>View All Inquiries</button>
+          <button className="btn btn-secondary btn-sm" style={{ padding: "6px 14px" }} onClick={handleViewAll}>View All Inquiries</button>
         )}
       </div>
 
@@ -3768,7 +4232,7 @@ export function UpcomingFollowUps() {
           No upcoming follow-ups scheduled.
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginTop: "16px" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mt-4">
           {upcoming.map(l => {
             return (
               <div
@@ -3776,8 +4240,8 @@ export function UpcomingFollowUps() {
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: "10px",
-                  padding: "16px 20px",
+                  gap: "8px",
+                  padding: "14px 16px",
                   background: "#fff",
                   border: "1px solid #f2e6d0",
                   borderRadius: "12px",
@@ -3785,29 +4249,31 @@ export function UpcomingFollowUps() {
                 }}
               >
                 {/* Header Row */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", alignItems: "center" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", minWidth: 0 }}>
                     <span
                       style={{
                         width: "8px",
                         height: "8px",
                         borderRadius: "50%",
                         background: getStatusColor(l.status),
-                        marginRight: "10px",
+                        marginRight: "8px",
+                        flexShrink: 0,
                         display: "inline-block"
                       }}
                     />
-                    <strong style={{ fontSize: "15px", fontWeight: 700, color: "#5c4115" }}>{l.name}</strong>
+                    <strong style={{ fontSize: "15px", fontWeight: 700, color: "#5c4115" }} className="truncate">{l.name}</strong>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                     <span
                       style={{
                         background: "#F5F3FF",
                         color: "#6D28D9",
                         fontSize: "12px",
                         fontWeight: 600,
-                        padding: "4px 10px",
-                        borderRadius: "99px"
+                        padding: "3px 8px",
+                        borderRadius: "99px",
+                        whiteSpace: "nowrap"
                       }}
                     >
                       {getRelativeDays(l.followUpDate!)}
@@ -3835,22 +4301,22 @@ export function UpcomingFollowUps() {
                 </div>
 
                 {/* Details Section */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632" }}>
-                    <Briefcase size={14} style={{ color: "#a8a29e" }} />
-                    <span>{l.product || "N/A"}{l.brand ? ` - ${l.brand}` : ""}</span>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-1 text-xs sm:text-sm">
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#8a6632" }} className="min-w-0">
+                    <Briefcase size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
+                    <span className="truncate">{l.product || "N/A"}{l.brand ? ` - ${l.brand}` : ""}</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632" }}>
-                    <Calendar size={14} style={{ color: "#a8a29e" }} />
-                    <span>{formatFollowUpDate(l.followUpDate!)}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#8a6632" }} className="min-w-0">
+                    <Calendar size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
+                    <span className="whitespace-nowrap">{formatFollowUpDate(l.followUpDate!)}</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632" }}>
-                    <Phone size={14} style={{ color: "#a8a29e" }} />
-                    <span>{l.phone}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#8a6632" }} className="min-w-0">
+                    <Phone size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
+                    <span className="whitespace-nowrap">{l.phone}</span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#8a6632" }}>
-                    <UserIcon size={14} style={{ color: "#a8a29e" }} />
-                    <span>Added By: <strong style={{ color: "#5c4115" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#8a6632" }} className="min-w-0">
+                    <UserIcon size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
+                    <span className="truncate">Added By: <strong style={{ color: "#5c4115" }}>
                       {l.createdBy || "System"}
                       {(() => {
                         const creator = users.find(u => u.username === l.createdBy || u.name === l.createdBy);
@@ -3884,6 +4350,8 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
   const removeUser = (id: string, role: string) => {
     if (!confirm(`Delete this ${role}?`)) return;
     setState((s: any) => ({ ...s, users: s.users.filter((u: User) => u.id !== id) }));
+    deleteDoc(doc(db, "users", id)).catch(() => {});
+    deleteDoc(doc(db, "employees", id)).catch(() => {});
   };
 
   const [activeTab, setActiveTab] = useState<"employee" | "manager">("employee");
@@ -4035,21 +4503,83 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
       {/* Add/Edit Manager */}
       {showAddManager && (
         <UserForm title="Add Manager" onClose={() => setShowAddManager(false)}
-          onSave={(data) => { setState((s: any) => ({ ...s, users: [...s.users, { id: uid("u"), role: "manager", ...data }] })); setShowAddManager(false); }} />
+          onSave={(data) => {
+            const newId = data.employeeId || uid("u");
+            const newMgr = { ...data, id: newId, role: "manager" as const };
+            setState((s: any) => ({ ...s, users: [...s.users.filter((u: any) => u.id !== newId), newMgr] }));
+            const clean: any = {};
+            Object.keys(newMgr).forEach(k => { if ((newMgr as any)[k] !== undefined) clean[k] = (newMgr as any)[k]; });
+            clean.role = "manager";
+            const empDoc = { ...clean, role: "manager", fullName: newMgr.name, location: newMgr.address, joiningDate: newMgr.dateOfJoining };
+            setDoc(doc(db, "users", newId), clean, { merge: true }).catch(() => {});
+            setDoc(doc(db, "employees", newId), empDoc, { merge: true }).catch(() => {});
+            if (data.employeeId && data.employeeId !== newId) {
+              setDoc(doc(db, "users", data.employeeId), clean, { merge: true }).catch(() => {});
+              setDoc(doc(db, "employees", data.employeeId), empDoc, { merge: true }).catch(() => {});
+            }
+            setShowAddManager(false);
+          }} />
       )}
       {editingManager && (
         <UserForm title="Edit Manager" initial={editingManager} onClose={() => setEditingManager(null)}
-          onSave={(data) => { setState((s: any) => ({ ...s, users: s.users.map((u: User) => u.id === editingManager.id ? { ...u, ...data } : u) })); setEditingManager(null); }} />
+          onSave={(data) => {
+            const targetId = editingManager.id;
+            const updatedMgr = { ...editingManager, ...data, role: "manager" as const };
+            setState((s: any) => ({ ...s, users: s.users.map((u: User) => u.id === targetId ? updatedMgr : u) }));
+            const clean: any = {};
+            Object.keys(updatedMgr).forEach(k => { if ((updatedMgr as any)[k] !== undefined) clean[k] = (updatedMgr as any)[k]; });
+            clean.role = "manager";
+            const empDoc = { ...clean, role: "manager", fullName: updatedMgr.name, location: updatedMgr.address, joiningDate: updatedMgr.dateOfJoining };
+            setDoc(doc(db, "users", targetId), clean, { merge: true }).catch(() => {});
+            setDoc(doc(db, "employees", targetId), empDoc, { merge: true }).catch(() => {});
+            const altId = updatedMgr.employeeId || editingManager.employeeId;
+            if (altId && altId !== targetId) {
+              setDoc(doc(db, "users", altId), clean, { merge: true }).catch(() => {});
+              setDoc(doc(db, "employees", altId), empDoc, { merge: true }).catch(() => {});
+            }
+            setEditingManager(null);
+          }} />
       )}
 
       {/* Add/Edit Employee */}
       {showAddEmployee && (
         <EmployeeForm title="Add Employee" onClose={() => setShowAddEmployee(false)}
-          onSave={(data) => { setState((s: any) => ({ ...s, users: [...s.users, { id: uid("u"), role: "employee", ...data }] })); setShowAddEmployee(false); }} />
+          onSave={(data) => {
+            const newId = data.employeeId || uid("u");
+            const newEmp = { ...data, id: newId, role: "employee" as const };
+            setState((s: any) => ({ ...s, users: [...s.users.filter((u: any) => u.id !== newId), newEmp] }));
+            const clean: any = {};
+            Object.keys(newEmp).forEach(k => { if ((newEmp as any)[k] !== undefined) clean[k] = (newEmp as any)[k]; });
+            clean.role = "employee";
+            const empDoc = { ...clean, role: "employee", fullName: newEmp.name, location: newEmp.address, joiningDate: newEmp.dateOfJoining };
+            setDoc(doc(db, "users", newId), clean, { merge: true }).catch(() => {});
+            setDoc(doc(db, "employees", newId), empDoc, { merge: true }).catch(() => {});
+            if (data.employeeId && data.employeeId !== newId) {
+              setDoc(doc(db, "users", data.employeeId), clean, { merge: true }).catch(() => {});
+              setDoc(doc(db, "employees", data.employeeId), empDoc, { merge: true }).catch(() => {});
+            }
+            setShowAddEmployee(false);
+          }} />
       )}
       {editingEmployee && (
         <EmployeeForm title="Edit Employee" initial={editingEmployee} onClose={() => setEditingEmployee(null)}
-          onSave={(data) => { setState((s: any) => ({ ...s, users: s.users.map((u: User) => u.id === editingEmployee.id ? { ...u, ...data } : u) })); setEditingEmployee(null); }} />
+          onSave={(data) => {
+            const targetId = editingEmployee.id;
+            const updatedEmp = { ...editingEmployee, ...data, role: "employee" as const };
+            setState((s: any) => ({ ...s, users: s.users.map((u: User) => u.id === targetId ? updatedEmp : u) }));
+            const clean: any = {};
+            Object.keys(updatedEmp).forEach(k => { if ((updatedEmp as any)[k] !== undefined) clean[k] = (updatedEmp as any)[k]; });
+            clean.role = "employee";
+            const empDoc = { ...clean, role: "employee", fullName: updatedEmp.name, location: updatedEmp.address, joiningDate: updatedEmp.dateOfJoining };
+            setDoc(doc(db, "users", targetId), clean, { merge: true }).catch(() => {});
+            setDoc(doc(db, "employees", targetId), empDoc, { merge: true }).catch(() => {});
+            const altId = updatedEmp.employeeId || editingEmployee.employeeId;
+            if (altId && altId !== targetId) {
+              setDoc(doc(db, "users", altId), clean, { merge: true }).catch(() => {});
+              setDoc(doc(db, "employees", altId), empDoc, { merge: true }).catch(() => {});
+            }
+            setEditingEmployee(null);
+          }} />
       )}
     </>
   );
@@ -5226,7 +5756,7 @@ export function LeadsSection() {
           <h2 className="page-title" style={{ margin: 0 }}>Lead Generation</h2>
           <p className="page-sub" style={{ margin: "4px 0 0 0" }}>Track customer inquiries, status updates, and assign them to staff members.</p>
         </div>
-        {(currentUser?.role === "employee" || currentUser?.role === "manager" || currentUser?.role === "superadmin") && (
+        {(currentUser?.role === "employee" || currentUser?.role === "manager") && (
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setShowAddModal(true)}
@@ -7987,5 +8517,758 @@ export function SuperAdminReportsSection() {
         </div>
       </div>
     </div>
+  );
+}
+
+export function getQuotationDiscount(q: Quotation | undefined | null) {
+  if (!q) {
+    return { discountAmount: 0, finalPrice: 0, label: "", isPercent: false };
+  }
+  const qty = q.qty || 1;
+  const unitPrice = q.unitPrice || 0;
+  const totalPrice = qty * unitPrice;
+  const discountVal = Number(q.discount) || 0;
+  if (!discountVal) {
+    return { discountAmount: 0, finalPrice: totalPrice, label: "", isPercent: false };
+  }
+
+  // If discountType is explicitly set or discountVal <= 100, treat as percentage by default
+  const isPercent = q.discountType === "percent" || (!q.discountType && discountVal <= 100);
+  const discountAmount = isPercent ? (totalPrice * discountVal) / 100 : discountVal;
+  const finalPrice = Math.max(0, totalPrice - discountAmount);
+  const label = isPercent
+    ? `Discount: ${discountVal}% (₹${discountAmount.toLocaleString()})`
+    : `Discount: ₹${discountVal.toLocaleString()}`;
+
+  return { discountAmount, finalPrice, label, isPercent };
+}
+
+export function QuotationsSection() {
+  const store = useStore();
+  const quotations = store?.quotations || [];
+  const products = store?.products || [];
+  const currentUser = store?.currentUser;
+  const setState = store?.setState;
+  const uid = store?.uid;
+  const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
+  const [viewQuotation, setViewQuotation] = useState<Quotation | null>(null);
+
+  const filteredQuotations = useMemo(() => {
+    const isSuperAdmin = currentUser?.role === "superadmin";
+    const myId = currentUser?.id;
+    const myEmpId = currentUser?.employeeId;
+    const myName = currentUser?.name?.toLowerCase().trim();
+
+    return (quotations || []).filter((q) => {
+      if (!q) return false;
+
+      // Rule: Admin sees ALL; Employee/Manager sees ONLY quotations added by themselves!
+      if (!isSuperAdmin) {
+        const matchesId = q.createdById && (q.createdById === myId || q.createdById === myEmpId);
+        const matchesName = q.createdBy && myName && q.createdBy.toLowerCase().trim() === myName;
+        if (!matchesId && !matchesName) return false;
+      }
+
+      const query = search.toLowerCase().trim();
+      if (!query) return true;
+      return (
+        (q.customerName || "").toLowerCase().includes(query) ||
+        (q.productName || "").toLowerCase().includes(query) ||
+        (q.brand && q.brand.toLowerCase().includes(query)) ||
+        (q.createdBy && q.createdBy.toLowerCase().includes(query)) ||
+        (q.status && q.status.toLowerCase().includes(query))
+      );
+    });
+  }, [quotations, currentUser, search]);
+
+  const handleDelete = (id: string) => {
+    if (!confirm("Are you sure you want to delete this quotation?")) return;
+    if (setState) {
+      setState((s: any) => ({
+        ...s,
+        quotations: (s.quotations || []).filter((q: any) => q.id !== id)
+      }));
+    }
+    deleteDoc(doc(db, "quotations", id)).catch(() => {});
+  };
+
+  const handlePrintPDF = (q: Quotation) => {
+    const docPdf = new jsPDF();
+    const discInfo = getQuotationDiscount(q);
+    
+    // Header Branding
+    docPdf.setFillColor(124, 58, 237); // #7C3AED
+    docPdf.rect(0, 0, 210, 38, "F");
+    
+    docPdf.setFont("helvetica", "bold");
+    docPdf.setFontSize(22);
+    docPdf.setTextColor(255, 255, 255);
+    docPdf.text("STAR HOME APPLIANCES", 14, 22);
+
+    docPdf.setFontSize(10);
+    docPdf.setFont("helvetica", "normal");
+    docPdf.text("PRICE QUOTATION / ESTIMATE BILL", 14, 30);
+
+    docPdf.setFontSize(10);
+    docPdf.setTextColor(255, 255, 255);
+    docPdf.text(`Quotation #: QT-${q.id.slice(-6).toUpperCase()}`, 145, 18);
+    docPdf.text(`Date: ${q.date}`, 145, 26);
+
+    // Customer & Seller Info Cards
+    docPdf.setTextColor(30, 41, 59);
+    docPdf.setFontSize(12);
+    docPdf.setFont("helvetica", "bold");
+    docPdf.text("CUSTOMER DETAILS", 14, 48);
+
+    docPdf.setFontSize(10);
+    docPdf.setFont("helvetica", "normal");
+    docPdf.text(`Customer Name: ${q.customerName}`, 14, 56);
+    if (q.customerPhone) docPdf.text(`Phone: ${q.customerPhone}`, 14, 63);
+    docPdf.text(`Prepared By: ${q.createdBy || currentUser?.name || "Admin"}`, 14, 70);
+
+    // Table Data
+    autoTable(docPdf, {
+      startY: 78,
+      head: [["PRODUCT NAME", "BRAND", "SIZE / MODEL", "QTY", "UNIT PRICE (₹)", "DISCOUNT", "TOTAL AMOUNT (₹)"]],
+      body: [
+        [
+          q.productName,
+          q.brand || "—",
+          `${q.size || ""} ${q.model || ""}`.trim() || "—",
+          String(q.qty),
+          `₹${(q.unitPrice || 0).toLocaleString()}`,
+          discInfo.isPercent ? `${q.discount}% (₹${discInfo.discountAmount.toLocaleString()})` : `₹${discInfo.discountAmount.toLocaleString()}`,
+          `₹${discInfo.finalPrice.toLocaleString()}`
+        ]
+      ],
+      headStyles: { fillColor: [124, 58, 237], textColor: [255, 255, 255], fontStyle: "bold" },
+      styles: { fontSize: 9.5, cellPadding: 6 },
+    });
+
+    const finalY = (docPdf as any).lastAutoTable ? (docPdf as any).lastAutoTable.finalY + 12 : 110;
+
+    // Total Calculation Box
+    docPdf.setFillColor(248, 250, 252);
+    docPdf.roundedRect(120, finalY, 76, 32, 3, 3, "F");
+    docPdf.setDrawColor(226, 232, 240);
+    docPdf.roundedRect(120, finalY, 76, 32, 3, 3, "D");
+
+    docPdf.setFontSize(9);
+    docPdf.setTextColor(100, 116, 139);
+    docPdf.text(`Subtotal: ₹${(q.qty * q.unitPrice).toLocaleString()}`, 126, finalY + 10);
+    docPdf.text(`Discount: ${discInfo.isPercent ? `${q.discount}% (₹${discInfo.discountAmount.toLocaleString()})` : `₹${discInfo.discountAmount.toLocaleString()}`}`, 126, finalY + 17);
+
+    docPdf.setFontSize(12);
+    docPdf.setFont("helvetica", "bold");
+    docPdf.setTextColor(124, 58, 237);
+    docPdf.text(`Grand Total: ₹${discInfo.finalPrice.toLocaleString()}`, 126, finalY + 26);
+
+    // Terms & Conditions / Authorized Signature
+    docPdf.setFontSize(9);
+    docPdf.setFont("helvetica", "italic");
+    docPdf.setTextColor(100, 116, 139);
+    docPdf.text("Thank you for choosing Star Home Appliances! Quotation valid for 15 days.", 14, finalY + 45);
+
+    docPdf.setFont("helvetica", "bold");
+    docPdf.text("Authorized Signature", 145, finalY + 45);
+    docPdf.line(140, finalY + 40, 195, finalY + 40);
+
+    const pdfBlob = docPdf.output("blob");
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, "_blank");
+  };
+
+  return (
+    <div style={{ padding: "4px" }}>
+      {/* Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: "#5B21B6" }}>
+            📑 Quotations & Price Estimates
+          </h2>
+          <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#64748B" }}>
+            {currentUser?.role === "superadmin"
+              ? "View and manage all customer quotations created by team members."
+              : "View, create, and manage your customer price quotations."}
+          </p>
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => { setEditingQuotation(null); setShowForm(true); }}
+          style={{ padding: "10px 18px", borderRadius: "12px", background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)", color: "#FFF", fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+        >
+          ➕ Create New Quotation
+        </button>
+      </div>
+
+      {/* Search Bar */}
+      <div style={{ background: "#FFFFFF", padding: "14px 18px", borderRadius: "16px", border: "1px solid #E2E8F0", marginBottom: "20px", display: "flex", alignItems: "center", gap: "12px" }}>
+        <span style={{ fontSize: "16px" }}>🔍</span>
+        <input
+          type="text"
+          placeholder="Search by customer name, product name, brand, or added by..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: "100%", border: "none", outline: "none", fontSize: "14px", fontWeight: 500, color: "#1E293B" }}
+        />
+      </div>
+
+      {/* Quotations Table */}
+      <div style={{ background: "#FFFFFF", borderRadius: "16px", border: "1px solid #E2E8F0", overflowX: "auto", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
+          <thead>
+            <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
+              <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>CUSTOMER NAME</th>
+              <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>PRODUCT DETAILS</th>
+              <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>ADDED BY</th>
+              <th style={{ padding: "14px 18px", textAlign: "center", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>QTY</th>
+              <th style={{ padding: "14px 18px", textAlign: "right", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>UNIT PRICE</th>
+              <th style={{ padding: "14px 18px", textAlign: "right", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>TOTAL PRICE</th>
+              <th style={{ padding: "14px 18px", textAlign: "center", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>STATUS</th>
+              <th style={{ padding: "14px 18px", textAlign: "right", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredQuotations.map((q, idx) => (
+              <tr key={q.id || idx} style={{ borderBottom: idx === filteredQuotations.length - 1 ? "none" : "1px solid #F1F5F9" }}>
+                <td style={{ padding: "16px 18px" }}>
+                  <div style={{ fontWeight: 800, color: "#1E293B" }}>{q.customerName}</div>
+                  {q.customerPhone && <div style={{ fontSize: "11px", color: "#64748B", marginTop: 2 }}>📞 {q.customerPhone}</div>}
+                  <div style={{ fontSize: "10px", color: "#94A3B8", marginTop: 2 }}>Date: {q.date}</div>
+                </td>
+                <td style={{ padding: "16px 18px" }}>
+                  <div style={{ fontWeight: 700, color: "#5B21B6" }}>{q.productName}</div>
+                  <div style={{ fontSize: "11px", color: "#64748B", marginTop: 2 }}>
+                    {q.brand && <span>Brand: {q.brand}</span>}
+                    {q.size && <span> · Size: {q.size}</span>}
+                    {q.model && <span> · Model: {q.model}</span>}
+                  </div>
+                </td>
+                <td style={{ padding: "16px 18px" }}>
+                  <div style={{ fontWeight: 700, color: "#4C1D95", fontSize: "12.5px" }}>👤 {q.createdBy || "—"}</div>
+                </td>
+                <td style={{ padding: "16px 18px", textAlign: "center", fontWeight: 900, fontSize: "16px", color: "#7C3AED" }}>
+                  {q.qty}
+                </td>
+                <td style={{ padding: "16px 18px", textAlign: "right", fontWeight: 700, color: "#1E293B" }}>
+                  ₹{(q.unitPrice || 0).toLocaleString()}
+                </td>
+                <td style={{ padding: "16px 18px", textAlign: "right" }}>
+                  {(() => {
+                    const disc = getQuotationDiscount(q);
+                    return (
+                      <>
+                        <div style={{ fontWeight: 900, color: "#166534", fontSize: "15px" }}>
+                          ₹{disc.finalPrice.toLocaleString()}
+                        </div>
+                        {disc.label ? <div style={{ fontSize: "11px", color: "#DC2626", fontWeight: 700 }}>{disc.label}</div> : null}
+                      </>
+                    );
+                  })()}
+                </td>
+                <td style={{ padding: "16px 18px", textAlign: "center" }}>
+                  <span
+                    style={{
+                      background: q.status === "Approved" ? "#DCFCE7" : q.status === "Sent" ? "#E0F2FE" : "#F1F5F9",
+                      color: q.status === "Approved" ? "#166534" : q.status === "Sent" ? "#0369A1" : "#475569",
+                      padding: "4px 12px",
+                      borderRadius: "999px",
+                      fontSize: "12px",
+                      fontWeight: 700
+                    }}
+                  >
+                    {q.status || "Draft"}
+                  </span>
+                </td>
+                <td style={{ padding: "16px 18px", textAlign: "right" }}>
+                  <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                    <button
+                      onClick={() => setViewQuotation(q)}
+                      title="View Full Quotation Details"
+                      style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", borderRadius: "10px", padding: "6px 14px", color: "#4F46E5", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
+                    >
+                      👁️ View
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filteredQuotations.length === 0 && (
+              <tr>
+                <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "#64748B", fontWeight: 600 }}>
+                  📑 No quotations found. Click "+ Create New Quotation" to add one.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* View Details Modal */}
+      {viewQuotation && (
+        <QuotationDetailsModal
+          quotation={viewQuotation}
+          onClose={() => setViewQuotation(null)}
+          onEdit={() => {
+            setEditingQuotation(viewQuotation);
+            setViewQuotation(null);
+            setShowForm(true);
+          }}
+          onPrint={() => handlePrintPDF(viewQuotation)}
+          onDelete={() => {
+            handleDelete(viewQuotation.id);
+            setViewQuotation(null);
+          }}
+        />
+      )}
+
+      {/* Quotation Form Modal */}
+      {showForm && (
+        <QuotationForm
+          initial={editingQuotation}
+          onClose={() => { setShowForm(false); setEditingQuotation(null); }}
+          onSave={(data) => {
+            if (editingQuotation) {
+              const updated = { ...editingQuotation, ...data };
+              if (setState) {
+                setState((s: any) => ({
+                  ...s,
+                  quotations: (s.quotations || []).map((q: any) => q.id === editingQuotation.id ? updated : q)
+                }));
+              }
+              setDoc(doc(db, "quotations", editingQuotation.id), updated, { merge: true }).catch(() => {});
+            } else {
+              const newId = (uid ? uid("qt") : `qt_${Date.now()}`);
+              const newQt = { id: newId, ...data };
+              if (setState) {
+                setState((s: any) => ({ ...s, quotations: [...(s.quotations || []), newQt] }));
+              }
+              setDoc(doc(db, "quotations", newId), newQt, { merge: true }).catch(() => {});
+            }
+            setShowForm(false);
+            setEditingQuotation(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export function QuotationForm({
+  initial,
+  onClose,
+  onSave
+}: {
+  initial?: Quotation | null;
+  onClose: () => void;
+  onSave: (data: Omit<Quotation, "id">) => void;
+}) {
+  const store = useStore();
+  const products = store?.products || [];
+  const currentUser = store?.currentUser;
+  const [customerName, setCustomerName] = useState(initial?.customerName ?? "");
+  const [customerPhone, setCustomerPhone] = useState(initial?.customerPhone ?? "");
+  const [selectedProductId, setSelectedProductId] = useState(initial?.productId ?? "");
+  const [productName, setProductName] = useState(initial?.productName ?? "");
+  const [brand, setBrand] = useState(initial?.brand ?? "");
+  const [size, setSize] = useState(initial?.size ?? "");
+  const [model, setModel] = useState(initial?.model ?? "");
+  const [qty, setQty] = useState(initial?.qty ?? 1);
+  const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ?? 0);
+  const [discount, setDiscount] = useState(initial?.discount ?? 0);
+  const [discountType, setDiscountType] = useState<"percent" | "amount">(initial?.discountType ?? "percent");
+  const [status, setStatus] = useState<"Draft" | "Sent" | "Approved" | "Closed">(initial?.status ?? "Draft");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+
+  const handleSelectProduct = (pId: string) => {
+    setSelectedProductId(pId);
+    const p = products.find((x) => x.id === pId);
+    if (p) {
+      setProductName(p.name);
+      if (p.brand) setBrand(p.brand);
+      if (p.warranty) setSize(p.warranty);
+      if (p.model) setModel(p.model);
+      if (p.cost || p.price) setUnitPrice(p.cost || p.price);
+    }
+  };
+
+  const totalPrice = qty * unitPrice;
+  const discountVal = Number(discount) || 0;
+  const discountAmount = discountType === "percent" ? (totalPrice * discountVal) / 100 : discountVal;
+  const finalPrice = Math.max(0, totalPrice - discountAmount);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerName || !productName) return;
+    onSave({
+      customerName,
+      customerPhone,
+      productId: selectedProductId,
+      productName,
+      brand,
+      size,
+      model,
+      qty: Number(qty),
+      unitPrice: Number(unitPrice),
+      totalPrice,
+      discount: Number(discount),
+      discountType,
+      finalPrice,
+      date: initial?.date || new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      createdBy: initial?.createdBy || currentUser?.name || "Admin",
+      createdById: initial?.createdById || currentUser?.employeeId || currentUser?.id || "admin",
+      status,
+      notes
+    });
+  };
+
+  return (
+    <Modal title={initial ? "✏️ Edit Price Quotation" : "📑 + New Price Quotation"} onClose={onClose} className="modal-lg">
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>CUSTOMER NAME *</label>
+            <input
+              className="form-input"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+              placeholder="e.g. Ramesh Patil"
+              required
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 600 }}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>CUSTOMER PHONE</label>
+            <input
+              className="form-input"
+              value={customerPhone}
+              onChange={(e) => setCustomerPhone(e.target.value)}
+              placeholder="e.g. 9876543210"
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 600 }}
+            />
+          </div>
+        </div>
+
+        <div className="form-group" style={{ marginBottom: "12px" }}>
+          <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>SELECT PRODUCT FROM INVENTORY (OPTIONAL)</label>
+          <select
+            className="form-select"
+            value={selectedProductId}
+            onChange={(e) => handleSelectProduct(e.target.value)}
+            style={{ width: "100%", background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "10px", fontWeight: 600 }}
+          >
+            <option value="">-- Choose Product or Type Manually Below --</option>
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} {p.brand ? `(${p.brand})` : ""} {p.warranty ? `- ${p.warranty}` : ""} - ₹{(p.cost || p.price || 0).toLocaleString()}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>PRODUCT NAME *</label>
+            <input
+              className="form-input"
+              value={productName}
+              onChange={(e) => setProductName(e.target.value)}
+              placeholder="e.g. TV, Refrigerator..."
+              required
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 600 }}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>BRAND</label>
+            <input
+              className="form-input"
+              value={brand}
+              onChange={(e) => setBrand(e.target.value)}
+              placeholder="e.g. Samsung, LG..."
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 600 }}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>SIZE / MODEL</label>
+            <input
+              className="form-input"
+              value={size || model ? `${size} ${model}`.trim() : ""}
+              onChange={(e) => setSize(e.target.value)}
+              placeholder="e.g. 55 Inch Crystal 4K"
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 600 }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", marginBottom: "16px" }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>QUANTITY *</label>
+            <input
+              type="number"
+              min="1"
+              className="form-input"
+              value={qty}
+              onChange={(e) => setQty(Math.max(1, parseInt(e.target.value) || 1))}
+              required
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 700, fontSize: "16px" }}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>UNIT PRICE (₹) *</label>
+            <input
+              type="number"
+              min="0"
+              className="form-input"
+              value={unitPrice}
+              onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+              required
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 700, fontSize: "16px" }}
+            />
+          </div>
+          <div className="form-group">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800, margin: 0 }}>
+                DISCOUNT ({discountType === "percent" ? "%" : "₹"})
+              </label>
+              <div style={{ display: "flex", background: "#E2E8F0", borderRadius: "6px", padding: "2px" }}>
+                <button
+                  type="button"
+                  onClick={() => setDiscountType("percent")}
+                  style={{
+                    border: "none",
+                    background: discountType === "percent" ? "#7C3AED" : "transparent",
+                    color: discountType === "percent" ? "#FFF" : "#64748B",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    borderRadius: "4px",
+                    padding: "2px 6px",
+                    cursor: "pointer"
+                  }}
+                >
+                  %
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDiscountType("amount")}
+                  style={{
+                    border: "none",
+                    background: discountType === "amount" ? "#7C3AED" : "transparent",
+                    color: discountType === "amount" ? "#FFF" : "#64748B",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    borderRadius: "4px",
+                    padding: "2px 6px",
+                    cursor: "pointer"
+                  }}
+                >
+                  ₹
+                </button>
+              </div>
+            </div>
+            <input
+              type="number"
+              min="0"
+              className="form-input"
+              value={discount}
+              onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+              placeholder={discountType === "percent" ? "e.g. 10%" : "e.g. 500"}
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 700, fontSize: "16px", color: "#DC2626" }}
+            />
+            {discountType === "percent" && discountVal > 0 ? (
+              <div style={{ fontSize: "10px", color: "#DC2626", marginTop: "2px", fontWeight: 700 }}>
+                -₹{discountAmount.toLocaleString()} ({discountVal}%)
+              </div>
+            ) : null}
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>FINAL TOTAL (₹)</label>
+            <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "10px", fontWeight: 900, color: "#166534", fontSize: "18px", textAlign: "center" }}>
+              ₹{finalPrice.toLocaleString()}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "10px", marginBottom: "16px" }}>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>STATUS</label>
+            <select
+              className="form-select"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as any)}
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "10px", fontWeight: 700 }}
+            >
+              <option value="Draft">Draft</option>
+              <option value="Sent">Sent to Customer</option>
+              <option value="Approved">Approved</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>SPECIAL NOTES / TERMS</label>
+            <input
+              className="form-input"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Valid for 15 days, Includes free installation"
+              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 600 }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+          <button type="button" className="btn btn-ghost" onClick={onClose} style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#64748B", fontWeight: 700 }}>
+            Cancel
+          </button>
+          <button type="submit" className="btn btn-primary" style={{ background: "#7C3AED", color: "#FFF", fontWeight: 700, padding: "10px 24px", borderRadius: "12px" }}>
+            💾 Save Quotation
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+export function QuotationDetailsModal({
+  quotation,
+  onClose,
+  onEdit,
+  onPrint,
+  onDelete
+}: {
+  quotation: Quotation;
+  onClose: () => void;
+  onEdit: () => void;
+  onPrint: () => void;
+  onDelete: () => void;
+}) {
+  const discInfo = getQuotationDiscount(quotation);
+
+  return (
+    <Modal title={`📑 Quotation Details — QT-${quotation.id.slice(-6).toUpperCase()}`} onClose={onClose} className="modal-lg">
+      <div style={{ padding: "4px" }}>
+        {/* Header Badge Row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+          <div>
+            <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>Quotation Date: </span>
+            <strong style={{ color: "#1E293B" }}>{quotation.date}</strong>
+          </div>
+          <span style={{
+            background: quotation.status === "Approved" ? "#DCFCE7" : quotation.status === "Sent" ? "#E0F2FE" : "#F1F5F9",
+            color: quotation.status === "Approved" ? "#166534" : quotation.status === "Sent" ? "#0369A1" : "#475569",
+            padding: "4px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: 800
+          }}>
+            {quotation.status || "Draft"}
+          </span>
+        </div>
+
+        {/* Info Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "18px" }}>
+          {/* Creator Box */}
+          <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: "12px", padding: "14px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#6D28D9", textTransform: "uppercase", marginBottom: "4px" }}>
+              👤 Added / Created By
+            </div>
+            <div style={{ fontSize: "15px", fontWeight: 800, color: "#4C1D95" }}>
+              {quotation.createdBy || "—"}
+            </div>
+            {quotation.createdById && (
+              <div style={{ fontSize: "11px", color: "#6D28D9", marginTop: "2px" }}>
+                ID: {quotation.createdById}
+              </div>
+            )}
+          </div>
+
+          {/* Customer Box */}
+          <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "14px" }}>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#475569", textTransform: "uppercase", marginBottom: "4px" }}>
+              🙋 Customer Information
+            </div>
+            <div style={{ fontSize: "15px", fontWeight: 800, color: "#1E293B" }}>
+              {quotation.customerName}
+            </div>
+            {quotation.customerPhone && (
+              <div style={{ fontSize: "11px", color: "#64748B", marginTop: "2px" }}>
+                📞 Phone: {quotation.customerPhone}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Product Details Box */}
+        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginBottom: "18px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 800, color: "#5B21B6", textTransform: "uppercase", marginBottom: "10px" }}>
+            📦 Product Specifications
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "10px", fontSize: "13px" }}>
+            <div>
+              <span style={{ color: "#64748B", fontSize: "11px", display: "block" }}>PRODUCT NAME</span>
+              <strong style={{ color: "#1E293B", fontSize: "14px" }}>{quotation.productName}</strong>
+            </div>
+            <div>
+              <span style={{ color: "#64748B", fontSize: "11px", display: "block" }}>BRAND</span>
+              <strong style={{ color: "#1E293B" }}>{quotation.brand || "—"}</strong>
+            </div>
+            <div>
+              <span style={{ color: "#64748B", fontSize: "11px", display: "block" }}>SIZE / MODEL</span>
+              <strong style={{ color: "#1E293B" }}>{`${quotation.size || ""} ${quotation.model || ""}`.trim() || "—"}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Price Breakdown */}
+        <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "12px", padding: "16px", marginBottom: "18px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 800, color: "#166534", textTransform: "uppercase", marginBottom: "10px" }}>
+            💰 Pricing & Amount Details
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", textAlign: "center" }}>
+            <div>
+              <div style={{ fontSize: "10px", color: "#15803D", fontWeight: 700 }}>QUANTITY</div>
+              <div style={{ fontSize: "16px", fontWeight: 900, color: "#166534" }}>{quotation.qty}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "10px", color: "#15803D", fontWeight: 700 }}>UNIT PRICE</div>
+              <div style={{ fontSize: "15px", fontWeight: 800, color: "#166534" }}>₹{(quotation.unitPrice || 0).toLocaleString()}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "10px", color: "#DC2626", fontWeight: 700 }}>DISCOUNT</div>
+              <div style={{ fontSize: "15px", fontWeight: 800, color: "#DC2626" }}>
+                {discInfo.isPercent ? `${quotation.discount}% (₹${discInfo.discountAmount.toLocaleString()})` : `₹${discInfo.discountAmount.toLocaleString()}`}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "10px", color: "#166534", fontWeight: 800 }}>FINAL PRICE</div>
+              <div style={{ fontSize: "18px", fontWeight: 900, color: "#15803D" }}>
+                ₹{discInfo.finalPrice.toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Special Notes if any */}
+        {quotation.notes && (
+          <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", fontSize: "12px", color: "#92400E" }}>
+            <strong>📌 Notes / Special Terms:</strong> {quotation.notes}
+          </div>
+        )}
+
+        {/* Modal Action Buttons */}
+        <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginTop: "16px" }}>
+          <button onClick={onPrint} style={{ background: "#7C3AED", color: "#FFF", border: "none", borderRadius: "10px", padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
+            📄 Download PDF
+          </button>
+          <button onClick={onEdit} style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A", borderRadius: "10px", padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
+            ✏️ Edit Quotation
+          </button>
+          <button onClick={onDelete} style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "10px", padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
+            🗑️ Delete Quotation
+          </button>
+          <button onClick={onClose} style={{ background: "#F1F5F9", color: "#475569", border: "1px solid #CBD5E1", borderRadius: "10px", padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
+            Close
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }

@@ -68,11 +68,23 @@ export function UnifiedEmployeeCard({
             </span>
             <strong style={{ color: "#1E293B" }}>{employee.username || "—"}</strong>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
               <Key size={14} /> PASSWORD
             </span>
-            <strong style={{ color: "#1E293B" }}>{employee.password || "—"}</strong>
+            <strong
+              style={{
+                color: "#1E293B",
+                maxWidth: "160px",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                textAlign: "right"
+              }}
+              title={employee.password}
+            >
+              {employee.password ? (employee.password.length > 18 ? `${employee.password.slice(0, 6)}...${employee.password.slice(-4)}` : employee.password) : "—"}
+            </strong>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>

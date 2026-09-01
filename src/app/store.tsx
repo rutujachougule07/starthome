@@ -27,12 +27,13 @@ export interface User {
   punchSetting?: string;
   branchAccess?: string;
 }
-export interface Product { id: string; name: string; category: string; price: number; stock: number; status: string; sku: string; image: string; qty: number; cost: number; incentive: number; supplier: string; date: string; warranty?: string; brand?: string; location?: "Shop" | "Godown 1" | "Godown 2" | "Display"; assignedEmployeeId?: string; incentiveSeen?: boolean; serialNumbers?: string[]; }
+export interface Product { id: string; name: string; category: string; price: number; stock: number; status: string; sku: string; image: string; qty: number; cost: number; incentive: number; supplier: string; date: string; warranty?: string; model?: string; brand?: string; location?: "Shop" | "Godown 1" | "Godown 2" | "Display"; assignedEmployeeId?: string; incentiveSeen?: boolean; serialNumbers?: string[]; }
 export interface Customer { id: string; name: string; email: string; phone: string; address: string; status: string; }
 export interface Order { id: string; customerId: string; customerName: string; productId: string; productName: string; qty: number; total: number; discount?: number; createdBy: string; status: "Pending" | "Approved" | "Rejected" | "Delivered"; date: string; assignedTo?: string; assignedToName?: string; sentToEmployee?: boolean; customerBargain?: string; docType?: "Bill" | "Order Copy"; bookingExpiryDate?: string; isIncentive?: boolean; serialNumber?: string; }
 export interface Task { id: string; title: string; assignedTo: string; assignedToName: string; customerId?: string; status: "Pending" | "In Progress" | "Completed"; date: string; proofNote?: string; proofUrl?: string; }
 export interface Notification { id: string; to: Role | "all"; from: string; message: string; date: string; read: boolean; }
 export interface Lead { id: string; name: string; phone: string; email?: string; source?: string; product?: string; brand?: string; gender?: "Male" | "Female" | "Other"; status: "New" | "Cold" | "Warm" | "Hot" | "Enrolled" | "Cancelled"; followUpDate?: string; notes?: string; date: string; assignedTo?: string; city?: string; address?: string; createdBy?: string; }
+export interface Quotation { id: string; customerName: string; customerPhone?: string; productId?: string; productName: string; brand?: string; size?: string; model?: string; qty: number; unitPrice: number; totalPrice: number; discount?: number; discountType?: "percent" | "amount"; finalPrice: number; date: string; createdBy: string; createdById?: string; status: "Draft" | "Sent" | "Approved" | "Closed"; notes?: string; }
 
 interface State {
   currentUser: User | null;
@@ -43,11 +44,11 @@ interface State {
   tasks: Task[];
   notifications: Notification[];
   leads: Lead[];
+  quotations: Quotation[];
 }
 
 const initialUsers: User[] = [
-  { id: "u1", name: "Super Admin", username: "admin@gmail.com", role: "superadmin", email: "admin@gmail.com", password: "admin123" },
-  { id: "u2", name: "Rohan Patil", username: "manager@gmail.com", role: "manager", email: "manager@gmail.com", phone: "9876543210", employeeId: "MGR001", jobTitle: "Store Manager", password: "manager123", address: "Kothrud, Pune", status: "Verified" },
+  { id: "u1", name: "Super Admin", username: "admin@gmail.com", role: "superadmin", email: "admin@gmail.com", password: "admin123" }
 ];
 
 const initialProducts: Product[] = [];
@@ -97,6 +98,7 @@ function defaultState(): State {
     tasks: [],
     notifications: [],
     leads: [],
+    quotations: [],
   };
 }
 
@@ -107,15 +109,27 @@ function loadCachedState(): State {
     const raw = localStorage.getItem(STATE_CACHE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      const cleanUsers = (Array.isArray(parsed.users) ? parsed.users : []).filter(
+        (u: any) =>
+          u.id !== "u2" &&
+          u.id !== "u3" &&
+          u.id !== "u4" &&
+          u.id !== "u5" &&
+          u.username !== "employee@gmail.com" &&
+          u.username !== "employee2" &&
+          u.username !== "manager@gmail.com" &&
+          u.name !== "Rohan Patil"
+      );
       return {
         ...base,
-        users: Array.isArray(parsed.users) && parsed.users.length ? parsed.users : base.users,
-        products: Array.isArray(parsed.products) && parsed.products.length ? parsed.products : base.products,
-        customers: Array.isArray(parsed.customers) && parsed.customers.length ? parsed.customers : base.customers,
-        orders: Array.isArray(parsed.orders) && parsed.orders.length ? parsed.orders : base.orders,
-        tasks: Array.isArray(parsed.tasks) && parsed.tasks.length ? parsed.tasks : base.tasks,
-        notifications: Array.isArray(parsed.notifications) && parsed.notifications.length ? parsed.notifications : base.notifications,
-        leads: Array.isArray(parsed.leads) && parsed.leads.length ? parsed.leads : base.leads,
+        users: cleanUsers,
+        products: Array.isArray(parsed.products) ? parsed.products : [],
+        customers: Array.isArray(parsed.customers) ? parsed.customers : [],
+        orders: Array.isArray(parsed.orders) ? parsed.orders : [],
+        tasks: Array.isArray(parsed.tasks) ? parsed.tasks : [],
+        notifications: Array.isArray(parsed.notifications) ? parsed.notifications : [],
+        leads: Array.isArray(parsed.leads) ? parsed.leads : [],
+        quotations: Array.isArray(parsed.quotations) ? parsed.quotations : [],
       };
     }
   } catch { /* ignore */ }
@@ -132,6 +146,7 @@ function persistStateCache(state: State) {
       tasks: state.tasks,
       notifications: state.notifications,
       leads: state.leads,
+      quotations: state.quotations,
     }));
   } catch { /* ignore */ }
 }
@@ -141,6 +156,59 @@ const PASSWORDS: Record<string, { password: string; role: Role }> = {
   "manager@gmail.com": { password: "manager123", role: "manager" },
   "employee@gmail.com": { password: "employee123", role: "employee" },
 };
+
+function normalizeUserData(data: any, docId: string): User {
+  const id = data.id || docId;
+  const empId = data.employeeId || id;
+  const jobTitleLower = String(data.jobTitle || data.designation || "").toLowerCase();
+
+  let role: Role = "employee";
+  if (data.role && String(data.role).trim()) {
+    const r = String(data.role).toLowerCase().trim();
+    if (r === "superadmin" || r === "admin") role = "superadmin";
+    else if (r === "manager" || r === "mgr" || r.includes("manager")) role = "manager";
+  }
+
+  if (role === "employee") {
+    if (
+      id.toUpperCase().startsWith("MGR") ||
+      String(empId).toUpperCase().startsWith("MGR") ||
+      jobTitleLower.includes("manager")
+    ) {
+      role = "manager";
+    } else if (id.toUpperCase().startsWith("SA") || id.toUpperCase().startsWith("ADM")) {
+      role = "superadmin";
+    }
+  }
+
+  const name = data.name || data.fullName || data.username || id;
+  const username = data.username || data.email || data.phone || data.employeeId || id;
+  const employeeId = data.employeeId || id;
+
+  return {
+    id: id,
+    name: name,
+    username: username,
+    role: role,
+    email: data.email || "",
+    phone: data.phone || "",
+    employeeId: employeeId,
+    jobTitle: data.jobTitle || data.designation || (role === "manager" ? "Store Manager" : "Sales Associate"),
+    password: data.password || "",
+    address: data.address || data.location || "",
+    status: data.status || "Verified",
+    department: data.department || "Sales & Operations",
+    designation: data.designation || data.jobTitle || "",
+    dateOfJoining: data.dateOfJoining || data.joiningDate || "",
+    shift: data.shift || "",
+    emergencyContact: data.emergencyContact || "",
+    panNumber: data.panNumber || "",
+    aadharNumber: data.aadharNumber || "",
+    locationTracking: data.locationTracking || "",
+    punchSetting: data.punchSetting || "",
+    branchAccess: data.branchAccess || ""
+  };
+}
 
 const sanitizeDoc = (obj: any) => {
   const clean: any = {};
@@ -167,9 +235,21 @@ const syncCollection = async (
   for (const newItem of newList) {
     const oldItem = oldMap.get(newItem.id);
     if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-      const docRef = doc(db, colName, newItem.id);
       const cleanItem = sanitizeDoc(newItem);
-      batch.set(docRef, cleanItem);
+      batch.set(doc(db, colName, newItem.id), cleanItem, { merge: true });
+      if (colName === "users") {
+        const empClean = sanitizeDoc({
+          ...cleanItem,
+          fullName: cleanItem.name || cleanItem.fullName,
+          joiningDate: cleanItem.dateOfJoining || cleanItem.joiningDate,
+          location: cleanItem.address || cleanItem.location
+        });
+        batch.set(doc(db, "employees", newItem.id), empClean, { merge: true });
+        if (newItem.employeeId && newItem.employeeId !== newItem.id) {
+          batch.set(doc(db, "employees", newItem.employeeId), empClean, { merge: true });
+          batch.set(doc(db, "users", newItem.employeeId), cleanItem, { merge: true });
+        }
+      }
       hasChanges = true;
     }
   }
@@ -177,8 +257,10 @@ const syncCollection = async (
   // Find deleted items
   for (const oldItem of oldList) {
     if (!newMap.has(oldItem.id)) {
-      const docRef = doc(db, colName, oldItem.id);
-      batch.delete(docRef);
+      batch.delete(doc(db, colName, oldItem.id));
+      if (colName === "users") {
+        batch.delete(doc(db, "employees", oldItem.id));
+      }
       hasChanges = true;
     }
   }
@@ -201,6 +283,7 @@ const syncStateToFirestore = (oldState: State, newState: State) => {
     "tasks",
     "notifications",
     "leads",
+    "quotations",
   ];
 
   collections.forEach((col) => {
@@ -254,13 +337,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setIsMounted(true);
 
+    let rawUsersList: User[] = [];
+    let rawEmployeesList: User[] = [];
+
+    const mergeAndSetUsers = () => {
+      const combinedMap = new Map<string, User>();
+      rawUsersList.forEach(u => combinedMap.set(u.id, u));
+      rawEmployeesList.forEach(u => {
+        if (!combinedMap.has(u.id)) {
+          combinedMap.set(u.id, u);
+        } else {
+          const existing = combinedMap.get(u.id)!;
+          combinedMap.set(u.id, {
+            ...u,
+            ...existing,
+            name: existing.name || u.name,
+            phone: existing.phone || u.phone,
+            department: existing.department || u.department,
+            designation: existing.designation || u.designation,
+          });
+        }
+      });
+
+      const merged = Array.from(combinedMap.values()).filter(
+        (u) =>
+          u.id !== "u2" &&
+          u.id !== "u3" &&
+          u.id !== "u4" &&
+          u.id !== "u5" &&
+          u.username !== "employee@gmail.com" &&
+          u.username !== "employee2" &&
+          u.username !== "manager@gmail.com" &&
+          u.name !== "Rohan Patil"
+      );
+      updateCollectionState("users", merged);
+    };
+
     // 1. Immediately subscribe to Firestore collections without waiting for network seed check
     const unsubscribers = [
       onSnapshot(collection(db, "users"), (snap) => {
-        const list = snap.docs
-          .map((d) => d.data() as User)
-          .filter((u) => u.id !== "u3" && u.id !== "u5" && u.id !== "u4" && u.username !== "employee@gmail.com" && u.username !== "employee2");
-        if (snap.docs.length > 0) updateCollectionState("users", list);
+        rawUsersList = snap.docs.map((d) => normalizeUserData(d.data(), d.id));
+        mergeAndSetUsers();
+      }),
+      onSnapshot(collection(db, "employees"), (snap) => {
+        rawEmployeesList = snap.docs.map((d) => normalizeUserData(d.data(), d.id));
+        mergeAndSetUsers();
       }),
       onSnapshot(collection(db, "products"), (snap) => {
         const list = snap.docs.map((d) => {
@@ -311,6 +432,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       onSnapshot(collection(db, "leads"), (snap) => {
         const list = snap.docs.map((d) => d.data() as Lead);
         if (snap.docs.length > 0) updateCollectionState("leads", list);
+      }),
+      onSnapshot(collection(db, "quotations"), (snap) => {
+        const list = snap.docs.map((d) => d.data() as Quotation);
+        updateCollectionState("quotations", list);
       }),
     ];
 
