@@ -318,6 +318,8 @@ const seedDatabase = async () => {
   } catch (err) {
     console.error("Error seeding Firestore:", err);
   }
+};
+
 export function normalizeQuotationDoc(d: any): Quotation {
   if (!d) {
     return {
