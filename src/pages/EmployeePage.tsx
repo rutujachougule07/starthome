@@ -738,21 +738,34 @@ function OrderUpdates() {
                 </div>
 
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 20, cursor: "pointer", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                    >
-                      🧾 Bill
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 20, cursor: "pointer", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
-                      onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
-                    >
-                      📄 Order Copy
-                    </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%", flexWrap: "wrap" }}>
+                    {((o.docTypes && o.docTypes.includes("Bill")) || o.docType === "Bill" || (!o.docTypes && !o.docType)) && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ flex: 1, minWidth: "90px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#E0F2FE", border: "1px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                      >
+                        🧾 View Bill
+                      </button>
+                    )}
+                    {((o.docTypes && o.docTypes.includes("Estimate")) || o.docType === "Estimate") && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ flex: 1, minWidth: "110px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FEF3C7", border: "1px solid #FCD34D", color: "#B45309", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Estimate" })}
+                      >
+                        🏷️ View Estimate ({o.estimateType || "Cash"})
+                      </button>
+                    )}
+                    {((o.docTypes && o.docTypes.includes("Order Copy")) || o.docType === "Order Copy") && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ flex: 1, minWidth: "110px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#F3E8FF", border: "1px solid #DDD6FE", color: "#6D28D9", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
+                      >
+                        📄 View Order Copy
+                      </button>
+                    )}
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%" }}>
@@ -852,30 +865,32 @@ function OrderUpdates() {
                 </div>
 
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}>
-                    {o.docType === "Order Copy" ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%", flexWrap: "wrap" }}>
+                    {((o.docTypes && o.docTypes.includes("Bill")) || o.docType === "Bill" || (!o.docTypes && !o.docType)) && (
                       <button
                         className="btn btn-ghost btn-sm"
-                        style={{ width: "100%", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#F3E8FF", border: "1px solid #DDD6FE", color: "#6D28D9", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
+                        style={{ flex: 1, minWidth: "90px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#E0F2FE", border: "1px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
                       >
-                        📄 View Order Copy
+                        🧾 View Bill
                       </button>
-                    ) : o.docType === "Estimate" ? (
+                    )}
+                    {((o.docTypes && o.docTypes.includes("Estimate")) || o.docType === "Estimate") && (
                       <button
                         className="btn btn-ghost btn-sm"
-                        style={{ width: "100%", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FEF3C7", border: "1px solid #FCD34D", color: "#B45309", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                        style={{ flex: 1, minWidth: "110px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FEF3C7", border: "1px solid #FCD34D", color: "#B45309", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
                         onClick={() => setActiveDoc({ order: o, type: "Estimate" })}
                       >
                         🏷️ View Estimate ({o.estimateType || "Cash"})
                       </button>
-                    ) : (
+                    )}
+                    {((o.docTypes && o.docTypes.includes("Order Copy")) || o.docType === "Order Copy") && (
                       <button
                         className="btn btn-ghost btn-sm"
-                        style={{ width: "100%", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#E0F2FE", border: "1px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                        style={{ flex: 1, minWidth: "110px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#F3E8FF", border: "1px solid #DDD6FE", color: "#6D28D9", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
                       >
-                        🧾 View Bill
+                        📄 View Order Copy
                       </button>
                     )}
                   </div>
@@ -954,8 +969,19 @@ function ProductsSection() {
   const [customerAddress, setCustomerAddress] = useState("");
   const [discountAmount, setDiscountAmount] = useState<number | "">("");
   const [sellQty, setSellQty] = useState<number>(1);
-  const [docType, setDocType] = useState<"Bill" | "Order Copy">("Bill");
+  const [selectedDocTypes, setSelectedDocTypes] = useState<("Bill" | "Order Copy" | "Estimate")[]>(["Bill"]);
   const [bookingExpiryDate, setBookingExpiryDate] = useState(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+
+  const toggleDocType = (t: "Bill" | "Order Copy" | "Estimate") => {
+    setSelectedDocTypes((prev) => {
+      if (prev.includes(t)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((x) => x !== t);
+      } else {
+        return [...prev, t];
+      }
+    });
+  };
 
   const [sellError, setSellError] = useState("");
   const [sellSuccess, setSellSuccess] = useState("");
@@ -1030,13 +1056,14 @@ function ProductsSection() {
         assignedTo: currentUser?.id,
         assignedToName: currentUser?.name,
         sentToEmployee: true,
-        docType,
-        bookingExpiryDate: docType === "Order Copy" ? bookingExpiryDate : undefined
+        docType: selectedDocTypes[0] || "Bill",
+        docTypes: selectedDocTypes,
+        bookingExpiryDate: selectedDocTypes.includes("Order Copy") ? bookingExpiryDate : undefined
       };
 
       const notifId = uid("n");
-      const docLabel = docType === "Bill" ? "Bill" : "Order Copy";
-      const expiryStr = docType === "Order Copy" && bookingExpiryDate ? ` (Valid Until: ${bookingExpiryDate})` : "";
+      const docLabel = selectedDocTypes.join(", ");
+      const expiryStr = selectedDocTypes.includes("Order Copy") && bookingExpiryDate ? ` (Valid Until: ${bookingExpiryDate})` : "";
       const notifMsg = `New ${docLabel} order pending for ${customerName.trim()} (Order #${orderId})${expiryStr}`;
 
       return {
@@ -1065,7 +1092,7 @@ function ProductsSection() {
       setCustomerAddress("");
       setDiscountAmount("");
       setSellQty(1);
-      setDocType("Bill");
+      setSelectedDocTypes(["Bill"]);
       setSellSuccess("");
       setSellError("");
     }, 1200);
@@ -1165,6 +1192,7 @@ function ProductsSection() {
                           </>
                         )}
                       </div>
+                    </div>
                   </td>
                   <td>{p.category}</td>
                   <td>₹{(p.price || 0).toLocaleString()}</td>
@@ -1307,67 +1335,82 @@ function ProductsSection() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
             <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
-              Document Type *
+              Document Types * (Multi-Select Enabled)
             </label>
             <div style={{ display: "flex", gap: "10px" }}>
-              <label onClick={() => setDocType("Bill")} style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "10px 14px",
-                borderRadius: "30px",
-                border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
-                background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                cursor: "pointer",
-                fontWeight: 700,
-                fontSize: "13px",
-                color: docType === "Bill" ? "#FFFFFF" : "#475569",
-                boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
-                transition: "all 0.2s ease"
-              }}>
-                <input
-                  type="radio"
-                  name="docTypeSelectProd"
-                  value="Bill"
-                  checked={docType === "Bill"}
-                  onChange={() => setDocType("Bill")}
-                  style={{ display: "none" }}
-                />
-                🧾 Bill
-              </label>
-              <label onClick={() => setDocType("Order Copy")} style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "10px 14px",
-                borderRadius: "30px",
-                border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
-                background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                cursor: "pointer",
-                fontWeight: 700,
-                fontSize: "13px",
-                color: docType === "Order Copy" ? "#FFFFFF" : "#475569",
-                boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
-                transition: "all 0.2s ease"
-              }}>
-                <input
-                  type="radio"
-                  name="docTypeSelectProd"
-                  value="Order Copy"
-                  checked={docType === "Order Copy"}
-                  onChange={() => setDocType("Order Copy")}
-                  style={{ display: "none" }}
-                />
-                📄 Order Copy
-              </label>
+              <button
+                type="button"
+                onClick={() => toggleDocType("Bill")}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px 14px",
+                  borderRadius: "30px",
+                  border: selectedDocTypes.includes("Bill") ? "none" : "1px solid #CBD5E1",
+                  background: selectedDocTypes.includes("Bill") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  color: selectedDocTypes.includes("Bill") ? "#FFFFFF" : "#475569",
+                  boxShadow: selectedDocTypes.includes("Bill") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {selectedDocTypes.includes("Bill") ? "✓ 🧾 Bill" : "🧾 Bill"}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleDocType("Order Copy")}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px 14px",
+                  borderRadius: "30px",
+                  border: selectedDocTypes.includes("Order Copy") ? "none" : "1px solid #CBD5E1",
+                  background: selectedDocTypes.includes("Order Copy") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  color: selectedDocTypes.includes("Order Copy") ? "#FFFFFF" : "#475569",
+                  boxShadow: selectedDocTypes.includes("Order Copy") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {selectedDocTypes.includes("Order Copy") ? "✓ 📄 Order Copy" : "📄 Order Copy"}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleDocType("Estimate")}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px 14px",
+                  borderRadius: "30px",
+                  border: selectedDocTypes.includes("Estimate") ? "none" : "1px solid #CBD5E1",
+                  background: selectedDocTypes.includes("Estimate") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  color: selectedDocTypes.includes("Estimate") ? "#FFFFFF" : "#475569",
+                  boxShadow: selectedDocTypes.includes("Estimate") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {selectedDocTypes.includes("Estimate") ? "✓ 🏷️ Estimate" : "🏷️ Estimate"}
+              </button>
             </div>
           </div>
 
-          {docType === "Order Copy" && (
+          {selectedDocTypes.includes("Order Copy") && (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px", background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)", padding: "16px", borderRadius: "16px", border: "1.5px solid #DDD6FE" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#6D28D9", letterSpacing: "1px" }}>
@@ -1490,8 +1533,19 @@ export function EmployeeIncentiveSection() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
-  const [docType, setDocType] = useState<"Bill" | "Order Copy">("Bill");
+  const [selectedIncDocTypes, setSelectedIncDocTypes] = useState<("Bill" | "Order Copy" | "Estimate")[]>(["Bill"]);
   const [bookingExpiryDate, setBookingExpiryDate] = useState(() => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+
+  const toggleIncDocType = (t: "Bill" | "Order Copy" | "Estimate") => {
+    setSelectedIncDocTypes((prev) => {
+      if (prev.includes(t)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((x) => x !== t);
+      } else {
+        return [...prev, t];
+      }
+    });
+  };
 
   const [incSellError, setIncSellError] = useState("");
   const [incSellSuccess, setIncSellSuccess] = useState("");
@@ -1560,13 +1614,14 @@ export function EmployeeIncentiveSection() {
         assignedTo: currentUser?.id,
         assignedToName: currentUser?.name,
         sentToEmployee: true,
-        docType,
-        bookingExpiryDate: docType === "Order Copy" ? bookingExpiryDate : undefined
+        docType: selectedIncDocTypes[0] || "Bill",
+        docTypes: selectedIncDocTypes,
+        bookingExpiryDate: selectedIncDocTypes.includes("Order Copy") ? bookingExpiryDate : undefined
       };
 
       const notifId = uid("n");
-      const docLabel = docType === "Bill" ? "Bill" : "Order Copy";
-      const expiryStr = docType === "Order Copy" && bookingExpiryDate ? ` (Valid Until: ${bookingExpiryDate})` : "";
+      const docLabel = selectedIncDocTypes.join(", ");
+      const expiryStr = selectedIncDocTypes.includes("Order Copy") && bookingExpiryDate ? ` (Valid Until: ${bookingExpiryDate})` : "";
       const notifMsg = `New ${docLabel} order pending for ${customerName.trim()} (Order #${orderId})${expiryStr}`;
 
       return {
@@ -1593,7 +1648,7 @@ export function EmployeeIncentiveSection() {
       setCustomerName("");
       setCustomerPhone("");
       setCustomerAddress("");
-      setDocType("Bill");
+      setSelectedIncDocTypes(["Bill"]);
       setIncSellSuccess("");
       setIncSellError("");
     }, 1200);
@@ -1765,67 +1820,82 @@ export function EmployeeIncentiveSection() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "16px" }}>
             <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#7C3AED", letterSpacing: "1.2px" }}>
-              Document Type *
+              Document Types * (Multi-Select Enabled)
             </label>
             <div style={{ display: "flex", gap: "10px" }}>
-              <label onClick={() => setDocType("Bill")} style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "10px 14px",
-                borderRadius: "30px",
-                border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
-                background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                cursor: "pointer",
-                fontWeight: 700,
-                fontSize: "13px",
-                color: docType === "Bill" ? "#FFFFFF" : "#475569",
-                boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
-                transition: "all 0.2s ease"
-              }}>
-                <input
-                  type="radio"
-                  name="docTypeSelectInc"
-                  value="Bill"
-                  checked={docType === "Bill"}
-                  onChange={() => setDocType("Bill")}
-                  style={{ display: "none" }}
-                />
-                🧾 Bill
-              </label>
-              <label onClick={() => setDocType("Order Copy")} style={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "10px 14px",
-                borderRadius: "30px",
-                border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
-                background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                cursor: "pointer",
-                fontWeight: 700,
-                fontSize: "13px",
-                color: docType === "Order Copy" ? "#FFFFFF" : "#475569",
-                boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
-                transition: "all 0.2s ease"
-              }}>
-                <input
-                  type="radio"
-                  name="docTypeSelectInc"
-                  value="Order Copy"
-                  checked={docType === "Order Copy"}
-                  onChange={() => setDocType("Order Copy")}
-                  style={{ display: "none" }}
-                />
-                📄 Order Copy
-              </label>
+              <button
+                type="button"
+                onClick={() => toggleIncDocType("Bill")}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px 14px",
+                  borderRadius: "30px",
+                  border: selectedIncDocTypes.includes("Bill") ? "none" : "1px solid #CBD5E1",
+                  background: selectedIncDocTypes.includes("Bill") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  color: selectedIncDocTypes.includes("Bill") ? "#FFFFFF" : "#475569",
+                  boxShadow: selectedIncDocTypes.includes("Bill") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {selectedIncDocTypes.includes("Bill") ? "✓ 🧾 Bill" : "🧾 Bill"}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleIncDocType("Order Copy")}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px 14px",
+                  borderRadius: "30px",
+                  border: selectedIncDocTypes.includes("Order Copy") ? "none" : "1px solid #CBD5E1",
+                  background: selectedIncDocTypes.includes("Order Copy") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  color: selectedIncDocTypes.includes("Order Copy") ? "#FFFFFF" : "#475569",
+                  boxShadow: selectedIncDocTypes.includes("Order Copy") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {selectedIncDocTypes.includes("Order Copy") ? "✓ 📄 Order Copy" : "📄 Order Copy"}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleIncDocType("Estimate")}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  padding: "10px 14px",
+                  borderRadius: "30px",
+                  border: selectedIncDocTypes.includes("Estimate") ? "none" : "1px solid #CBD5E1",
+                  background: selectedIncDocTypes.includes("Estimate") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  color: selectedIncDocTypes.includes("Estimate") ? "#FFFFFF" : "#475569",
+                  boxShadow: selectedIncDocTypes.includes("Estimate") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {selectedIncDocTypes.includes("Estimate") ? "✓ 🏷️ Estimate" : "🏷️ Estimate"}
+              </button>
             </div>
           </div>
 
-          {docType === "Order Copy" && (
+          {selectedIncDocTypes.includes("Order Copy") && (
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px", background: "linear-gradient(135deg, #F5F3FF, #EDE9FE)", padding: "16px", borderRadius: "16px", border: "1.5px solid #DDD6FE" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#6D28D9", letterSpacing: "1px" }}>
@@ -2219,10 +2289,26 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
   const [qty, setQty] = useState(initial?.qty ?? 1);
   const [discountPct, setDiscountPct] = useState<number | "">(initial?.discount ?? "");
   const [docType, setDocType] = useState<"Bill" | "Order Copy" | "Estimate">(initial?.docType ?? "Bill");
+  const [selectedDocTypes, setSelectedDocTypes] = useState<("Bill" | "Order Copy" | "Estimate")[]>(() => {
+    if (initial?.docTypes && initial.docTypes.length > 0) return initial.docTypes;
+    if (initial?.docType) return [initial.docType];
+    return ["Bill"];
+  });
   const [paymentMode, setPaymentMode] = useState<"Cash" | "Online" | "Financial">(initial?.paymentMode ?? initial?.estimateType ?? "Cash");
   const [estimateType, setEstimateType] = useState<"Cash" | "Online" | "Financial">(initial?.estimateType ?? initial?.paymentMode ?? "Cash");
   const [bookingExpiryDate, setBookingExpiryDate] = useState(() => initial?.bookingExpiryDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
   const [customerBargain, setCustomerBargain] = useState(initial?.customerBargain ?? "");
+
+  const toggleDocType = (t: "Bill" | "Order Copy" | "Estimate") => {
+    setSelectedDocTypes((prev) => {
+      if (prev.includes(t)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((x) => x !== t);
+      } else {
+        return [...prev, t];
+      }
+    });
+  };
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [showScanner, setShowScanner] = useState(false);
@@ -2352,10 +2438,11 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
         assignedToName: currentUser?.name,
         sentToEmployee: true,
         customerBargain: customerBargain.trim() || undefined,
-        docType,
+        docType: selectedDocTypes[0] || "Bill",
+        docTypes: selectedDocTypes,
         paymentMode,
         estimateType: paymentMode,
-        bookingExpiryDate: docType === "Order Copy" ? bookingExpiryDate : undefined
+        bookingExpiryDate: selectedDocTypes.includes("Order Copy") ? bookingExpiryDate : undefined
       };
       createdOrderObj = newOrder;
 
@@ -2616,78 +2703,90 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
               </div>
 
               <div style={{ flex: 1, minWidth: "220px" }}>
-                <div style={sectionLabel}>📋 Document Type *</div>
+                <div style={sectionLabel}>📋 Document Types * (Click multiple to select together)</div>
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <button
                     type="button"
-                      onClick={() => setDocType("Bill")}
-                      style={{
-                        flex: "1 1 80px", padding: "10px 12px", borderRadius: "30px", cursor: "pointer",
-                        fontWeight: 700, fontSize: "12px", transition: "all .2s",
-                        background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                        color: docType === "Bill" ? "#fff" : "#475569",
-                        border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
-                        boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
-                      }}
-                    >
-                      🧾 Bill
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDocType("Order Copy")}
-                      style={{
-                        flex: "1 1 90px", padding: "10px 12px", borderRadius: "30px", cursor: "pointer",
-                        fontWeight: 700, fontSize: "12px", transition: "all .2s",
-                        background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                        color: docType === "Order Copy" ? "#fff" : "#475569",
-                        border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
-                        boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
-                      }}
-                    >
-                      📄 Order Copy
-                    </button>
+                    onClick={() => toggleDocType("Bill")}
+                    style={{
+                      flex: "1 1 80px", padding: "10px 12px", borderRadius: "30px", cursor: "pointer",
+                      fontWeight: 700, fontSize: "12px", transition: "all .2s",
+                      background: selectedDocTypes.includes("Bill") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                      color: selectedDocTypes.includes("Bill") ? "#fff" : "#475569",
+                      border: selectedDocTypes.includes("Bill") ? "none" : "1px solid #CBD5E1",
+                      boxShadow: selectedDocTypes.includes("Bill") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
+                    }}
+                  >
+                    {selectedDocTypes.includes("Bill") ? "✓ 🧾 Bill" : "🧾 Bill"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleDocType("Order Copy")}
+                    style={{
+                      flex: "1 1 90px", padding: "10px 12px", borderRadius: "30px", cursor: "pointer",
+                      fontWeight: 700, fontSize: "12px", transition: "all .2s",
+                      background: selectedDocTypes.includes("Order Copy") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                      color: selectedDocTypes.includes("Order Copy") ? "#fff" : "#475569",
+                      border: selectedDocTypes.includes("Order Copy") ? "none" : "1px solid #CBD5E1",
+                      boxShadow: selectedDocTypes.includes("Order Copy") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
+                    }}
+                  >
+                    {selectedDocTypes.includes("Order Copy") ? "✓ 📄 Order Copy" : "📄 Order Copy"}
+                  </button>
 
-                    <div style={{ flex: "1 1 140px" }}>
-                      <select
-                        value={docType === "Estimate" ? estimateType : ""}
-                        onChange={(e) => {
-                          setDocType("Estimate");
-                          const mode = e.target.value as any;
+                  <div style={{ flex: "1 1 140px" }}>
+                    <select
+                      value={selectedDocTypes.includes("Estimate") ? estimateType : ""}
+                      onChange={(e) => {
+                        const mode = e.target.value as any;
+                        if (!mode) {
+                          setSelectedDocTypes(prev => prev.filter(x => x !== "Estimate"));
+                        } else {
                           setEstimateType(mode);
                           setPaymentMode(mode);
-                        }}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: "30px",
-                          cursor: "pointer",
-                          fontWeight: 700,
-                          fontSize: "12px",
-                          transition: "all .2s",
-                          background: docType === "Estimate" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                          color: docType === "Estimate" ? "#ffffff" : "#475569",
-                          border: docType === "Estimate" ? "none" : "1px solid #CBD5E1",
-                          boxShadow: docType === "Estimate" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
-                          outline: "none",
-                          appearance: "none",
-                          backgroundImage: docType === "Estimate"
-                            ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
-                            : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "right 10px center",
-                          paddingRight: "26px",
-                          textAlign: "center"
-                        }}
-                      >
-                        {docType !== "Estimate" && <option value="" disabled hidden>🏷️ Estimate ▾</option>}
-                        <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Estimate (Cash)</option>
-                        <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Estimate (Online)</option>
-                        <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Estimate (Financial)</option>
-                      </select>
-                    </div>
+                          if (!selectedDocTypes.includes("Estimate")) {
+                            setSelectedDocTypes(prev => [...prev, "Estimate"]);
+                          }
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        borderRadius: "30px",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        transition: "all .2s",
+                        background: selectedDocTypes.includes("Estimate") ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                        color: selectedDocTypes.includes("Estimate") ? "#ffffff" : "#475569",
+                        border: selectedDocTypes.includes("Estimate") ? "none" : "1px solid #CBD5E1",
+                        boxShadow: selectedDocTypes.includes("Estimate") ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                        outline: "none",
+                        appearance: "none",
+                        backgroundImage: selectedDocTypes.includes("Estimate")
+                          ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
+                          : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "right 10px center",
+                        paddingRight: "26px",
+                        textAlign: "center"
+                      }}
+                    >
+                      {!selectedDocTypes.includes("Estimate") && <option value="" disabled hidden>🏷️ Estimate ▾</option>}
+                      <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>
+                        {selectedDocTypes.includes("Estimate") ? "✓ 💵 Estimate (Cash)" : "💵 Estimate (Cash)"}
+                      </option>
+                      <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>
+                        {selectedDocTypes.includes("Estimate") ? "✓ 💳 Estimate (Online)" : "💳 Estimate (Online)"}
+                      </option>
+                      <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>
+                        {selectedDocTypes.includes("Estimate") ? "✓ 🏦 Estimate (Financial)" : "🏦 Estimate (Financial)"}
+                      </option>
+                    </select>
                   </div>
                 </div>
               </div>
+            </div>
 
             {/* Booking Expiry Date */}
             {docType === "Order Copy" && (

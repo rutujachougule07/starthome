@@ -348,29 +348,6 @@ export function ProductDetailPage() {
                 >
                   ← Back
                 </button>
-                {canManage && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <button
-                      onClick={handleDeleteEntireProduct}
-                      title="Delete Product"
-                      style={{
-                        background: "#FEF2F2",
-                        border: "1px solid #FECACA",
-                        borderRadius: "10px",
-                        color: "#DC2626",
-                        padding: "6px 12px",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        fontSize: "12px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px"
-                      }}
-                    >
-                      🗑️ Delete
-                    </button>
-                  </div>
-                )}
               </div>
               <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: "#5B21B6", lineHeight: 1.3 }}>
                 Product & Batch Details
@@ -401,36 +378,6 @@ export function ProductDetailPage() {
                   Product & Batch Details
                 </h1>
               </div>
-              {canManage && (
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <button
-                    onClick={handleDeleteEntireProduct}
-                    title="Delete this product and all its batches"
-                    style={{
-                      background: "#FEF2F2",
-                      border: "1px solid #FECACA",
-                      borderRadius: "10px",
-                      color: "#DC2626",
-                      padding: "7px 14px",
-                      cursor: "pointer",
-                      fontWeight: 700,
-                      fontSize: "13px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#FEE2E2";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "#FEF2F2";
-                    }}
-                  >
-                    🗑️ Delete Product
-                  </button>
-                </div>
-              )}
             </div>
           )}
 

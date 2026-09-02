@@ -1245,10 +1245,12 @@ button * {
   height: 6px;
   display: block;
 }
+
 .table-wrap::-webkit-scrollbar-track {
   background: rgba(148, 163, 184, 0.1);
   border-radius: 999px;
 }
+
 .table-wrap::-webkit-scrollbar-thumb {
   background: linear-gradient(90deg, #7C3AED, #EC4899);
   border-radius: 999px;
@@ -3357,46 +3359,46 @@ body::after {
     margin-top: 8px !important;
   }
 
-  .product-card-premium > .product-img-platform {
+  .product-card-premium>.product-img-platform {
     grid-column: 1 !important;
     grid-row: 1 !important;
     width: 60px !important;
     height: 50px !important;
   }
 
-  .product-card-premium > .product-img-platform img {
+  .product-card-premium>.product-img-platform img {
     width: 40px !important;
     height: 40px !important;
     margin-bottom: 4px !important;
   }
 
-  .product-card-premium > .product-img-platform::after {
+  .product-card-premium>.product-img-platform::after {
     width: 52px !important;
     height: 16px !important;
   }
 
-  .product-card-premium > .product-name-premium {
+  .product-card-premium>.product-name-premium {
     grid-column: 2 !important;
     grid-row: 1 !important;
     min-width: 0 !important;
   }
 
-  .product-card-premium > .product-name-premium h2 {
+  .product-card-premium>.product-name-premium h2 {
     font-size: 15px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
 
-  .product-card-premium > .product-name-premium p {
+  .product-card-premium>.product-name-premium p {
     font-size: 11px !important;
   }
 
-  .product-card-premium > .sku-premium {
+  .product-card-premium>.sku-premium {
     display: none !important;
   }
 
-  .product-card-premium > div:nth-child(4) {
+  .product-card-premium>div:nth-child(4) {
     grid-column: 3 !important;
     grid-row: 1 !important;
     justify-self: end !important;
@@ -3408,7 +3410,7 @@ body::after {
     border-radius: 20px !important;
   }
 
-  .product-card-premium > div:nth-child(5) {
+  .product-card-premium>div:nth-child(5) {
     grid-column: 1 !important;
     grid-row: 2 !important;
     justify-self: center !important;
@@ -3428,7 +3430,7 @@ body::after {
     font-size: 9px !important;
   }
 
-  .product-card-premium > .incentive-box-premium {
+  .product-card-premium>.incentive-box-premium {
     grid-column: 2 !important;
     grid-row: 2 !important;
     height: 44px !important;
@@ -3449,7 +3451,7 @@ body::after {
     font-size: 9px !important;
   }
 
-  .product-card-premium > div:nth-child(7) {
+  .product-card-premium>div:nth-child(7) {
     grid-column: 3 !important;
     grid-row: 2 !important;
     justify-self: end !important;
@@ -3879,14 +3881,21 @@ td {
     grid-template-columns: 1fr !important;
     gap: 16px !important;
   }
+
   .table-wrap {
     border-radius: 12px !important;
   }
-  .tbl th, .data-table th, th {
+
+  .tbl th,
+  .data-table th,
+  th {
     padding: 10px 10px !important;
     font-size: 10px !important;
   }
-  .tbl td, .data-table td, td {
+
+  .tbl td,
+  .data-table td,
+  td {
     padding: 10px 10px !important;
     font-size: 11px !important;
   }
