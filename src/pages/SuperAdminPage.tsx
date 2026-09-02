@@ -376,7 +376,7 @@ function LiveDashboard() {
   const navigate = useNavigate();
 
   const totalProducts = products.length;
-  const lowStock = products.filter(p => (p.qty ?? p.stock ?? 0) < 20).length;
+  const lowStock = products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5).length;
   const highStock = products.filter(p => (p.qty ?? p.stock ?? 0) >= 50).length;
 
   const incentive90Days = products.filter(p => {
@@ -399,7 +399,7 @@ function LiveDashboard() {
 
       <div className="stat-grid" style={{ marginBottom: 4 }}>
         <StatCard icon="📦" label="TOTAL PRODUCTS" value={totalProducts} onClick={() => goTo("products")} />
-        <StatCard icon="⚠️" label="LOW STOCK (< 20)" value={lowStock} onClick={() => goTo("products")} />
+        <StatCard icon="⚠️" label="LOW STOCK (< 5)" value={lowStock} onClick={() => goTo("products")} />
         <StatCard icon="📈" label="HIGH STOCK (≥ 50)" value={highStock} onClick={() => goTo("products")} />
         <StatCard icon="💰" label="INCENTIVE (> 90 DAYS)" value={incentive90Days} onClick={() => goTo("incentive")} />
       </div>
@@ -1458,9 +1458,9 @@ function ProductsSection() {
       const matchCat = categoryFilter === "All Products" || categoryFilter === "All" || p.category.toLowerCase().includes(categoryFilter.toLowerCase());
       let matchStock = true;
       if (stockFilter === "Low") {
-        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20;
+        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5;
       } else if (stockFilter === "InStock") {
-        matchStock = (p.qty ?? p.stock ?? 0) >= 20;
+        matchStock = (p.qty ?? p.stock ?? 0) > 0;
       } else if (stockFilter === "OutOfStock") {
         matchStock = (p.qty ?? p.stock ?? 0) === 0;
       }
@@ -1478,11 +1478,13 @@ function ProductsSection() {
   const groupedProducts = useMemo(() => {
     const map = new Map<string, Product & { batches: Product[] }>();
     filteredProducts.forEach(p => {
-      const key = (p.sku || p.name).toLowerCase();
+      const key = `${(p.name || "").trim().toLowerCase()}___${(p.brand || "").trim().toLowerCase()}`;
       if (map.has(key)) {
         const existing = map.get(key)!;
         existing.qty = (existing.qty ?? existing.stock ?? 0) + (p.qty ?? p.stock ?? 0);
         existing.stock = existing.qty;
+        if (!existing.sku && p.sku) existing.sku = p.sku;
+        else if (existing.sku && existing.sku.length > 20 && p.sku && p.sku.length <= 20) existing.sku = p.sku;
         existing.batches.push(p);
       } else {
         map.set(key, { ...p, batches: [p] });
@@ -1588,8 +1590,8 @@ function ProductsSection() {
         <div className="stat-card" onClick={() => setStockFilter("InStock")}>
           <span>🟢</span>
           <div>
-            <small>In Stock</small>
-            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) >= 20).length}</h2>
+            <small>In Stock (Total Units)</small>
+            <h2>{products.reduce((acc, p) => acc + (p.qty ?? p.stock ?? 0), 0)}</h2>
           </div>
         </div>
 
@@ -1597,7 +1599,7 @@ function ProductsSection() {
           <span>⚠️</span>
           <div>
             <small>Low Stock</small>
-            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20).length}</h2>
+            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5).length}</h2>
           </div>
         </div>
 
@@ -1968,6 +1970,7 @@ function CustomSelect({
   hasOther?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1980,50 +1983,188 @@ function CustomSelect({
     return () => document.removeEventListener("mousedown", clickOut);
   }, []);
 
+  const filteredOptions = useMemo(() => {
+    if (!search.trim()) return options;
+    const q = search.toLowerCase().trim();
+    return options.filter((o) => o.toLowerCase().includes(q));
+  }, [options, search]);
+
   return (
     <div ref={ref} style={{ position: "relative", width: "100%" }}>
       <div
         className="form-input"
         onClick={() => setOpen(!open)}
-        style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--warm-white)" }}
+        style={{
+          cursor: "pointer",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          background: "#FFFFFF",
+          border: open ? "1.5px solid #7C3AED" : "1px solid var(--border)",
+          boxShadow: open ? "0 0 0 3px rgba(124, 58, 237, 0.15)" : "none",
+          transition: "all 0.2s ease"
+        }}
       >
-        <span style={{ color: value ? "inherit" : "#aaa" }}>{value || placeholder}</span>
-        <span style={{ fontSize: 10, opacity: 0.5 }}>▼</span>
+        <span style={{ color: value ? "var(--brown-dark)" : "#94A3B8", fontWeight: value ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {value || placeholder}
+        </span>
+        <span style={{ fontSize: 11, opacity: 0.6, transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s ease" }}>▼</span>
       </div>
+
       {open && (
-        <div style={{ position: "absolute", top: "100%", left: 0, minWidth: "100%", width: options.length > 6 ? "220%" : "100%", background: "var(--warm-white)", border: "1px solid var(--border)", zIndex: 100, boxShadow: "var(--shadow-md)", borderRadius: 8, marginTop: 6, padding: 6 }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 6px)",
+            left: 0,
+            width: "100%",
+            minWidth: "260px",
+            maxWidth: "340px",
+            background: "#FFFFFF",
+            border: "1px solid #E2E8F0",
+            zIndex: 99999,
+            boxShadow: "0 16px 36px -4px rgba(15, 23, 42, 0.18), 0 6px 12px -2px rgba(15, 23, 42, 0.08)",
+            borderRadius: "14px",
+            padding: "8px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px"
+          }}
+        >
+          {/* Quick search inside dropdown if many options */}
+          {options.length > 5 && (
+            <input
+              type="text"
+              placeholder="Search options..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "6px 12px",
+                fontSize: "12px",
+                borderRadius: "8px",
+                border: "1px solid #E2E8F0",
+                background: "#F8FAFC",
+                outline: "none",
+                marginBottom: "4px"
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+
           {hasOther && (
             <div
-              style={{ padding: "8px 12px", cursor: "pointer", color: "var(--accent-dark)", fontWeight: 600, background: "var(--biscuit-light)", borderRadius: 6, marginBottom: 6, display: "flex", alignItems: "center", gap: 6, transition: "background 0.2s" }}
-              onClick={() => { onChange("Other"); setOpen(false); }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--biscuit)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--biscuit-light)")}
+              style={{
+                padding: "8px 12px",
+                cursor: "pointer",
+                color: "#7C3AED",
+                fontWeight: 700,
+                background: "#F3EEFF",
+                borderRadius: "8px",
+                marginBottom: "4px",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: "13px",
+                transition: "background 0.2s"
+              }}
+              onClick={() => {
+                onChange("Other");
+                setOpen(false);
+                setSearch("");
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#E9D8FD")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#F3EEFF")}
             >
-              <span style={{ fontSize: 16 }}>+</span> Other (Type Custom)
+              <span style={{ fontSize: 16, fontWeight: 800 }}>+</span> Other (Type Custom)
             </div>
           )}
-          <div style={{ display: "grid", gridTemplateColumns: options.length > 6 ? "1fr 1fr" : "1fr", gap: 4 }}>
-            {options.map(opt => (
+
+          <div
+            style={{
+              maxHeight: "220px",
+              overflowY: "auto",
+              display: "flex",
+              flexDirection: "column",
+              gap: "2px"
+            }}
+          >
+            {filteredOptions.map((opt) => (
               <div
                 key={opt}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", cursor: "pointer", borderRadius: 6, transition: "background 0.2s" }}
-                onClick={() => { onChange(opt); setOpen(false); }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--cream)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "7px 10px",
+                  cursor: "pointer",
+                  borderRadius: "8px",
+                  background: value === opt ? "#F1F5F9" : "transparent",
+                  transition: "background 0.15s ease"
+                }}
+                onClick={() => {
+                  onChange(opt);
+                  setOpen(false);
+                  setSearch("");
+                }}
+                onMouseEnter={(e) => {
+                  if (value !== opt) e.currentTarget.style.background = "#F8FAFC";
+                }}
+                onMouseLeave={(e) => {
+                  if (value !== opt) e.currentTarget.style.background = "transparent";
+                }}
               >
-                <span style={{ flex: 1, fontWeight: value === opt ? 600 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: value === opt ? "var(--accent-dark)" : "var(--brown-dark)" }}>{opt}</span>
+                <span
+                  style={{
+                    flex: 1,
+                    fontWeight: value === opt ? 700 : 500,
+                    fontSize: "13px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    color: value === opt ? "#7C3AED" : "#1E293B"
+                  }}
+                  title={opt}
+                >
+                  {opt}
+                </span>
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onDelete(opt); }}
-                  style={{ background: "transparent", border: "none", color: "#bbb", cursor: "pointer", padding: "2px 6px", fontSize: 12, flexShrink: 0, borderRadius: 4, transition: "color 0.2s, background 0.2s" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = "var(--danger)"; e.currentTarget.style.background = "#f4d6d2"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = "#bbb"; e.currentTarget.style.background = "transparent"; }}
-                  title="Delete Option"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(opt);
+                  }}
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "#94A3B8",
+                    cursor: "pointer",
+                    padding: "3px 7px",
+                    fontSize: "12px",
+                    flexShrink: 0,
+                    borderRadius: "6px",
+                    fontWeight: 700,
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "#EF4444";
+                    e.currentTarget.style.background = "#FEE2E2";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#94A3B8";
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                  title="Remove from options"
                 >
                   ✕
                 </button>
               </div>
             ))}
+            {filteredOptions.length === 0 && (
+              <div style={{ padding: "12px", fontSize: "12px", color: "#94A3B8", textAlign: "center" }}>
+                No options found
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2043,7 +2184,22 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
   const [incentive, setIncentive] = useState(initial?.incentive ?? 0);
   const [supplier, setSupplier] = useState(initial?.supplier ?? "");
   const [location, setLocation] = useState<"Shop" | "Godown 1" | "Godown 2" | "Display">(initial?.location ?? "Shop");
-  const [date, setDate] = useState(initial?.date ?? new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => {
+    if (initial?.date && initial.date !== "Invalid Date") {
+      if (initial.date.includes("T")) return initial.date.slice(0, 16);
+      if (initial.date.length === 10) {
+        const nowTime = new Date().toTimeString().slice(0, 5);
+        return `${initial.date}T${nowTime}`;
+      }
+    }
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const mins = String(now.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${mins}`;
+  });
   const [status, setStatus] = useState(initial?.status ?? "Verified");
   const [image, setImage] = useState(initial?.image ?? "");
   const [imageName, setImageName] = useState("");
@@ -2908,11 +3064,11 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
               </div>
             </div>
             <div className="form-group">
-              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>STOCK DATE</label>
+              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>STOCK DATE & TIME</label>
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
                 <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📅</span>
                 <input
-                  type="date"
+                  type="datetime-local"
                   className="form-input"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}

@@ -41,7 +41,28 @@ export function ProductDetailPage() {
   const [editProductBrand, setEditProductBrand] = useState("");
   const [editProductCategory, setEditProductCategory] = useState("");
   const [editProductWarranty, setEditProductWarranty] = useState("");
-  const { setState } = useStore();
+  const [showAddBatchModal, setShowAddBatchModal] = useState(false);
+  const store = useStore();
+  const { setState } = store;
+
+  function formatDateSafe(dateVal?: string) {
+    if (!dateVal || dateVal === "Invalid Date") {
+      return new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
+    }
+    try {
+      const d = new Date(dateVal);
+      if (isNaN(d.getTime())) return dateVal;
+      const hasTime = dateVal.includes("T") || dateVal.includes(":");
+      return d.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        ...(hasTime ? { hour: "2-digit", minute: "2-digit", hour12: true } : {})
+      });
+    } catch {
+      return dateVal;
+    }
+  }
 
   useEffect(() => {
     try {
@@ -86,9 +107,39 @@ export function ProductDetailPage() {
     );
   }
 
-  const isAdmin = role === "superadmin" || role === "admin";
-  const batchList: Batch[] = (data.batches && data.batches.length > 0) ? data.batches : [data];
-  const totalStock = data.qty ?? data.stock ?? 0;
+  const canManage = role === "superadmin" || role === "admin" || role === "manager";
+
+  const matchingStoreProducts = store.products.filter(
+    (p) =>
+      (data.id && p.id === data.id) ||
+      (data.sku && p.sku && p.sku.toLowerCase() === data.sku.toLowerCase()) ||
+      (data.name && p.name && p.name.trim().toLowerCase() === data.name.trim().toLowerCase())
+  );
+
+  const batchList: Batch[] = (() => {
+    let list: Batch[] = [];
+    if (data.batches && data.batches.length > 0) {
+      list = [...data.batches];
+    } else if (matchingStoreProducts.length > 0) {
+      matchingStoreProducts.forEach((p) => {
+        if (p.batches && p.batches.length > 0) {
+          list.push(...p.batches);
+        } else {
+          list.push(p);
+        }
+      });
+    } else {
+      list = [data];
+    }
+    const map = new Map<string, Batch>();
+    list.forEach((b, i) => {
+      const k = b.id || `batch_${i}_${b.date}_${b.qty}`;
+      if (!map.has(k)) map.set(k, b);
+    });
+    return Array.from(map.values());
+  })();
+
+  const totalStock = batchList.reduce((sum, b) => sum + (b.qty ?? b.stock ?? 0), 0);
   const defaultImg = "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600";
 
   // Pricing / Cost Analysis calculations
@@ -297,7 +348,7 @@ export function ProductDetailPage() {
                 >
                   ← Back
                 </button>
-                {isAdmin && (
+                {canManage && (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <button
                       onClick={handleDeleteEntireProduct}
@@ -318,9 +369,6 @@ export function ProductDetailPage() {
                     >
                       🗑️ Delete
                     </button>
-                    <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                      👑 Admin Mode
-                    </span>
                   </div>
                 )}
               </div>
@@ -353,7 +401,7 @@ export function ProductDetailPage() {
                   Product & Batch Details
                 </h1>
               </div>
-              {isAdmin && (
+              {canManage && (
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <button
                     onClick={handleDeleteEntireProduct}
@@ -381,9 +429,6 @@ export function ProductDetailPage() {
                   >
                     🗑️ Delete Product
                   </button>
-                  <span style={{ background: "#F3EEFF", color: "#7C3AED", border: "1px solid #C7D2FE", padding: "4px 12px", borderRadius: "999px", fontSize: "12px", fontWeight: 700 }}>
-                    👑 Admin Mode
-                  </span>
                 </div>
               )}
             </div>
@@ -476,9 +521,29 @@ export function ProductDetailPage() {
             </div>
           </div>
 
-          <h3 style={{ margin: "0 0 16px 0", fontSize: "18px", fontWeight: 800, color: "#5B21B6" }}>
-            Batch History
-          </h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+            <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#5B21B6" }}>
+              Batch History ({batchList.length})
+            </h3>
+            <button
+              onClick={() => setShowAddBatchModal(true)}
+              style={{
+                background: "#7C3AED",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "10px",
+                padding: "8px 16px",
+                fontSize: "13px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px"
+              }}
+            >
+              <span>+</span> Add New Batch
+            </button>
+          </div>
 
           <div style={{ overflowX: "auto", borderRadius: "14px", border: "1px solid #E2E8F0", marginBottom: "24px", WebkitOverflowScrolling: "touch" }}>
             <table style={{ width: "100%", minWidth: "550px", borderCollapse: "collapse", fontSize: "14px" }}>
@@ -489,7 +554,7 @@ export function ProductDetailPage() {
                   <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 700, fontSize: "11px", letterSpacing: "0.5px" }}>UNIT COST</th>
                   <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 700, fontSize: "11px", letterSpacing: "0.5px" }}>SUPPLIER</th>
                   <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 700, fontSize: "11px", letterSpacing: "0.5px" }}>STATUS</th>
-                  {isAdmin && (
+                  {canManage && (
                     <th style={{ padding: "14px 18px", textAlign: "right", color: "#5B21B6", fontWeight: 700, fontSize: "11px", letterSpacing: "0.5px" }}>ACTIONS</th>
                   )}
                 </tr>
@@ -499,7 +564,7 @@ export function ProductDetailPage() {
                   <tr key={b.id || idx} style={{ borderBottom: idx === batchList.length - 1 ? "none" : "1px solid #F1F5F9", background: idx % 2 === 0 ? "#FFFFFF" : "#FAFCFF" }}>
                     <td style={{ padding: "16px 18px" }}>
                       <div style={{ fontWeight: 600, color: "#1E293B" }}>
-                        {b.date ? new Date(b.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+                        {formatDateSafe(b.date)}
                       </div>
                       {idx === batchList.length - 1 && (
                         <div style={{ fontSize: "10px", color: "#7C3AED", marginTop: "2px", fontWeight: 700 }}>Latest Batch</div>
@@ -526,7 +591,7 @@ export function ProductDetailPage() {
                         🛡 {b.status || "Verified"}
                       </span>
                     </td>
-                    {isAdmin && (
+                    {canManage && (
                       <td style={{ padding: "16px 18px", textAlign: "right" }}>
                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                           <button
@@ -673,6 +738,64 @@ export function ProductDetailPage() {
             setData(updatedData as any);
             localStorage.setItem("product_detail_preview", JSON.stringify(updatedData));
             setEditingBatch(null);
+          }}
+        />
+      )}
+
+      {showAddBatchModal && (
+        <ProductForm
+          title={`Add New Batch for ${data.name}`}
+          initial={{
+            name: data.name,
+            sku: data.sku || "",
+            brand: data.brand || "",
+            category: data.category || "Electronics",
+            warranty: data.warranty || "",
+            qty: 1,
+            cost: data.cost || 0,
+            supplier: data.supplier || "",
+            location: (data.location as any) || "Shop",
+            date: (() => {
+              const now = new Date();
+              const year = now.getFullYear();
+              const month = String(now.getMonth() + 1).padStart(2, "0");
+              const day = String(now.getDate()).padStart(2, "0");
+              const hours = String(now.getHours()).padStart(2, "0");
+              const mins = String(now.getMinutes()).padStart(2, "0");
+              return `${year}-${month}-${day}T${hours}:${mins}`;
+            })()
+          } as any}
+          onClose={() => setShowAddBatchModal(false)}
+          onSave={async (formData) => {
+            const nextId = `${data.id || "p"}_b_${Date.now().toString(36)}`;
+            const newBatchObj: ProductData = {
+              ...formData,
+              id: nextId,
+              name: data.name,
+              sku: data.sku,
+              brand: data.brand,
+              category: data.category,
+              warranty: data.warranty
+            };
+
+            try {
+              await setDoc(doc(db, "products", nextId), newBatchObj, { merge: true });
+            } catch (err) {
+              console.error("Error adding batch to Firestore:", err);
+            }
+
+            const updatedBatches = [...batchList, newBatchObj];
+            const newQty = updatedBatches.reduce((acc, item) => acc + (item.qty ?? item.stock ?? 0), 0);
+            const updatedData = { ...data, qty: newQty, stock: newQty, batches: updatedBatches };
+
+            setState((s) => ({
+              ...s,
+              products: [...s.products, newBatchObj as any]
+            }));
+
+            setData(updatedData as any);
+            localStorage.setItem("product_detail_preview", JSON.stringify(updatedData));
+            setShowAddBatchModal(false);
           }}
         />
       )}

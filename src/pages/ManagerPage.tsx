@@ -7,6 +7,8 @@ import { DashboardLayout, StatCard, Pill, Modal, NavItem, BarChart } from "../ap
 import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection } from "./SuperAdminPage";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { Search, Download, Plus, SlidersHorizontal } from "lucide-react";
+import { db } from "./firebase";
+import { doc, setDoc, deleteDoc } from "firebase/firestore";
 
 const NAV: NavItem[] = [
   { key: "overview", label: "Live Dashboard", icon: "📡" },
@@ -1036,9 +1038,9 @@ function ProductsAvail() {
       const matchCat = categoryFilter === "All Products" || categoryFilter === "All" || p.category.toLowerCase().includes(categoryFilter.toLowerCase());
       let matchStock = true;
       if (stockFilter === "Low") {
-        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20;
+        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5;
       } else if (stockFilter === "InStock") {
-        matchStock = (p.qty ?? p.stock ?? 0) >= 20;
+        matchStock = (p.qty ?? p.stock ?? 0) > 0;
       } else if (stockFilter === "OutOfStock") {
         matchStock = (p.qty ?? p.stock ?? 0) === 0;
       }
@@ -1056,11 +1058,13 @@ function ProductsAvail() {
   const groupedProducts = useMemo(() => {
     const map = new Map<string, Product & { batches: Product[] }>();
     filteredProducts.forEach(p => {
-      const key = (p.sku || p.name).toLowerCase();
+      const key = `${(p.name || "").trim().toLowerCase()}___${(p.brand || "").trim().toLowerCase()}`;
       if (map.has(key)) {
         const existing = map.get(key)!;
         existing.qty = (existing.qty ?? existing.stock ?? 0) + (p.qty ?? p.stock ?? 0);
         existing.stock = existing.qty;
+        if (!existing.sku && p.sku) existing.sku = p.sku;
+        else if (existing.sku && existing.sku.length > 20 && p.sku && p.sku.length <= 20) existing.sku = p.sku;
         existing.batches.push(p);
       } else {
         map.set(key, { ...p, batches: [p] });
@@ -1085,6 +1089,53 @@ function ProductsAvail() {
               </p>
             </div>
           </div>
+        </div>
+
+        <div className="header-buttons" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setShowAdd(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              padding: "9px 18px",
+              borderRadius: "999px",
+              fontWeight: 700,
+              fontSize: "14px",
+              cursor: "pointer"
+            }}
+          >
+            <Plus size={18} />
+            <span>Add Product</span>
+          </button>
+
+          <DownloadDropdown
+            label="Download"
+            onPDF={() => {
+              const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Quantity", "Unit Cost", "Total Cost", "Supplier", "Date", "Status"];
+              const rows = filteredProducts.map((p, index) => {
+                const qty = p.qty ?? p.stock ?? 0;
+                const unitCost = p.cost || 0;
+                const totalCost = qty * unitCost;
+                const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+                return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitCost, totalCost, p.supplier || "—", formattedDate, p.status || "Verified"];
+              });
+              openPDFPreview("Stocking Inventory Report", headers, rows, `Total Products: ${filteredProducts.length}`, "pdf");
+            }}
+            onCSV={() => {
+              const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Quantity", "Unit Cost", "Total Cost", "Supplier", "Date", "Status"];
+              const rows = filteredProducts.map((p, index) => {
+                const qty = p.qty ?? p.stock ?? 0;
+                const unitCost = p.cost || 0;
+                const totalCost = qty * unitCost;
+                const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+                return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitCost, totalCost, p.supplier || "—", formattedDate, p.status || "Verified"];
+              });
+              openPDFPreview("Stocking Inventory Report", headers, rows, `Total Products: ${filteredProducts.length}`, "csv");
+            }}
+          />
         </div>
       </div>
 
@@ -1111,8 +1162,8 @@ function ProductsAvail() {
         <div className="stat-card" onClick={() => setStockFilter("InStock")}>
           <span>🟢</span>
           <div>
-            <small>In Stock</small>
-            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) >= 20).length}</h2>
+            <small>In Stock (Total Units)</small>
+            <h2>{products.reduce((acc, p) => acc + (p.qty ?? p.stock ?? 0), 0)}</h2>
           </div>
         </div>
 
@@ -1120,7 +1171,7 @@ function ProductsAvail() {
           <span>⚠️</span>
           <div>
             <small>Low Stock</small>
-            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20).length}</h2>
+            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5).length}</h2>
           </div>
         </div>
 
@@ -1156,11 +1207,13 @@ function ProductsAvail() {
             <tbody>
               {groupedProducts.map((p) => {
                 const totalValue = (p.qty ?? p.stock ?? 0) * p.cost;
-                const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric"
-                }) : "—";
+                const formattedDate = p.date ? (
+                  p.date.includes("T") || p.date.includes(":") ? (
+                    new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })
+                  ) : (
+                    new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                  )
+                ) : "—";
                 return (
                   <tr key={p.id}>
                     <td>
@@ -1247,7 +1300,12 @@ function ProductsAvail() {
           onClose={() => setShowAdd(false)}
           onSave={(d) => {
             const nextId = uid("p");
-            setState((s) => ({ ...s, products: [...s.products, { id: nextId, ...d }] }));
+            const newProd = { id: nextId, ...d };
+            setState((s) => ({ ...s, products: [...s.products, newProd] }));
+            setDoc(doc(db, "products", nextId), newProd, { merge: true }).catch(() => {});
+            if (d.serialNumbers) {
+              try { localStorage.setItem(`sham_serials_${nextId}`, JSON.stringify(d.serialNumbers)); } catch (_) {}
+            }
             setShowAdd(false);
           }}
         />
@@ -1259,10 +1317,15 @@ function ProductsAvail() {
           initial={editing}
           onClose={() => setEditing(null)}
           onSave={(d) => {
+            const updated = { ...editing, ...d };
             setState((s) => ({
               ...s,
-              products: s.products.map((p) => (p.id === editing.id ? { ...p, ...d } : p))
+              products: s.products.map((p) => (p.id === editing.id ? updated : p))
             }));
+            setDoc(doc(db, "products", editing.id), updated, { merge: true }).catch(() => {});
+            if (d.serialNumbers) {
+              try { localStorage.setItem(`sham_serials_${editing.id}`, JSON.stringify(d.serialNumbers)); } catch (_) {}
+            }
             setEditing(null);
           }}
         />

@@ -1130,7 +1130,6 @@ function ProductsSection() {
                           )}
                         </div>
                       </div>
-                    </div>
                   </td>
                   <td>{p.category}</td>
                   <td>₹{(p.price || 0).toLocaleString()}</td>

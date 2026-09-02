@@ -699,8 +699,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const uid = (prefix: string) => `${prefix}${Math.random().toString(36).slice(2, 8)}`;
 
-  if (!isMounted) return null;
-
   return (
     <StoreContext.Provider value={{ ...state, login, logout, setState, uid }}>
       {children}
