@@ -1155,8 +1155,8 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
                   <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Estimate (Financial)</option>
                 </select>
               </div>
+              </div>
             </div>
-          </div>
 
           {/* BOOKING EXPIRY DATE IF ORDER COPY */}
           {docType === "Order Copy" && (

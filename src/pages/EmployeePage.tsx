@@ -894,6 +894,7 @@ function OrderUpdates() {
                       </button>
                     )}
                   </div>
+                  </div>
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%" }}>
                     <div>
@@ -2786,7 +2787,6 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
                   </div>
                 </div>
               </div>
-            </div>
 
             {/* Booking Expiry Date */}
             {docType === "Order Copy" && (
