@@ -1732,9 +1732,9 @@ function ProductsSection() {
             const nextId = uid("p");
             const newProd = { id: nextId, ...d };
             setState((s) => ({ ...s, products: [...s.products, newProd] }));
-            setDoc(doc(db, "products", nextId), newProd, { merge: true }).catch(() => {});
+            setDoc(doc(db, "products", nextId), newProd, { merge: true }).catch(() => { });
             if (d.serialNumbers) {
-              try { localStorage.setItem(`sham_serials_${nextId}`, JSON.stringify(d.serialNumbers)); } catch (_) {}
+              try { localStorage.setItem(`sham_serials_${nextId}`, JSON.stringify(d.serialNumbers)); } catch (_) { }
             }
             setShowAdd(false);
           }}
@@ -1748,9 +1748,9 @@ function ProductsSection() {
           onSave={(d) => {
             const updated = { ...editing, ...d };
             setState((s) => ({ ...s, products: s.products.map((p) => (p.id === editing.id ? updated : p)) }));
-            setDoc(doc(db, "products", editing.id), updated, { merge: true }).catch(() => {});
+            setDoc(doc(db, "products", editing.id), updated, { merge: true }).catch(() => { });
             if (d.serialNumbers) {
-              try { localStorage.setItem(`sham_serials_${editing.id}`, JSON.stringify(d.serialNumbers)); } catch (_) {}
+              try { localStorage.setItem(`sham_serials_${editing.id}`, JSON.stringify(d.serialNumbers)); } catch (_) { }
             }
             setEditing(null);
           }}
@@ -2647,7 +2647,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
         ...s,
         products: s.products.map((p: any) => (p.id === initial.id ? { ...p, serialNumbers: next } : p))
       }));
-      setDoc(doc(db, "products", initial.id), { serialNumbers: next }, { merge: true }).catch(() => {});
+      setDoc(doc(db, "products", initial.id), { serialNumbers: next }, { merge: true }).catch(() => { });
     }
   };
 
@@ -3493,7 +3493,7 @@ export function OrdersTable() {
   );
 }
 
-function OrderApprovalSection() {
+export function OrderApprovalSection() {
   const { orders, products, users, setState, uid } = useStore();
   const [filter, setFilter] = useState<"all" | "Pending" | "Approved" | "Rejected">("all");
 
@@ -3509,12 +3509,12 @@ function OrderApprovalSection() {
         ...s,
         orders: s.orders.filter((o: any) => o.id !== dummyOrder.id)
       }));
-      deleteDoc(doc(db, "orders", dummyOrder.id)).catch(() => {});
+      deleteDoc(doc(db, "orders", dummyOrder.id)).catch(() => { });
     }
   }, [orders, setState]);
 
   const [editDiscounts, setEditDiscounts] = useState<Record<string, number>>({});
-  const [activeDoc, setActiveDoc] = useState<{ order: Order; type: "Bill" | "Order Copy" } | null>(null);
+  const [activeDoc, setActiveDoc] = useState<{ order: Order; type: "Bill" | "Order Copy" | "Estimate" } | null>(null);
 
   const decide = (id: string, status: "Approved" | "Rejected", newDiscountPct?: number) => {
     const notifId2 = uid("n");
@@ -3623,14 +3623,14 @@ function OrderApprovalSection() {
                         </span>
                       )}
                       <span className="pill" style={{
-                        background: o.docType === "Order Copy" ? "#f3e8ff" : "#e0f2fe",
-                        color: o.docType === "Order Copy" ? "#6D28D9" : "#0369a1",
-                        border: o.docType === "Order Copy" ? "1px solid #e9d5ff" : "1px solid #bae6fd",
+                        background: o.docType === "Order Copy" ? "#f3e8ff" : o.docType === "Estimate" ? "#fef3c7" : "#e0f2fe",
+                        color: o.docType === "Order Copy" ? "#6D28D9" : o.docType === "Estimate" ? "#b45309" : "#0369a1",
+                        border: o.docType === "Order Copy" ? "1px solid #e9d5ff" : o.docType === "Estimate" ? "1px solid #fde047" : "1px solid #bae6fd",
                         fontSize: "10px",
                         padding: "2px 6px",
                         fontWeight: 700
                       }}>
-                        {o.docType === "Order Copy" ? "📄 Order Copy" : "🧾 Bill / Invoice"}
+                        {o.docType === "Order Copy" ? "📄 Order Copy" : o.docType === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill / Invoice"}
                       </span>
                       {o.docType === "Order Copy" && o.bookingExpiryDate && (
                         o.bookingExpiryDate < new Date().toISOString().slice(0, 10) ? (
@@ -3657,6 +3657,15 @@ function OrderApprovalSection() {
                     </div>
                   )}
                   <div className="data-row"><span className="data-label">Customer</span><span className="data-value">{o.customerName}</span></div>
+                  <div className="data-row">
+                    <span className="data-label">Payment Mode</span>
+                    <span className="data-value" style={{
+                      fontWeight: 700,
+                      color: (o.estimateType || o.paymentMode) === "Financial" ? "#b45309" : (o.estimateType || o.paymentMode) === "Online" ? "#0369a1" : "#166534"
+                    }}>
+                      {(o.estimateType || o.paymentMode) === "Financial" ? "🏦 Financial / Finance" : (o.estimateType || o.paymentMode) === "Online" ? "💳 Online / UPI" : "💵 Cash"}
+                    </span>
+                  </div>
                   <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{Math.round(orderBasePrice / o.qty).toLocaleString()}</span></div>
                   {o.customerBargain && (
@@ -3697,62 +3706,81 @@ function OrderApprovalSection() {
                       <span style={{ fontSize: "11px", color: "var(--brown)", fontWeight: 500 }}>Includes discount</span>
                     )}
                   </div>
-
-                  {/* Document Buttons Row */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", boxSizing: "border-box", flexWrap: "wrap" }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{
-                        flex: "1 1 120px",
-                        minWidth: 0,
-                        padding: "7px 8px",
-                        fontSize: 11,
-                        justifyContent: "center",
-                        borderRadius: "10px",
-                        background: (!o.docType || o.docType === "Bill") ? "#e0f2fe" : "#ffffff",
-                        border: (!o.docType || o.docType === "Bill") ? "1px solid #bae6fd" : "1px solid #e2e8f0",
-                        color: (!o.docType || o.docType === "Bill") ? "#0369a1" : "#475569",
-                        fontWeight: (!o.docType || o.docType === "Bill") ? 700 : 500,
-                        boxSizing: "border-box"
-                      }}
-                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                    >
-                      🧾 View Bill
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{
-                        flex: "1 1 120px",
-                        minWidth: 0,
-                        padding: "7px 8px",
-                        fontSize: 11,
-                        justifyContent: "center",
-                        borderRadius: "10px",
-                        background: o.docType === "Order Copy" ? "#f3e8ff" : "#ffffff",
-                        border: o.docType === "Order Copy" ? "1px solid #e9d5ff" : "1px solid #e2e8f0",
-                        color: o.docType === "Order Copy" ? "#6D28D9" : "#475569",
-                        fontWeight: o.docType === "Order Copy" ? 700 : 500,
-                        boxSizing: "border-box"
-                      }}
-                      onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
-                    >
-                      📄 View Order Copy
-                    </button>
+                  {/* Selected Document Button Row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", boxSizing: "border-box" }}>
+                    {o.docType === "Order Copy" ? (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          fontSize: 12,
+                          justifyContent: "center",
+                          borderRadius: "10px",
+                          background: "linear-gradient(135deg, #F3E8FF 0%, #EDE9FE 100%)",
+                          border: "1.5px solid #DDD6FE",
+                          color: "#6D28D9",
+                          fontWeight: 800,
+                          boxSizing: "border-box"
+                        }}
+                        onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
+                      >
+                        📄 View Order Copy
+                      </button>
+                    ) : o.docType === "Estimate" ? (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          fontSize: 12,
+                          justifyContent: "center",
+                          borderRadius: "10px",
+                          background: "linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)",
+                          border: "1.5px solid #FCD34D",
+                          color: "#B45309",
+                          fontWeight: 800,
+                          boxSizing: "border-box"
+                        }}
+                        onClick={() => setActiveDoc({ order: o, type: "Estimate" })}
+                      >
+                        🏷️ View Estimate ({o.estimateType || "Cash"})
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          fontSize: 12,
+                          justifyContent: "center",
+                          borderRadius: "10px",
+                          background: "linear-gradient(135deg, #E0F2FE 0%, #F0F9FF 100%)",
+                          border: "1.5px solid #BAE6FD",
+                          color: "#0369A1",
+                          fontWeight: 800,
+                          boxSizing: "border-box"
+                        }}
+                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                      >
+                        🧾 View Bill
+                      </button>
+                    )}
                   </div>
 
-                  <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "6px", flexWrap: "wrap", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "6px", flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>
                     {o.status === "Pending" && (
                       <>
                         <button
                           className="btn btn-success btn-sm"
-                          style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
+                          style={{ flex: "1 1 120px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
                           onClick={() => decide(o.id, "Approved", editDiscounts[o.id])}
                         >
                           Approve
                         </button>
                         <button
                           className="btn btn-danger btn-sm"
-                          style={{ flex: "1 1 100px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
+                          style={{ flex: "1 1 120px", minWidth: 0, padding: "8px 12px", fontWeight: 700, fontSize: "12px", justifyContent: "center", borderRadius: "8px" }}
                           onClick={() => decide(o.id, "Rejected")}
                         >
                           Reject
@@ -3761,11 +3789,25 @@ function OrderApprovalSection() {
                     )}
                     <button
                       className="btn btn-sm"
-                      style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid #FECACA", padding: "6px 12px", fontWeight: 700, fontSize: "12px", borderRadius: "8px", cursor: "pointer", marginLeft: "auto" }}
+                      style={{
+                        background: "#FEE2E2",
+                        color: "#DC2626",
+                        border: "1px solid #FECACA",
+                        padding: "8px 16px",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        margin: "0 auto",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "4px"
+                      }}
                       onClick={() => {
                         if (!confirm(`Delete Order #${o.id}?`)) return;
                         setState((s: any) => ({ ...s, orders: s.orders.filter((ord: any) => ord.id !== o.id) }));
-                        deleteDoc(doc(db, "orders", o.id)).catch(() => {});
+                        deleteDoc(doc(db, "orders", o.id)).catch(() => { });
                       }}
                       title="Delete Order from Firebase"
                     >
@@ -4508,8 +4550,8 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
   const removeUser = (id: string, role: string) => {
     if (!confirm(`Delete this ${role}?`)) return;
     setState((s: any) => ({ ...s, users: s.users.filter((u: User) => u.id !== id) }));
-    deleteDoc(doc(db, "users", id)).catch(() => {});
-    deleteDoc(doc(db, "employees", id)).catch(() => {});
+    deleteDoc(doc(db, "users", id)).catch(() => { });
+    deleteDoc(doc(db, "employees", id)).catch(() => { });
   };
 
   const [activeTab, setActiveTab] = useState<"employee" | "manager">("employee");
@@ -4669,11 +4711,11 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
             Object.keys(newMgr).forEach(k => { if ((newMgr as any)[k] !== undefined) clean[k] = (newMgr as any)[k]; });
             clean.role = "manager";
             const empDoc = { ...clean, role: "manager", fullName: newMgr.name, location: newMgr.address, joiningDate: newMgr.dateOfJoining };
-            setDoc(doc(db, "users", newId), clean, { merge: true }).catch(() => {});
-            setDoc(doc(db, "employees", newId), empDoc, { merge: true }).catch(() => {});
+            setDoc(doc(db, "users", newId), clean, { merge: true }).catch(() => { });
+            setDoc(doc(db, "employees", newId), empDoc, { merge: true }).catch(() => { });
             if (data.employeeId && data.employeeId !== newId) {
-              setDoc(doc(db, "users", data.employeeId), clean, { merge: true }).catch(() => {});
-              setDoc(doc(db, "employees", data.employeeId), empDoc, { merge: true }).catch(() => {});
+              setDoc(doc(db, "users", data.employeeId), clean, { merge: true }).catch(() => { });
+              setDoc(doc(db, "employees", data.employeeId), empDoc, { merge: true }).catch(() => { });
             }
             setShowAddManager(false);
           }} />
@@ -4688,12 +4730,12 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
             Object.keys(updatedMgr).forEach(k => { if ((updatedMgr as any)[k] !== undefined) clean[k] = (updatedMgr as any)[k]; });
             clean.role = "manager";
             const empDoc = { ...clean, role: "manager", fullName: updatedMgr.name, location: updatedMgr.address, joiningDate: updatedMgr.dateOfJoining };
-            setDoc(doc(db, "users", targetId), clean, { merge: true }).catch(() => {});
-            setDoc(doc(db, "employees", targetId), empDoc, { merge: true }).catch(() => {});
+            setDoc(doc(db, "users", targetId), clean, { merge: true }).catch(() => { });
+            setDoc(doc(db, "employees", targetId), empDoc, { merge: true }).catch(() => { });
             const altId = updatedMgr.employeeId || editingManager.employeeId;
             if (altId && altId !== targetId) {
-              setDoc(doc(db, "users", altId), clean, { merge: true }).catch(() => {});
-              setDoc(doc(db, "employees", altId), empDoc, { merge: true }).catch(() => {});
+              setDoc(doc(db, "users", altId), clean, { merge: true }).catch(() => { });
+              setDoc(doc(db, "employees", altId), empDoc, { merge: true }).catch(() => { });
             }
             setEditingManager(null);
           }} />
@@ -4710,11 +4752,11 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
             Object.keys(newEmp).forEach(k => { if ((newEmp as any)[k] !== undefined) clean[k] = (newEmp as any)[k]; });
             clean.role = "employee";
             const empDoc = { ...clean, role: "employee", fullName: newEmp.name, location: newEmp.address, joiningDate: newEmp.dateOfJoining };
-            setDoc(doc(db, "users", newId), clean, { merge: true }).catch(() => {});
-            setDoc(doc(db, "employees", newId), empDoc, { merge: true }).catch(() => {});
+            setDoc(doc(db, "users", newId), clean, { merge: true }).catch(() => { });
+            setDoc(doc(db, "employees", newId), empDoc, { merge: true }).catch(() => { });
             if (data.employeeId && data.employeeId !== newId) {
-              setDoc(doc(db, "users", data.employeeId), clean, { merge: true }).catch(() => {});
-              setDoc(doc(db, "employees", data.employeeId), empDoc, { merge: true }).catch(() => {});
+              setDoc(doc(db, "users", data.employeeId), clean, { merge: true }).catch(() => { });
+              setDoc(doc(db, "employees", data.employeeId), empDoc, { merge: true }).catch(() => { });
             }
             setShowAddEmployee(false);
           }} />
@@ -4729,12 +4771,12 @@ export function TasksAssignSection({ readOnly = false }: { readOnly?: boolean } 
             Object.keys(updatedEmp).forEach(k => { if ((updatedEmp as any)[k] !== undefined) clean[k] = (updatedEmp as any)[k]; });
             clean.role = "employee";
             const empDoc = { ...clean, role: "employee", fullName: updatedEmp.name, location: updatedEmp.address, joiningDate: updatedEmp.dateOfJoining };
-            setDoc(doc(db, "users", targetId), clean, { merge: true }).catch(() => {});
-            setDoc(doc(db, "employees", targetId), empDoc, { merge: true }).catch(() => {});
+            setDoc(doc(db, "users", targetId), clean, { merge: true }).catch(() => { });
+            setDoc(doc(db, "employees", targetId), empDoc, { merge: true }).catch(() => { });
             const altId = updatedEmp.employeeId || editingEmployee.employeeId;
             if (altId && altId !== targetId) {
-              setDoc(doc(db, "users", altId), clean, { merge: true }).catch(() => {});
-              setDoc(doc(db, "employees", altId), empDoc, { merge: true }).catch(() => {});
+              setDoc(doc(db, "users", altId), clean, { merge: true }).catch(() => { });
+              setDoc(doc(db, "employees", altId), empDoc, { merge: true }).catch(() => { });
             }
             setEditingEmployee(null);
           }} />
@@ -8736,17 +8778,17 @@ export function QuotationsSection() {
         quotations: (s.quotations || []).filter((q: any) => q.id !== id)
       }));
     }
-    deleteDoc(doc(db, "quotations", id)).catch(() => {});
+    deleteDoc(doc(db, "quotations", id)).catch(() => { });
   };
 
   const handlePrintPDF = (q: Quotation) => {
     const docPdf = new jsPDF();
     const discInfo = getQuotationDiscount(q);
-    
+
     // Header Branding
     docPdf.setFillColor(124, 58, 237); // #7C3AED
     docPdf.rect(0, 0, 210, 38, "F");
-    
+
     docPdf.setFont("helvetica", "bold");
     docPdf.setFontSize(22);
     docPdf.setTextColor(255, 255, 255);
@@ -8983,14 +9025,14 @@ export function QuotationsSection() {
                   quotations: (s.quotations || []).map((q: any) => q.id === editingQuotation.id ? updated : q)
                 }));
               }
-              setDoc(doc(db, "quotations", editingQuotation.id), updated, { merge: true }).catch(() => {});
+              setDoc(doc(db, "quotations", editingQuotation.id), updated, { merge: true }).catch(() => { });
             } else {
               const newId = (uid ? uid("qt") : `qt_${Date.now()}`);
               const newQt = { id: newId, ...data };
               if (setState) {
                 setState((s: any) => ({ ...s, quotations: [...(s.quotations || []), newQt] }));
               }
-              setDoc(doc(db, "quotations", newId), newQt, { merge: true }).catch(() => {});
+              setDoc(doc(db, "quotations", newId), newQt, { merge: true }).catch(() => { });
             }
             setShowForm(false);
             setEditingQuotation(null);

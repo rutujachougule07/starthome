@@ -1,10 +1,10 @@
 import { EmployeeIncentiveSection } from "./EmployeePage";
 import { Navigate, useNavigate } from "@tanstack/react-router";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useStore, loadCurrentUser, User, Customer, Order, Product } from "../app/store";
 import { DashboardLayout, StatCard, Pill, Modal, NavItem, BarChart } from "../app/DashboardLayout";
-import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection } from "./SuperAdminPage";
+import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection, OrderApprovalSection } from "./SuperAdminPage";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { Search, Download, Plus, SlidersHorizontal } from "lucide-react";
 import { db } from "./firebase";
@@ -17,7 +17,7 @@ const NAV: NavItem[] = [
   { key: "quotations", label: "Quotations", icon: "📑" },
   { key: "assign", label: "Add Employee", icon: "📋" },
   { key: "task-assign", label: "Task Assign", icon: "📝" },
-  { key: "orders", label: "Orders", icon: "🧾" },
+  { key: "orders", label: "Order Approval", icon: "🧾" },
   { key: "incentive", label: "Incentive", icon: "💰" },
   { key: "profile", label: "Profile", icon: "⚙" },
 ];
@@ -28,6 +28,7 @@ interface ManagerPageProps {
 
 export function ManagerPage({ tab = "overview" }: ManagerPageProps) {
   const store = useStore();
+  const [showNotification, setShowNotification] = useState(true);
   const active = tab || "overview";
   const navigate = useNavigate();
   const setActive = (tab: string) => {
@@ -37,20 +38,159 @@ export function ManagerPage({ tab = "overview" }: ManagerPageProps) {
   const user = store.currentUser || loadCurrentUser();
   if (!user || user.role !== "manager") return <Navigate to="/login" />;
 
+  const pendingApprovals = store.orders.filter(
+    (o) => o.status === "Pending" && !o.isIncentive && o.customerId !== "c_incentive" && o.customerName !== "Incentive Sell Request"
+  ).length;
+
   return (
-    <DashboardLayout role="manager" title="Manager" nav={NAV} active={active} onNav={setActive}>
-      {active === "overview" && <Overview onNav={setActive} />}
-      {active === "assign" && <TasksAssignSection />}
-      {active === "task-assign" && <TaskAssignmentSection />}
-      {active === "customers" && <CustomersMgmt />}
-      {active === "leads" && <LeadsSection />}
-      {active === "quotations" && <QuotationsSection />}
-      {active === "orders" && <OrdersMgmt />}
-      {active === "products" && <ProductsAvail />}
-      {active === "incentive" && <SuperAdminIncentiveSection />}
-      {active === "notifications" && <NotificationsSection role="manager" />}
-      {active === "profile" && <ProfileSection />}
-    </DashboardLayout>
+    <>
+      <style>{`
+        @keyframes popupSlideDown {
+          0% { transform: translate(-50%, -100%); opacity: 0; }
+          60% { transform: translate(-50%, 5%); opacity: 1; }
+          100% { transform: translate(-50%, 0); opacity: 1; }
+        }
+        @keyframes bellRing {
+          0% { transform: rotate(0); }
+          15% { transform: rotate(15deg); }
+          30% { transform: rotate(-15deg); }
+          45% { transform: rotate(10deg); }
+          60% { transform: rotate(-10deg); }
+          75% { transform: rotate(5deg); }
+          100% { transform: rotate(0); }
+        }
+        .admin-notif-banner {
+          position: fixed;
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(135deg, #ff416c, #ff4b2b);
+          color: white;
+          padding: 12px 18px 12px 24px;
+          border-radius: 100px;
+          z-index: 9999;
+          box-shadow: 0 12px 30px rgba(255, 65, 108, 0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          font-weight: 500;
+          border: 1px solid rgba(255,255,255,0.25);
+          animation: popupSlideDown 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          max-width: 90vw;
+          box-sizing: border-box;
+        }
+        @media (max-width: 640px) {
+          .admin-notif-banner {
+            top: 10px;
+            width: calc(100vw - 20px);
+            max-width: 480px;
+            padding: 10px 12px 10px 16px;
+            border-radius: 50px;
+            gap: 10px;
+          }
+          .admin-notif-text-full {
+            display: none !important;
+          }
+          .admin-notif-text-short {
+            display: inline-block !important;
+          }
+        }
+        @media (min-width: 641px) {
+          .admin-notif-text-full {
+            display: inline-block !important;
+          }
+          .admin-notif-text-short {
+            display: none !important;
+          }
+        }
+        .btn-review-now:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
+        }
+        .btn-dismiss-pop:hover {
+          background: rgba(255,255,255,0.3) !important;
+        }
+      `}</style>
+
+      {pendingApprovals > 0 && showNotification && (
+        <div className="admin-notif-banner">
+          <span style={{ fontSize: "22px", display: "inline-block", animation: "bellRing 1.5s ease-in-out infinite", transformOrigin: "top center", flexShrink: 0 }}>🔔</span>
+
+          <span className="admin-notif-text-full" style={{ fontSize: "15px", letterSpacing: "0.2px", fontWeight: 600, whiteSpace: "nowrap" }}>
+            You have <strong style={{ fontSize: "16px", background: "rgba(255,255,255,0.25)", padding: "3px 10px", borderRadius: "10px", margin: "0 2px" }}>{pendingApprovals}</strong> pending request(s) for approval!
+          </span>
+
+          <span className="admin-notif-text-short" style={{ fontSize: "13px", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <strong style={{ fontSize: "14px", background: "rgba(255,255,255,0.25)", padding: "2px 7px", borderRadius: "8px", marginRight: "4px" }}>{pendingApprovals}</strong>
+            Pending Approval(s)
+          </span>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, marginLeft: "auto" }}>
+            <button
+              className="btn-review-now"
+              onClick={() => {
+                setShowNotification(false);
+                setActive("orders");
+              }}
+              style={{
+                background: "#ffffff",
+                border: "none",
+                color: "#ff416c",
+                padding: "8px 16px",
+                borderRadius: "100px",
+                cursor: "pointer",
+                fontWeight: 800,
+                fontSize: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                boxShadow: "0 3px 10px rgba(0,0,0,0.12)",
+                whiteSpace: "nowrap",
+                transition: "all 0.2s ease"
+              }}
+            >
+              Review Now
+            </button>
+            <button
+              className="btn-dismiss-pop"
+              onClick={() => setShowNotification(false)}
+              title="Dismiss"
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                border: "none",
+                color: "#ffffff",
+                width: "28px",
+                height: "28px",
+                borderRadius: "50%",
+                cursor: "pointer",
+                fontWeight: 800,
+                fontSize: "14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1,
+                transition: "all 0.2s ease"
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      <DashboardLayout role="manager" title="Manager" nav={NAV} active={active} onNav={setActive}>
+        {active === "overview" && <Overview onNav={setActive} />}
+        {active === "assign" && <TasksAssignSection />}
+        {active === "task-assign" && <TaskAssignmentSection />}
+        {active === "customers" && <CustomersMgmt />}
+        {active === "leads" && <LeadsSection />}
+        {active === "quotations" && <QuotationsSection />}
+        {active === "orders" && <OrderApprovalSection />}
+        {active === "products" && <ProductsAvail />}
+        {active === "incentive" && <SuperAdminIncentiveSection />}
+        {active === "notifications" && <NotificationsSection role="manager" />}
+        {active === "profile" && <ProfileSection />}
+      </DashboardLayout>
+    </>
   );
 }
 
@@ -593,9 +733,13 @@ function OrdersMgmt() {
   );
 }
 
-function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSave: (customerName: string, customerPhone: string, customerAddress: string, productId: string, qty: number, discountPct: number, assignedTo: string, assignedToName: string, customerBargain?: string, docType?: "Bill" | "Order Copy", bookingExpiryDate?: string) => void; onClose: () => void }) {
+function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSave: (customerName: string, customerPhone: string, customerAddress: string, productId: string, qty: number, discountPct: number, assignedTo: string, assignedToName: string, customerBargain?: string, docType?: "Bill" | "Order Copy" | "Estimate", bookingExpiryDate?: string) => void; onClose: () => void }) {
   const { customers, products, users } = useStore();
-  const active = products.filter((p) => p.status === "Active" || p.status === "Verified");
+  const active = useMemo(() => {
+    if (!products || products.length === 0) return [];
+    const filtered = products.filter((p) => !p.status || p.status === "Active" || p.status === "Verified" || p.status === "In Stock" || p.status.toLowerCase() !== "inactive");
+    return filtered.length > 0 ? filtered : products;
+  }, [products]);
   const employees = users.filter((u) => u.role === "employee");
 
   const initialCust = customers.find(c => c.id === initial?.customerId || c.name.toLowerCase() === initial?.customerName?.toLowerCase());
@@ -604,11 +748,19 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
   const [customerPhone, setCustomerPhone] = useState(initialCust?.phone ?? "");
   const [customerAddress, setCustomerAddress] = useState(initialCust?.address ?? "");
   const [productId, setProductId] = useState(initial?.productId ?? active[0]?.id ?? "");
+
+  useEffect(() => {
+    if (!productId && active.length > 0) {
+      setProductId(active[0].id);
+    }
+  }, [active, productId]);
   const [qty, setQty] = useState(initial?.qty ?? 1);
   const [discountPct, setDiscountPct] = useState<number | string>(initial?.discount ?? 0);
   const [assignedTo, setAssignedTo] = useState(initial?.assignedTo ?? employees[0]?.id ?? "");
   const [customerBargain, setCustomerBargain] = useState(initial?.customerBargain ?? "");
-  const [docType, setDocType] = useState<"Bill" | "Order Copy">(initial?.docType ?? "Bill");
+  const [docType, setDocType] = useState<"Bill" | "Order Copy" | "Estimate">(initial?.docType ?? "Bill");
+  const [paymentMode, setPaymentMode] = useState<"Cash" | "Online" | "Financial">(initial?.paymentMode ?? initial?.estimateType ?? "Cash");
+  const [estimateType, setEstimateType] = useState<"Cash" | "Online" | "Financial">(initial?.estimateType ?? initial?.paymentMode ?? "Cash");
   const [bookingExpiryDate, setBookingExpiryDate] = useState(
     initial?.bookingExpiryDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   );
@@ -857,38 +1009,129 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
 
           {/* DOCUMENT TYPE */}
           <div>
-            <div style={sectionLabel}>📋 DOCUMENT TYPE *</div>
-            <div style={{ display: "flex", gap: "12px" }}>
-              <button
-                type="button"
-                onClick={() => setDocType("Bill")}
-                style={{
-                  flex: 1, padding: "12px 18px", borderRadius: "50px", cursor: "pointer",
-                  fontWeight: 800, fontSize: "14px", transition: "all .2s",
-                  background: docType === "Bill" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
-                  color: docType === "Bill" ? "#FFFFFF" : "#475569",
-                  border: docType === "Bill" ? "none" : "1.5px solid #E2E8F0",
-                  boxShadow: docType === "Bill" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none"
-                }}
-              >
-                🧾 Bill
-              </button>
-              <button
-                type="button"
-                onClick={() => setDocType("Order Copy")}
-                style={{
-                  flex: 1, padding: "12px 18px", borderRadius: "50px", cursor: "pointer",
-                  fontWeight: 800, fontSize: "14px", transition: "all .2s",
-                  background: docType === "Order Copy" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
-                  color: docType === "Order Copy" ? "#FFFFFF" : "#475569",
-                  border: docType === "Order Copy" ? "none" : "1.5px solid #E2E8F0",
-                  boxShadow: docType === "Order Copy" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none"
-                }}
-              >
-                📄 Order Copy
-              </button>
+              <div style={sectionLabel}>📋 Document Type & Payment Mode *</div>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {/* Bill Dropdown */}
+                <div style={{ flex: "1 1 110px" }}>
+                  <select
+                    value={docType === "Bill" ? paymentMode : ""}
+                    onChange={(e) => {
+                      setDocType("Bill");
+                      const mode = e.target.value as any;
+                      setPaymentMode(mode);
+                      setEstimateType(mode);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "50px",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: "13px",
+                      transition: "all .2s",
+                      background: docType === "Bill" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
+                      color: docType === "Bill" ? "#FFFFFF" : "#475569",
+                      border: docType === "Bill" ? "none" : "1.5px solid #E2E8F0",
+                      boxShadow: docType === "Bill" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
+                      outline: "none",
+                      appearance: "none",
+                      backgroundImage: docType === "Bill"
+                        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
+                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "28px",
+                      textAlign: "center"
+                    }}
+                  >
+                    {docType !== "Bill" && <option value="" disabled hidden>🧾 Bill ▾</option>}
+                    <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Bill (Cash)</option>
+                    <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Bill (Online)</option>
+                    <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Bill (Financial)</option>
+                  </select>
+                </div>
+
+                {/* Order Copy Dropdown */}
+                <div style={{ flex: "1 1 125px" }}>
+                  <select
+                    value={docType === "Order Copy" ? paymentMode : ""}
+                    onChange={(e) => {
+                      setDocType("Order Copy");
+                      const mode = e.target.value as any;
+                      setPaymentMode(mode);
+                      setEstimateType(mode);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "50px",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: "13px",
+                      transition: "all .2s",
+                      background: docType === "Order Copy" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
+                      color: docType === "Order Copy" ? "#FFFFFF" : "#475569",
+                      border: docType === "Order Copy" ? "none" : "1.5px solid #E2E8F0",
+                      boxShadow: docType === "Order Copy" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
+                      outline: "none",
+                      appearance: "none",
+                      backgroundImage: docType === "Order Copy"
+                        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
+                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "28px",
+                      textAlign: "center"
+                    }}
+                  >
+                    {docType !== "Order Copy" && <option value="" disabled hidden>📄 Order Copy ▾</option>}
+                    <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Order Copy (Cash)</option>
+                    <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Order Copy (Online)</option>
+                    <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Order Copy (Financial)</option>
+                  </select>
+                </div>
+
+                {/* Estimate Dropdown */}
+                <div style={{ flex: "1 1 120px" }}>
+                  <select
+                    value={docType === "Estimate" ? paymentMode : ""}
+                    onChange={(e) => {
+                      setDocType("Estimate");
+                      const mode = e.target.value as any;
+                      setPaymentMode(mode);
+                      setEstimateType(mode);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "50px",
+                      cursor: "pointer",
+                      fontWeight: 800,
+                      fontSize: "13px",
+                      transition: "all .2s",
+                      background: docType === "Estimate" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
+                      color: docType === "Estimate" ? "#FFFFFF" : "#475569",
+                      border: docType === "Estimate" ? "none" : "1.5px solid #E2E8F0",
+                      boxShadow: docType === "Estimate" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
+                      outline: "none",
+                      appearance: "none",
+                      backgroundImage: docType === "Estimate"
+                        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
+                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      paddingRight: "28px",
+                      textAlign: "center"
+                    }}
+                  >
+                    {docType !== "Estimate" && <option value="" disabled hidden>🏷️ Estimate ▾</option>}
+                    <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Estimate (Cash)</option>
+                    <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Estimate (Online)</option>
+                    <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Estimate (Financial)</option>
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
 
           {/* BOOKING EXPIRY DATE IF ORDER COPY */}
           {docType === "Order Copy" && (
