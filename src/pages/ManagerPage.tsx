@@ -7,6 +7,8 @@ import { DashboardLayout, StatCard, Pill, Modal, NavItem, BarChart } from "../ap
 import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection, OrderApprovalSection } from "./SuperAdminPage";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { Search, Download, Plus, SlidersHorizontal } from "lucide-react";
+import { db } from "./firebase";
+import { doc, setDoc, deleteDoc } from "firebase/firestore";
 
 const NAV: NavItem[] = [
   { key: "overview", label: "Live Dashboard", icon: "📡" },
@@ -575,7 +577,7 @@ function OrdersMgmt() {
       {show && (
         <CreateOrderModal
           onClose={() => setShow(false)}
-          onSave={(customerName, customerPhone, customerAddress, productId, qty, discountPct, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate) => {
+          onSave={(customerName, customerPhone, customerAddress, productId, qty, discountPct, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate, docTypes) => {
             const p = products.find((p) => p.id === productId)!;
             const orderId = uid("o");
             const notifId = uid("n");
@@ -631,6 +633,7 @@ function OrdersMgmt() {
                     assignedToName,
                     customerBargain,
                     docType,
+                    docTypes: docTypes && docTypes.length > 0 ? docTypes : [docType || "Bill"],
                     bookingExpiryDate
                   }
                 ],
@@ -656,7 +659,7 @@ function OrdersMgmt() {
         <CreateOrderModal
           initial={editingOrder}
           onClose={() => setEditingOrder(null)}
-          onSave={(customerName, customerPhone, customerAddress, productId, qty, discountPct, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate) => {
+          onSave={(customerName, customerPhone, customerAddress, productId, qty, discountPct, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate, docTypes) => {
             const p = products.find((p) => p.id === productId)!;
             const rawTotal = qty * p.price;
             const finalDiscount = Number(discountPct) || 0;
@@ -718,6 +721,7 @@ function OrdersMgmt() {
                   assignedToName,
                   customerBargain,
                   docType,
+                  docTypes: docTypes && docTypes.length > 0 ? docTypes : [docType || "Bill"],
                   bookingExpiryDate,
                   status: "Pending" // Reset to Pending on edit so Super Admin approves/rejects again
                 } : o),
@@ -731,7 +735,7 @@ function OrdersMgmt() {
   );
 }
 
-function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSave: (customerName: string, customerPhone: string, customerAddress: string, productId: string, qty: number, discountPct: number, assignedTo: string, assignedToName: string, customerBargain?: string, docType?: "Bill" | "Order Copy" | "Estimate", bookingExpiryDate?: string) => void; onClose: () => void }) {
+function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSave: (customerName: string, customerPhone: string, customerAddress: string, productId: string, qty: number, discountPct: number, assignedTo: string, assignedToName: string, customerBargain?: string, docType?: "Bill" | "Order Copy" | "Estimate", bookingExpiryDate?: string, docTypes?: ("Bill" | "Order Copy" | "Estimate")[]) => void; onClose: () => void }) {
   const { customers, products, users } = useStore();
   const active = useMemo(() => {
     if (!products || products.length === 0) return [];
@@ -757,11 +761,27 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
   const [assignedTo, setAssignedTo] = useState(initial?.assignedTo ?? employees[0]?.id ?? "");
   const [customerBargain, setCustomerBargain] = useState(initial?.customerBargain ?? "");
   const [docType, setDocType] = useState<"Bill" | "Order Copy" | "Estimate">(initial?.docType ?? "Bill");
+  const [selectedDocTypes, setSelectedDocTypes] = useState<("Bill" | "Order Copy" | "Estimate")[]>(() => {
+    if (initial?.docTypes && initial.docTypes.length > 0) return initial.docTypes;
+    if (initial?.docType) return [initial.docType];
+    return ["Bill"];
+  });
   const [paymentMode, setPaymentMode] = useState<"Cash" | "Online" | "Financial">(initial?.paymentMode ?? initial?.estimateType ?? "Cash");
   const [estimateType, setEstimateType] = useState<"Cash" | "Online" | "Financial">(initial?.estimateType ?? initial?.paymentMode ?? "Cash");
   const [bookingExpiryDate, setBookingExpiryDate] = useState(
     initial?.bookingExpiryDate ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
   );
+
+  const toggleDocType = (t: "Bill" | "Order Copy" | "Estimate") => {
+    setSelectedDocTypes((prev) => {
+      if (prev.includes(t)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((x) => x !== t);
+      } else {
+        return [...prev, t];
+      }
+    });
+  };
 
   const selectedProduct = active.find((p) => p.id === productId);
 
@@ -799,8 +819,9 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
       assignedTo,
       emp?.name ?? "",
       customerBargain.trim(),
-      docType,
-      docType === "Order Copy" ? bookingExpiryDate : undefined
+      selectedDocTypes[0] || "Bill",
+      selectedDocTypes.includes("Order Copy") ? bookingExpiryDate : undefined,
+      selectedDocTypes
     );
   };
 
@@ -1007,127 +1028,133 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
 
           {/* DOCUMENT TYPE */}
           <div>
-              <div style={sectionLabel}>📋 Document Type & Payment Mode *</div>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                {/* Bill Dropdown */}
-                <div style={{ flex: "1 1 110px" }}>
-                  <select
-                    value={docType === "Bill" ? paymentMode : ""}
-                    onChange={(e) => {
-                      setDocType("Bill");
-                      const mode = e.target.value as any;
-                      setPaymentMode(mode);
-                      setEstimateType(mode);
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "50px",
-                      cursor: "pointer",
-                      fontWeight: 800,
-                      fontSize: "13px",
-                      transition: "all .2s",
-                      background: docType === "Bill" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
-                      color: docType === "Bill" ? "#FFFFFF" : "#475569",
-                      border: docType === "Bill" ? "none" : "1.5px solid #E2E8F0",
-                      boxShadow: docType === "Bill" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
-                      outline: "none",
-                      appearance: "none",
-                      backgroundImage: docType === "Bill"
-                        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
-                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "right 12px center",
-                      paddingRight: "28px",
-                      textAlign: "center"
-                    }}
-                  >
-                    {docType !== "Bill" && <option value="" disabled hidden>🧾 Bill ▾</option>}
-                    <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Bill (Cash)</option>
-                    <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Bill (Online)</option>
-                    <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Bill (Financial)</option>
-                  </select>
-                </div>
+            <div style={sectionLabel}>📋 Document Types & Payment Mode * (Multi-Select Enabled)</div>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {/* Bill Dropdown */}
+              <div style={{ flex: "1 1 110px" }}>
+                <select
+                  value={selectedDocTypes.includes("Bill") ? paymentMode : ""}
+                  onChange={(e) => {
+                    const mode = e.target.value as any;
+                    setPaymentMode(mode);
+                    setEstimateType(mode);
+                    if (!selectedDocTypes.includes("Bill")) {
+                      setSelectedDocTypes(prev => [...prev, "Bill"]);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "50px",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    fontSize: "13px",
+                    transition: "all .2s",
+                    background: selectedDocTypes.includes("Bill") ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
+                    color: selectedDocTypes.includes("Bill") ? "#FFFFFF" : "#475569",
+                    border: selectedDocTypes.includes("Bill") ? "none" : "1.5px solid #E2E8F0",
+                    boxShadow: selectedDocTypes.includes("Bill") ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
+                    outline: "none",
+                    appearance: "none",
+                    backgroundImage: selectedDocTypes.includes("Bill")
+                      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
+                      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 12px center",
+                    paddingRight: "28px",
+                    textAlign: "center"
+                  }}
+                >
+                  {!selectedDocTypes.includes("Bill") && <option value="" disabled hidden>🧾 Bill ▾</option>}
+                  <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Bill (Cash)</option>
+                  <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Bill (Online)</option>
+                  <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Bill (Financial)</option>
+                </select>
+              </div>
 
-                {/* Order Copy Dropdown */}
-                <div style={{ flex: "1 1 125px" }}>
-                  <select
-                    value={docType === "Order Copy" ? paymentMode : ""}
-                    onChange={(e) => {
-                      setDocType("Order Copy");
-                      const mode = e.target.value as any;
-                      setPaymentMode(mode);
-                      setEstimateType(mode);
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "50px",
-                      cursor: "pointer",
-                      fontWeight: 800,
-                      fontSize: "13px",
-                      transition: "all .2s",
-                      background: docType === "Order Copy" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
-                      color: docType === "Order Copy" ? "#FFFFFF" : "#475569",
-                      border: docType === "Order Copy" ? "none" : "1.5px solid #E2E8F0",
-                      boxShadow: docType === "Order Copy" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
-                      outline: "none",
-                      appearance: "none",
-                      backgroundImage: docType === "Order Copy"
-                        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
-                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "right 12px center",
-                      paddingRight: "28px",
-                      textAlign: "center"
-                    }}
-                  >
-                    {docType !== "Order Copy" && <option value="" disabled hidden>📄 Order Copy ▾</option>}
-                    <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Order Copy (Cash)</option>
-                    <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Order Copy (Online)</option>
-                    <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Order Copy (Financial)</option>
-                  </select>
-                </div>
+              {/* Order Copy Dropdown */}
+              <div style={{ flex: "1 1 125px" }}>
+                <select
+                  value={selectedDocTypes.includes("Order Copy") ? paymentMode : ""}
+                  onChange={(e) => {
+                    const mode = e.target.value as any;
+                    setPaymentMode(mode);
+                    setEstimateType(mode);
+                    if (!selectedDocTypes.includes("Order Copy")) {
+                      setSelectedDocTypes(prev => [...prev, "Order Copy"]);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "50px",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    fontSize: "13px",
+                    transition: "all .2s",
+                    background: selectedDocTypes.includes("Order Copy") ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
+                    color: selectedDocTypes.includes("Order Copy") ? "#FFFFFF" : "#475569",
+                    border: selectedDocTypes.includes("Order Copy") ? "none" : "1.5px solid #E2E8F0",
+                    boxShadow: selectedDocTypes.includes("Order Copy") ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
+                    outline: "none",
+                    appearance: "none",
+                    backgroundImage: selectedDocTypes.includes("Order Copy")
+                      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
+                      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 12px center",
+                    paddingRight: "28px",
+                    textAlign: "center"
+                  }}
+                >
+                  {!selectedDocTypes.includes("Order Copy") && <option value="" disabled hidden>📄 Order Copy ▾</option>}
+                  <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Order Copy (Cash)</option>
+                  <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Order Copy (Online)</option>
+                  <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Order Copy (Financial)</option>
+                </select>
+              </div>
 
-                {/* Estimate Dropdown */}
-                <div style={{ flex: "1 1 120px" }}>
-                  <select
-                    value={docType === "Estimate" ? paymentMode : ""}
-                    onChange={(e) => {
-                      setDocType("Estimate");
-                      const mode = e.target.value as any;
-                      setPaymentMode(mode);
-                      setEstimateType(mode);
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "10px 14px",
-                      borderRadius: "50px",
-                      cursor: "pointer",
-                      fontWeight: 800,
-                      fontSize: "13px",
-                      transition: "all .2s",
-                      background: docType === "Estimate" ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
-                      color: docType === "Estimate" ? "#FFFFFF" : "#475569",
-                      border: docType === "Estimate" ? "none" : "1.5px solid #E2E8F0",
-                      boxShadow: docType === "Estimate" ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
-                      outline: "none",
-                      appearance: "none",
-                      backgroundImage: docType === "Estimate"
-                        ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
-                        : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "right 12px center",
-                      paddingRight: "28px",
-                      textAlign: "center"
-                    }}
-                  >
-                    {docType !== "Estimate" && <option value="" disabled hidden>🏷️ Estimate ▾</option>}
-                    <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Estimate (Cash)</option>
-                    <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Estimate (Online)</option>
-                    <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Estimate (Financial)</option>
-                  </select>
-                </div>
+              {/* Estimate Dropdown */}
+              <div style={{ flex: "1 1 120px" }}>
+                <select
+                  value={selectedDocTypes.includes("Estimate") ? paymentMode : ""}
+                  onChange={(e) => {
+                    const mode = e.target.value as any;
+                    setPaymentMode(mode);
+                    setEstimateType(mode);
+                    if (!selectedDocTypes.includes("Estimate")) {
+                      setSelectedDocTypes(prev => [...prev, "Estimate"]);
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "10px 14px",
+                    borderRadius: "50px",
+                    cursor: "pointer",
+                    fontWeight: 800,
+                    fontSize: "13px",
+                    transition: "all .2s",
+                    background: selectedDocTypes.includes("Estimate") ? "linear-gradient(135deg, #a855f7 0%, #ec4899 100%)" : "#FFFFFF",
+                    color: selectedDocTypes.includes("Estimate") ? "#FFFFFF" : "#475569",
+                    border: selectedDocTypes.includes("Estimate") ? "none" : "1.5px solid #E2E8F0",
+                    boxShadow: selectedDocTypes.includes("Estimate") ? "0 6px 18px rgba(168, 85, 247, 0.35)" : "none",
+                    outline: "none",
+                    appearance: "none",
+                    backgroundImage: docType === "Estimate"
+                      ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
+                      : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "right 12px center",
+                    paddingRight: "28px",
+                    textAlign: "center"
+                  }}
+                >
+                  {docType !== "Estimate" && <option value="" disabled hidden>🏷️ Estimate ▾</option>}
+                  <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Estimate (Cash)</option>
+                  <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Estimate (Online)</option>
+                  <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Estimate (Financial)</option>
+                </select>
+              </div>
               </div>
             </div>
 
@@ -1279,9 +1306,9 @@ function ProductsAvail() {
       const matchCat = categoryFilter === "All Products" || categoryFilter === "All" || p.category.toLowerCase().includes(categoryFilter.toLowerCase());
       let matchStock = true;
       if (stockFilter === "Low") {
-        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20;
+        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5;
       } else if (stockFilter === "InStock") {
-        matchStock = (p.qty ?? p.stock ?? 0) >= 20;
+        matchStock = (p.qty ?? p.stock ?? 0) > 0;
       } else if (stockFilter === "OutOfStock") {
         matchStock = (p.qty ?? p.stock ?? 0) === 0;
       }
@@ -1299,11 +1326,13 @@ function ProductsAvail() {
   const groupedProducts = useMemo(() => {
     const map = new Map<string, Product & { batches: Product[] }>();
     filteredProducts.forEach(p => {
-      const key = (p.sku || p.name).toLowerCase();
+      const key = `${(p.name || "").trim().toLowerCase()}___${(p.brand || "").trim().toLowerCase()}`;
       if (map.has(key)) {
         const existing = map.get(key)!;
         existing.qty = (existing.qty ?? existing.stock ?? 0) + (p.qty ?? p.stock ?? 0);
         existing.stock = existing.qty;
+        if (!existing.sku && p.sku) existing.sku = p.sku;
+        else if (existing.sku && existing.sku.length > 20 && p.sku && p.sku.length <= 20) existing.sku = p.sku;
         existing.batches.push(p);
       } else {
         map.set(key, { ...p, batches: [p] });
@@ -1330,7 +1359,7 @@ function ProductsAvail() {
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="header-buttons" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             type="button"
             onClick={() => setShowAdd(true)}
@@ -1404,8 +1433,8 @@ function ProductsAvail() {
         <div className="stat-card" onClick={() => setStockFilter("InStock")}>
           <span>🟢</span>
           <div>
-            <small>In Stock</small>
-            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) >= 20).length}</h2>
+            <small>In Stock (Total Units)</small>
+            <h2>{products.reduce((acc, p) => acc + (p.qty ?? p.stock ?? 0), 0)}</h2>
           </div>
         </div>
 
@@ -1413,7 +1442,7 @@ function ProductsAvail() {
           <span>⚠️</span>
           <div>
             <small>Low Stock</small>
-            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20).length}</h2>
+            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5).length}</h2>
           </div>
         </div>
 
@@ -1449,11 +1478,13 @@ function ProductsAvail() {
             <tbody>
               {groupedProducts.map((p) => {
                 const totalValue = (p.qty ?? p.stock ?? 0) * p.cost;
-                const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric"
-                }) : "—";
+                const formattedDate = p.date ? (
+                  p.date.includes("T") || p.date.includes(":") ? (
+                    new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })
+                  ) : (
+                    new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+                  )
+                ) : "—";
                 return (
                   <tr key={p.id}>
                     <td>
@@ -1541,7 +1572,12 @@ function ProductsAvail() {
           onClose={() => setShowAdd(false)}
           onSave={(d) => {
             const nextId = uid("p");
-            setState((s) => ({ ...s, products: [...s.products, { id: nextId, ...d }] }));
+            const newProd = { id: nextId, ...d };
+            setState((s) => ({ ...s, products: [...s.products, newProd] }));
+            setDoc(doc(db, "products", nextId), newProd, { merge: true }).catch(() => { });
+            if (d.serialNumbers) {
+              try { localStorage.setItem(`sham_serials_${nextId}`, JSON.stringify(d.serialNumbers)); } catch (_) { }
+            }
             setShowAdd(false);
           }}
         />
@@ -1554,10 +1590,15 @@ function ProductsAvail() {
           initial={editing}
           onClose={() => setEditing(null)}
           onSave={(d) => {
+            const updated = { ...editing, ...d };
             setState((s) => ({
               ...s,
-              products: s.products.map((p) => (p.id === editing.id ? { ...p, ...d } : p))
+              products: s.products.map((p) => (p.id === editing.id ? updated : p))
             }));
+            setDoc(doc(db, "products", editing.id), updated, { merge: true }).catch(() => { });
+            if (d.serialNumbers) {
+              try { localStorage.setItem(`sham_serials_${editing.id}`, JSON.stringify(d.serialNumbers)); } catch (_) { }
+            }
             setEditing(null);
           }}
         />

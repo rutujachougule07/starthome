@@ -54,15 +54,8 @@ function App() {
   const fileInputRef = useRef(null);
 
   // Separate inventory for each godown
-  const [godown1Inventory, setGodown1Inventory] = useState([
-    { id: 1, image: 'https://images.unsplash.com/photo-1565814329452-e1efa11c5b89?auto=format&fit=crop&w=40&h=40&q=80', imageAlt: 'fan', product: 'Ceiling Fan', brand: 'Havells', sku: 'GD1-F001', category: 'Electronics', qty: 15, cost: 15000, incentivePerUnit: 2000, supplier: 'vaishnavi', date: '21 May 2026', status: 'Verified' },
-    { id: 2, image: null, imageAlt: 'washing machine', product: 'Washing Machine', brand: 'Samsung', sku: 'GD1-WM001', category: 'Electronics', qty: 5, cost: 50000, incentivePerUnit: 3000, supplier: 'rutuja', date: '21 May 2026', status: 'Verified' },
-  ]);
-
-  const [godown2Inventory, setGodown2Inventory] = useState([
-    { id: 3, image: null, imageAlt: 'refrigerator', product: 'Refrigerator', brand: 'LG', sku: 'GD2-RF001', category: 'Electronics', qty: 8, cost: 35000, incentivePerUnit: 2500, supplier: 'samsung', date: '18 May 2026', status: 'Verified' },
-    { id: 4, image: null, imageAlt: 'microwave', product: 'Microwave Oven', brand: 'Samsung', sku: 'GD2-MW001', category: 'Electronics', qty: 12, cost: 18000, incentivePerUnit: 1500, supplier: 'lg', date: '20 May 2026', status: 'Verified' },
-  ]);
+  const [godown1Inventory, setGodown1Inventory] = useState<any[]>([]);
+  const [godown2Inventory, setGodown2Inventory] = useState<any[]>([]);
 
   // Get current inventory based on selected godown
   const currentInventory = activeGodown === 'Godown 1' ? godown1Inventory : godown2Inventory;
@@ -74,20 +67,14 @@ function App() {
   const highStockCount = currentInventory.filter(i => i.qty >= LOW_STOCK_THRESHOLD).length;
   const formatINR = (amt: number) => '₹' + Number(amt).toLocaleString('en-IN');
   // Tasks state (same for both godowns)
-  const [tasks, setTasks] = useState([
-    { id: 1, title: 'Audit Shelf 4', assignee: 'Rajesh Kumar', priority: 'High', assignDate: '2026-05-20', due: '2026-05-25', desc: 'Verify all electronic items on shelf 4 match system inventory.', status: 'Pending' },
-    { id: 2, title: 'Restock Display Units', assignee: 'Priya Patel', priority: 'Medium', assignDate: '2026-05-21', due: '2026-05-28', desc: 'Move 5 washing machines from warehouse B to showroom floor.', status: 'In Progress' },
-  ]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [showTaskForm, setShowTaskForm] = useState(false);
-  const emptyTask = { title: '', assignee: 'Rajesh Kumar', priority: 'High', assignDate: '', due: '', desc: '', status: 'Pending' };
+  const emptyTask = { title: '', assignee: '', priority: 'High', assignDate: '', due: '', desc: '', status: 'Pending' };
   const [taskForm, setTaskForm] = useState(emptyTask);
   const [editTaskId, setEditTaskId] = useState(null);
 
   // Employees state (same for both godowns)
-  const [employees, setEmployees] = useState([
-    { id: 1, initials: 'RK', color: 'var(--accent-orange)', name: 'Rajesh Kumar', role: 'Store Manager', dept: 'Operations', email: 'rajesh@smartops.com', status: 'Active' },
-    { id: 2, initials: 'PP', color: '#8b5cf6', name: 'Priya Patel', role: 'Sales Associate', dept: 'Sales', email: 'priya@smartops.com', status: 'Active' },
-  ]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [showEmpForm, setShowEmpForm] = useState(false);
   const emptyEmp = { name: '', role: '', dept: '', email: '', status: 'Active' };
   const [empForm, setEmpForm] = useState(emptyEmp);
