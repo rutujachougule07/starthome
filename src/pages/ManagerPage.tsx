@@ -1315,7 +1315,7 @@ function ProductsAvail() {
   return (
     <div className="inventory-page">
       {/* Header */}
-      <div className="top-section">
+      <div className="top-section" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
         <div>
           <div className="title-row">
             <div className="title-icon">
@@ -1328,6 +1328,56 @@ function ProductsAvail() {
               </p>
             </div>
           </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            style={{
+              background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "100px",
+              padding: "10px 22px",
+              fontWeight: 700,
+              fontSize: "14px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              boxShadow: "0 4px 15px rgba(124, 58, 237, 0.3)",
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+          >
+            <span style={{ fontSize: "16px", fontWeight: "bold" }}>+</span> Add Product
+          </button>
+
+          <DownloadDropdown
+            label="Download"
+            onPDF={() => {
+              const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Quantity", "Unit Cost", "Total Cost", "Supplier", "Date", "Status"];
+              const rows = filteredProducts.map((p, index) => {
+                const qty = p.qty ?? p.stock ?? 0;
+                const unitCost = p.cost || 0;
+                const totalCost = qty * unitCost;
+                const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+                return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitCost, totalCost, p.supplier || "—", formattedDate, p.status || "Verified"];
+              });
+              openPDFPreview("Stocking Inventory Report", headers, rows, `Total Products: ${filteredProducts.length}`, "pdf");
+            }}
+            onCSV={() => {
+              const headers = ["Sr. No.", "Product Name", "SKU", "Brand", "Location", "Quantity", "Unit Cost", "Total Cost", "Supplier", "Date", "Status"];
+              const rows = filteredProducts.map((p, index) => {
+                const qty = p.qty ?? p.stock ?? 0;
+                const unitCost = p.cost || 0;
+                const totalCost = qty * unitCost;
+                const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+                return [index + 1, p.name, p.sku || "", p.brand || "—", p.location || "Unassigned", qty, unitCost, totalCost, p.supplier || "—", formattedDate, p.status || "Verified"];
+              });
+              openPDFPreview("Stocking Inventory Report", headers, rows, `Total Products: ${filteredProducts.length}`, "csv");
+            }}
+          />
         </div>
       </div>
 
@@ -1486,6 +1536,7 @@ function ProductsAvail() {
 
       {showAdd && (
         <ProductForm
+          hideIncentiveFields={true}
           title="+ New Product"
           onClose={() => setShowAdd(false)}
           onSave={(d) => {
@@ -1498,6 +1549,7 @@ function ProductsAvail() {
 
       {editing && (
         <ProductForm
+          hideIncentiveFields={true}
           title="Edit Product"
           initial={editing}
           onClose={() => setEditing(null)}

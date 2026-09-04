@@ -628,6 +628,7 @@ export function ProductDetailPage() {
 
       {editingBatch && (
         <ProductForm
+          hideIncentiveFields={role !== "superadmin" && role !== "admin"}
           title="Edit Stock Entry"
           initial={{
             ...editingBatch,

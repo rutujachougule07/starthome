@@ -1204,7 +1204,18 @@ function ProductsSection() {
         </div>
       </div>
 
-      {showAdd && <ProductForm title="Add Product" onClose={() => setShowAdd(false)} onSave={(d) => { const nextId = uid("p"); setState((s) => ({ ...s, products: [...s.products, { id: nextId, ...d }] })); setShowAdd(false); }} />}
+      {showAdd && (
+        <ProductForm
+          hideIncentiveFields={true}
+          title="Add Product"
+          onClose={() => setShowAdd(false)}
+          onSave={(d) => {
+            const nextId = uid("p");
+            setState((s) => ({ ...s, products: [...s.products, { id: nextId, ...d }] }));
+            setShowAdd(false);
+          }}
+        />
+      )}
 
       {selectedProductForOrder && (
         <EmployeeCreateOrderModal
@@ -2621,74 +2632,74 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
                 <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                   <button
                     type="button"
-                      onClick={() => setDocType("Bill")}
-                      style={{
-                        flex: "1 1 80px", padding: "10px 12px", borderRadius: "30px", cursor: "pointer",
-                        fontWeight: 700, fontSize: "12px", transition: "all .2s",
-                        background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                        color: docType === "Bill" ? "#fff" : "#475569",
-                        border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
-                        boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
-                      }}
-                    >
-                      🧾 Bill
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDocType("Order Copy")}
-                      style={{
-                        flex: "1 1 90px", padding: "10px 12px", borderRadius: "30px", cursor: "pointer",
-                        fontWeight: 700, fontSize: "12px", transition: "all .2s",
-                        background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                        color: docType === "Order Copy" ? "#fff" : "#475569",
-                        border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
-                        boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
-                      }}
-                    >
-                      📄 Order Copy
-                    </button>
+                    onClick={() => setDocType("Bill")}
+                    style={{
+                      flex: "1 1 80px", padding: "10px 12px", borderRadius: "30px", cursor: "pointer",
+                      fontWeight: 700, fontSize: "12px", transition: "all .2s",
+                      background: docType === "Bill" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                      color: docType === "Bill" ? "#fff" : "#475569",
+                      border: docType === "Bill" ? "none" : "1px solid #CBD5E1",
+                      boxShadow: docType === "Bill" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
+                    }}
+                  >
+                    🧾 Bill
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDocType("Order Copy")}
+                    style={{
+                      flex: "1 1 90px", padding: "10px 12px", borderRadius: "30px", cursor: "pointer",
+                      fontWeight: 700, fontSize: "12px", transition: "all .2s",
+                      background: docType === "Order Copy" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                      color: docType === "Order Copy" ? "#fff" : "#475569",
+                      border: docType === "Order Copy" ? "none" : "1px solid #CBD5E1",
+                      boxShadow: docType === "Order Copy" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none"
+                    }}
+                  >
+                    📄 Order Copy
+                  </button>
 
-                    <div style={{ flex: "1 1 140px" }}>
-                      <select
-                        value={docType === "Estimate" ? estimateType : ""}
-                        onChange={(e) => {
-                          setDocType("Estimate");
-                          const mode = e.target.value as any;
-                          setEstimateType(mode);
-                          setPaymentMode(mode);
-                        }}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: "30px",
-                          cursor: "pointer",
-                          fontWeight: 700,
-                          fontSize: "12px",
-                          transition: "all .2s",
-                          background: docType === "Estimate" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
-                          color: docType === "Estimate" ? "#ffffff" : "#475569",
-                          border: docType === "Estimate" ? "none" : "1px solid #CBD5E1",
-                          boxShadow: docType === "Estimate" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
-                          outline: "none",
-                          appearance: "none",
-                          backgroundImage: docType === "Estimate"
-                            ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
-                            : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
-                          backgroundRepeat: "no-repeat",
-                          backgroundPosition: "right 10px center",
-                          paddingRight: "26px",
-                          textAlign: "center"
-                        }}
-                      >
-                        {docType !== "Estimate" && <option value="" disabled hidden>🏷️ Estimate ▾</option>}
-                        <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Estimate (Cash)</option>
-                        <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Estimate (Online)</option>
-                        <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Estimate (Financial)</option>
-                      </select>
-                    </div>
+                  <div style={{ flex: "1 1 140px" }}>
+                    <select
+                      value={docType === "Estimate" ? estimateType : ""}
+                      onChange={(e) => {
+                        setDocType("Estimate");
+                        const mode = e.target.value as any;
+                        setEstimateType(mode);
+                        setPaymentMode(mode);
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px 12px",
+                        borderRadius: "30px",
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        transition: "all .2s",
+                        background: docType === "Estimate" ? "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)" : "#FFFFFF",
+                        color: docType === "Estimate" ? "#ffffff" : "#475569",
+                        border: docType === "Estimate" ? "none" : "1px solid #CBD5E1",
+                        boxShadow: docType === "Estimate" ? "0 4px 14px rgba(124, 58, 237, 0.35)" : "none",
+                        outline: "none",
+                        appearance: "none",
+                        backgroundImage: docType === "Estimate"
+                          ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23FFFFFF' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`
+                          : `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%23475569' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6 6.5-6'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "right 10px center",
+                        paddingRight: "26px",
+                        textAlign: "center"
+                      }}
+                    >
+                      {docType !== "Estimate" && <option value="" disabled hidden>🏷️ Estimate ▾</option>}
+                      <option value="Cash" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💵 Estimate (Cash)</option>
+                      <option value="Online" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>💳 Estimate (Online)</option>
+                      <option value="Financial" style={{ background: "#FFF", color: "#1E293B", fontWeight: 600 }}>🏦 Estimate (Financial)</option>
+                    </select>
                   </div>
                 </div>
               </div>
+            </div>
 
             {/* Booking Expiry Date */}
             {docType === "Order Copy" && (
@@ -2849,3 +2860,4 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
     document.body
   );
 }
+

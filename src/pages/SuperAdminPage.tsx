@@ -2032,7 +2032,7 @@ function CustomSelect({
 }
 
 
-export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, isGodownOnly }: { title: string; initial?: Product; onSave: (d: Omit<Product, "id">) => void; onClose: () => void; isIncentiveMode?: boolean; isGodownOnly?: boolean }) {
+export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, isGodownOnly, hideIncentiveFields }: { title: string; initial?: Product; onSave: (d: Omit<Product, "id">) => void; onClose: () => void; isIncentiveMode?: boolean; isGodownOnly?: boolean; hideIncentiveFields?: boolean }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [sku, setSku] = useState(initial?.sku ?? "");
   const [brand, setBrand] = useState(initial?.brand ?? "");
@@ -2770,8 +2770,6 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
             </div>
           )}
         </div>
-
-        {/* SKU */}
         <div className="form-group">
           <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>SKU</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
@@ -2787,11 +2785,8 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
         </div>
       </div>
 
-
-
       {isIncentiveMode ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginBottom: 8 }}>
-
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>ASSIGN EMPLOYEE</label>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
@@ -2813,7 +2808,8 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
         </div>
       ) : (
         <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 8 }}>
+          {/* ROW 3: QUANTITY, UNIT COST, TOTAL COST, INCENTIVE */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 12 }}>
             <div className="form-group">
               <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>QUANTITY</label>
               <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
@@ -2849,6 +2845,10 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
                     const val = +e.target.value;
                     setCost(val);
                     setTotalCost(parseFloat((val * qty).toFixed(2)));
+                    if (incentivePercent) {
+                      const pct = parseFloat(incentivePercent) || 0;
+                      setIncentive(parseFloat(((val * pct) / 100).toFixed(2)));
+                    }
                   }}
                   placeholder="0.00"
                   style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
@@ -2868,13 +2868,131 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
                     setTotalCost(val);
                     const calculatedCost = qty > 0 ? parseFloat((val / qty).toFixed(2)) : 0;
                     setCost(calculatedCost);
+                    if (incentivePercent) {
+                      const pct = parseFloat(incentivePercent) || 0;
+                      setIncentive(parseFloat(((calculatedCost * pct) / 100).toFixed(2)));
+                    }
                   }}
                   placeholder="0.00"
                   style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
                 />
               </div>
             </div>
+            {!hideIncentiveFields && (
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>INCENTIVE (%)</span>
+                  <span style={{ color: "#16a34a", fontWeight: 600, textTransform: "none" }}>Manual</span>
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#DCFCE7", border: "1px solid #BBF7D0", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, fontWeight: 700 }}>%</span>
+                  <input
+                    type="number"
+                    className="form-input"
+                    value={incentivePercent || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setIncentivePercent(val);
+                      const pct = parseFloat(val) || 0;
+                      const calculatedIncentive = parseFloat(((cost * pct) / 100).toFixed(2));
+                      setIncentive(calculatedIncentive);
+                    }}
+                    placeholder="e.g. 5"
+                    style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+                  />
+                </div>
+                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600, marginTop: 3 }}>
+                  Incentive Amount: ₹{incentive || 0}
+                </div>
+              </div>
+            )}
           </div>
+
+          {!hideIncentiveFields && (
+            <div style={{ display: "grid", gridTemplateColumns: (assignedEmployeeId && assignedEmployeeId !== "all") ? "1fr 1fr" : "1fr", gap: 12, marginBottom: 12, background: "#FAF5FF", border: "1px solid #F3E8FF", padding: "10px 14px", borderRadius: 14 }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 5, color: "#7C3AED", fontWeight: 800, display: "block" }}>
+                  INCENTIVE APPLICABLE TO
+                </label>
+                <div style={{ display: "flex", alignItems: "center", background: "#FFFFFF", border: "1px solid #E9D8FD", borderRadius: 14, padding: "3px", height: "38px" }}>
+                  <button
+                    type="button"
+                    onClick={() => setAssignedEmployeeId("all")}
+                    style={{
+                      flex: 1,
+                      height: "100%",
+                      border: "none",
+                      borderRadius: 11,
+                      padding: "4px 12px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      background: (!assignedEmployeeId || assignedEmployeeId === "all") ? "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)" : "transparent",
+                      color: (!assignedEmployeeId || assignedEmployeeId === "all") ? "#FFFFFF" : "#64748B",
+                      boxShadow: (!assignedEmployeeId || assignedEmployeeId === "all") ? "0 3px 8px rgba(124, 58, 237, 0.3)" : "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6
+                    }}
+                  >
+                    <span style={{ fontSize: 8 }}>●</span> All Employees
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!assignedEmployeeId || assignedEmployeeId === "all") {
+                        const firstEmp = users.find(u => u.role === "employee")?.id || "";
+                        setAssignedEmployeeId(firstEmp);
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      height: "100%",
+                      border: "none",
+                      borderRadius: 11,
+                      padding: "4px 12px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      transition: "all 0.2s",
+                      background: (assignedEmployeeId && assignedEmployeeId !== "all") ? "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)" : "transparent",
+                      color: (assignedEmployeeId && assignedEmployeeId !== "all") ? "#FFFFFF" : "#64748B",
+                      boxShadow: (assignedEmployeeId && assignedEmployeeId !== "all") ? "0 3px 8px rgba(124, 58, 237, 0.3)" : "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    Specific Employee
+                  </button>
+                </div>
+              </div>
+
+              {assignedEmployeeId && assignedEmployeeId !== "all" && (
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, marginBottom: 5, color: "#7C3AED", fontWeight: 800, display: "block" }}>
+                    SELECT SPECIFIC EMPLOYEE
+                  </label>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#FFFFFF", border: "1px solid #E9D8FD", borderRadius: 14, padding: "3px 10px", height: "38px" }}>
+                    <span style={{ width: 26, height: 26, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>👤</span>
+                    <select
+                      className="form-input"
+                      value={assignedEmployeeId}
+                      onChange={(e) => setAssignedEmployeeId(e.target.value)}
+                      style={{ border: "none", background: "transparent", padding: "4px 6px", fontSize: 11, color: "#1E293B", fontWeight: 600, width: "100%", appearance: "auto" }}
+                    >
+                      <option value="">-- Select Employee --</option>
+                      {users.filter(u => u.role === "employee").map(u => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10, marginBottom: 8 }}>
             <div className="form-group">
@@ -3012,14 +3130,14 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
           className="btn btn-primary"
           onClick={save}
           style={{
-            background: "linear-gradient(135deg, #38BDF8 0%, #6D28D9 100%)",
+            background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
             border: "none",
             color: "#ffffff",
             borderRadius: 12,
             padding: "10px 24px",
             fontWeight: 700,
             fontSize: 14,
-            boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+            boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
             cursor: "pointer"
           }}
         >
@@ -6906,11 +7024,33 @@ export function SuperAdminGodownSection() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 className="page-title">Godown Management & Stock Reports</h2>
           <p className="page-sub">Manage stock and generate detailed reports for Godown 1 and Godown 2.</p>
         </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          style={{
+            background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: "999px",
+            padding: "9px 20px",
+            fontSize: "14px",
+            fontWeight: 700,
+            cursor: "pointer",
+            boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            transition: "all 0.2s"
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
+          onMouseOut={(e) => (e.currentTarget.style.transform = "none")}
+        >
+          + Add Product
+        </button>
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "12px", marginTop: "20px", marginBottom: "24px", background: "#F8FAFC", padding: "12px", borderRadius: "24px", border: "1px solid #EEF1F8" }}>
@@ -7007,16 +7147,40 @@ export function SuperAdminGodownSection() {
               {activeProducts.length} Products | Total Qty: {activeTotalQty} | Value: ₹{activeTotalCost.toLocaleString()}
             </span>
           </div>
-          <DownloadDropdown
-            onPDF={() => handlePDFExport(activeTab)}
-            onCSV={() => {
-              const list = activeTab === "Godown 1" ? godown1Products : godown2Products;
-              const totalValuation = list.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
-              const headers = ["Sr. No.", "Product Name", "SKU", "Category", "Qty", "Unit Cost (₹)", "Total Cost (₹)"];
-              const rows = list.map((p, index) => [index + 1, p.name, p.sku || "—", p.category || "—", p.qty ?? p.stock ?? 0, p.cost || 0, (p.qty ?? p.stock ?? 0) * (p.cost || 0)]);
-              openPDFPreview(`${activeTab} Stock Inventory Report`, headers, rows, `Total Items: ${list.length} | Valuation: ₹${totalValuation.toLocaleString()}`, "csv");
-            }}
-          />
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              onClick={() => setShowAdd(true)}
+              style={{
+                background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "999px",
+                padding: "8px 18px",
+                fontSize: "13px",
+                fontWeight: 700,
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.2s"
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
+              onMouseOut={(e) => (e.currentTarget.style.transform = "none")}
+            >
+              + Add Product
+            </button>
+            <DownloadDropdown
+              onPDF={() => handlePDFExport(activeTab)}
+              onCSV={() => {
+                const list = activeTab === "Godown 1" ? godown1Products : godown2Products;
+                const totalValuation = list.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
+                const headers = ["Sr. No.", "Product Name", "SKU", "Category", "Qty", "Unit Cost (₹)", "Total Cost (₹)"];
+                const rows = list.map((p, index) => [index + 1, p.name, p.sku || "—", p.category || "—", p.qty ?? p.stock ?? 0, p.cost || 0, (p.qty ?? p.stock ?? 0) * (p.cost || 0)]);
+                openPDFPreview(`${activeTab} Stock Inventory Report`, headers, rows, `Total Items: ${list.length} | Valuation: ₹${totalValuation.toLocaleString()}`, "csv");
+              }}
+            />
+          </div>
         </div>
         {renderTable(activeProducts)}
       </div>
