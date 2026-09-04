@@ -7180,33 +7180,11 @@ export function SuperAdminGodownSection() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 className="page-title">Godown Management & Stock Reports</h2>
           <p className="page-sub">Manage stock and generate detailed reports for Godown 1 and Godown 2.</p>
         </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          style={{
-            background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: "999px",
-            padding: "9px 20px",
-            fontSize: "14px",
-            fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            transition: "all 0.2s"
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
-          onMouseOut={(e) => (e.currentTarget.style.transform = "none")}
-        >
-          + Add Product
-        </button>
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "12px", marginTop: "20px", marginBottom: "24px", background: "#F8FAFC", padding: "12px", borderRadius: "24px", border: "1px solid #EEF1F8" }}>
