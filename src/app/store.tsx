@@ -764,8 +764,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const fallbackStoreContext = {
+  currentUser: loadCurrentUser(),
+  users: [],
+  products: [],
+  customers: [],
+  orders: [],
+  tasks: [],
+  notifications: [],
+  leads: [],
+  quotations: [],
+  login: async () => null,
+  logout: () => {},
+  setState: () => {},
+  uid: (prefix: string) => `${prefix}${Math.random().toString(36).slice(2, 8)}`,
+};
+
 export function useStore() {
   const ctx = useContext(StoreContext);
-  if (!ctx) throw new Error("useStore must be inside StoreProvider");
+  if (!ctx) {
+    console.warn("useStore invoked outside StoreProvider context. Using fallback store context.");
+    return fallbackStoreContext;
+  }
   return ctx;
 }
