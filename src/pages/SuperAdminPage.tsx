@@ -7277,28 +7277,6 @@ export function SuperAdminGodownSection() {
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <button
-              onClick={() => setShowAdd(true)}
-              style={{
-                background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
-                color: "#FFFFFF",
-                border: "none",
-                borderRadius: "999px",
-                padding: "8px 18px",
-                fontSize: "13px",
-                fontWeight: 700,
-                cursor: "pointer",
-                boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                transition: "all 0.2s"
-              }}
-              onMouseOver={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
-              onMouseOut={(e) => (e.currentTarget.style.transform = "none")}
-            >
-              + Add Product
-            </button>
             <DownloadDropdown
               onPDF={() => handlePDFExport(activeTab)}
               onCSV={() => {
