@@ -7118,18 +7118,25 @@ export function SuperAdminIncentiveSection() {
 
 export function SuperAdminGodownSection() {
   const { products, setState, uid } = useStore();
-  const [activeTab, setActiveTab] = useState<"Godown 1" | "Godown 2">("Godown 1");
+  const [godownList, setGodownList] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem("custom_godowns_list");
+      if (saved) return JSON.parse(saved);
+    } catch (err) {}
+    return ["Godown 1", "Godown 2"];
+  });
+  const [activeTab, setActiveTab] = useState<string>("Godown 1");
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddGodown, setShowAddGodown] = useState(false);
+  const [newGodownName, setNewGodownName] = useState("");
 
-  const godown1Products = products.filter(p => p.location === "Godown 1");
-  const godown2Products = products.filter(p => p.location === "Godown 2");
-  const activeProducts = activeTab === "Godown 1" ? godown1Products : godown2Products;
+  const activeProducts = products.filter(p => p.location === activeTab);
 
   const activeTotalQty = activeProducts.reduce((acc, p) => acc + (p.qty ?? p.stock ?? 0), 0);
   const activeTotalCost = activeProducts.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
 
-  const handlePDFExport = (locationTag: "Godown 1" | "Godown 2") => {
-    const list = locationTag === "Godown 1" ? godown1Products : godown2Products;
+  const handlePDFExport = (locationTag: string) => {
+    const list = products.filter(p => p.location === locationTag);
     const totalValuation = list.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
     const headers = ["Sr. No.", "Product Name", "SKU", "Category", "Qty", "Unit Cost (₹)", "Total Cost (₹)"];
     const rows = list.map((p, index) => {
@@ -7180,95 +7187,83 @@ export function SuperAdminGodownSection() {
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <div>
           <h2 className="page-title">Godown Management & Stock Reports</h2>
-          <p className="page-sub">Manage stock and generate detailed reports for Godown 1 and Godown 2.</p>
+          <p className="page-sub">Manage stock and generate detailed reports across all godowns.</p>
         </div>
+        <button
+          onClick={() => setShowAddGodown(true)}
+          style={{
+            background: "linear-gradient(135deg, #059669 0%, #10B981 100%)",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: "999px",
+            padding: "9px 20px",
+            fontSize: "14px",
+            fontWeight: 700,
+            cursor: "pointer",
+            boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            transition: "all 0.2s"
+          }}
+          onMouseOver={(e) => (e.currentTarget.style.transform = "translateY(-1px)")}
+          onMouseOut={(e) => (e.currentTarget.style.transform = "none")}
+        >
+          + Add Godown
+        </button>
       </div>
 
       <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "12px", marginTop: "20px", marginBottom: "24px", background: "#F8FAFC", padding: "12px", borderRadius: "24px", border: "1px solid #EEF1F8" }}>
-        <button
-          onClick={() => setActiveTab("Godown 1")}
-          style={{
-            flex: "1 1 140px",
-            maxWidth: "250px",
-            padding: "12px 24px",
-            borderRadius: "999px",
-            border: activeTab === "Godown 1" ? "none" : "1px solid #E2E8F0",
-            background: activeTab === "Godown 1" ? "linear-gradient(135deg, #7C3AED 0%, #7C3AED 100%)" : "#FFFFFF",
-            color: activeTab === "Godown 1" ? "#FFFFFF" : "#475569",
-            fontSize: "15px",
-            fontWeight: 700,
-            cursor: "pointer",
-            transition: "all 300ms ease",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "10px",
-            boxShadow: activeTab === "Godown 1" ? "0 8px 22px rgba(124, 58, 237, 0.35)" : "0 2px 8px rgba(0,0,0,0.03)"
-          }}
-          onMouseOver={(e) => { if (activeTab !== "Godown 1") e.currentTarget.style.transform = "translateY(-2px)"; }}
-          onMouseOut={(e) => { if (activeTab !== "Godown 1") e.currentTarget.style.transform = "none"; }}
-        >
-          <span style={{ fontSize: "18px" }}>🏫</span>
-          <span style={{ color: activeTab === "Godown 1" ? "#FFFFFF" : "#1E293B" }}>Godown 1</span>
-          <span style={{
-            background: activeTab === "Godown 1" ? "rgba(255, 255, 255, 0.25)" : "#F3EEFF",
-            color: activeTab === "Godown 1" ? "#FFFFFF" : "#7C3AED",
-            width: "22px",
-            height: "22px",
-            borderRadius: "50%",
-            fontSize: "12px",
-            fontWeight: 800,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            {godown1Products.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("Godown 2")}
-          style={{
-            flex: "1 1 140px",
-            maxWidth: "250px",
-            padding: "12px 24px",
-            borderRadius: "999px",
-            border: activeTab === "Godown 2" ? "none" : "1px solid #E2E8F0",
-            background: activeTab === "Godown 2" ? "linear-gradient(135deg, #7C3AED 0%, #7C3AED 100%)" : "#FFFFFF",
-            color: activeTab === "Godown 2" ? "#FFFFFF" : "#475569",
-            fontSize: "15px",
-            fontWeight: 700,
-            cursor: "pointer",
-            transition: "all 300ms ease",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "10px",
-            boxShadow: activeTab === "Godown 2" ? "0 8px 22px rgba(124, 58, 237, 0.35)" : "0 2px 8px rgba(0,0,0,0.03)"
-          }}
-          onMouseOver={(e) => { if (activeTab !== "Godown 2") e.currentTarget.style.transform = "translateY(-2px)"; }}
-          onMouseOut={(e) => { if (activeTab !== "Godown 2") e.currentTarget.style.transform = "none"; }}
-        >
-          <span style={{ fontSize: "18px" }}>🏫</span>
-          <span style={{ color: activeTab === "Godown 2" ? "#FFFFFF" : "#1E293B" }}>Godown 2</span>
-          <span style={{
-            background: activeTab === "Godown 2" ? "rgba(255, 255, 255, 0.25)" : "#F3EEFF",
-            color: activeTab === "Godown 2" ? "#FFFFFF" : "#7C3AED",
-            width: "22px",
-            height: "22px",
-            borderRadius: "50%",
-            fontSize: "12px",
-            fontWeight: 800,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            {godown2Products.length}
-          </span>
-        </button>
+        {godownList.map((gName) => {
+          const gProducts = products.filter(p => p.location === gName);
+          const isActive = activeTab === gName;
+          return (
+            <button
+              key={gName}
+              onClick={() => setActiveTab(gName)}
+              style={{
+                flex: "1 1 140px",
+                maxWidth: "250px",
+                padding: "12px 24px",
+                borderRadius: "999px",
+                border: isActive ? "none" : "1px solid #E2E8F0",
+                background: isActive ? "linear-gradient(135deg, #7C3AED 0%, #7C3AED 100%)" : "#FFFFFF",
+                color: isActive ? "#FFFFFF" : "#475569",
+                fontSize: "15px",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 300ms ease",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                boxShadow: isActive ? "0 8px 22px rgba(124, 58, 237, 0.35)" : "0 2px 8px rgba(0,0,0,0.03)"
+              }}
+              onMouseOver={(e) => { if (!isActive) e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseOut={(e) => { if (!isActive) e.currentTarget.style.transform = "none"; }}
+            >
+              <span style={{ fontSize: "18px" }}>🏫</span>
+              <span style={{ color: isActive ? "#FFFFFF" : "#1E293B" }}>{gName}</span>
+              <span style={{
+                background: isActive ? "rgba(255, 255, 255, 0.25)" : "#F3EEFF",
+                color: isActive ? "#FFFFFF" : "#7C3AED",
+                width: "22px",
+                height: "22px",
+                borderRadius: "50%",
+                fontSize: "12px",
+                fontWeight: 800,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                {gProducts.length}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="panel" style={{ margin: 0 }}>
@@ -7307,7 +7302,7 @@ export function SuperAdminGodownSection() {
             <DownloadDropdown
               onPDF={() => handlePDFExport(activeTab)}
               onCSV={() => {
-                const list = activeTab === "Godown 1" ? godown1Products : godown2Products;
+                const list = products.filter(p => p.location === activeTab);
                 const totalValuation = list.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
                 const headers = ["Sr. No.", "Product Name", "SKU", "Category", "Qty", "Unit Cost (₹)", "Total Cost (₹)"];
                 const rows = list.map((p, index) => [index + 1, p.name, p.sku || "—", p.category || "—", p.qty ?? p.stock ?? 0, p.cost || 0, (p.qty ?? p.stock ?? 0) * (p.cost || 0)]);
@@ -7331,6 +7326,71 @@ export function SuperAdminGodownSection() {
           }}
           onClose={() => setShowAdd(false)}
         />
+      )}
+
+      {showAddGodown && (
+        <Modal title="🏭 Add New Godown" onClose={() => setShowAddGodown(false)}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newGodownName.trim()) return;
+              const name = newGodownName.trim();
+              if (!godownList.includes(name)) {
+                const updated = [...godownList, name];
+                setGodownList(updated);
+                try {
+                  localStorage.setItem("custom_godowns_list", JSON.stringify(updated));
+                } catch (err) {}
+                setActiveTab(name);
+              }
+              setNewGodownName("");
+              setShowAddGodown(false);
+            }}
+            style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 10 }}
+          >
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 12, fontWeight: 700, color: "#475569", marginBottom: 6, display: "block" }}>
+                GODOWN NAME *
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={newGodownName}
+                onChange={(e) => setNewGodownName(e.target.value)}
+                placeholder="e.g. Godown 3, Central Warehouse"
+                required
+                style={{ width: "100%", padding: "10px 14px", borderRadius: 12, border: "1px solid #CBD5E1" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={() => setShowAddGodown(false)}
+                className="btn btn-ghost"
+                style={{ borderRadius: "999px", padding: "8px 18px" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{
+                  background: "linear-gradient(135deg, #059669 0%, #10B981 100%)",
+                  color: "#FFFFFF",
+                  border: "none",
+                  borderRadius: "999px",
+                  padding: "8px 22px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)"
+                }}
+              >
+                Create Godown
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
     </>
   );
