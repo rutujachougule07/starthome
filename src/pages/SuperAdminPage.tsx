@@ -7135,6 +7135,29 @@ export function SuperAdminGodownSection() {
   const activeTotalQty = activeProducts.reduce((acc, p) => acc + (p.qty ?? p.stock ?? 0), 0);
   const activeTotalCost = activeProducts.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
 
+  const handleDeleteGodown = (targetGodown: string) => {
+    if (godownList.length <= 1) {
+      alert("At least one godown must remain.");
+      return;
+    }
+    const count = products.filter((p) => p.location === targetGodown).length;
+    const msg = count > 0 
+      ? `Are you sure you want to delete "${targetGodown}"? It currently contains ${count} product(s).` 
+      : `Are you sure you want to delete "${targetGodown}"?`;
+    
+    if (!window.confirm(msg)) return;
+
+    const updated = godownList.filter((g) => g !== targetGodown);
+    setGodownList(updated);
+    try {
+      localStorage.setItem("custom_godowns_list", JSON.stringify(updated));
+    } catch (err) {}
+
+    if (activeTab === targetGodown) {
+      setActiveTab(updated[0] || "Godown 1");
+    }
+  };
+
   const handlePDFExport = (locationTag: string) => {
     const list = products.filter(p => p.location === locationTag);
     const totalValuation = list.reduce((acc, p) => acc + ((p.qty ?? p.stock ?? 0) * (p.cost || 0)), 0);
@@ -7226,8 +7249,8 @@ export function SuperAdminGodownSection() {
               onClick={() => setActiveTab(gName)}
               style={{
                 flex: "1 1 140px",
-                maxWidth: "250px",
-                padding: "12px 24px",
+                maxWidth: "270px",
+                padding: "12px 20px",
                 borderRadius: "999px",
                 border: isActive ? "none" : "1px solid #E2E8F0",
                 background: isActive ? "linear-gradient(135deg, #7C3AED 0%, #7C3AED 100%)" : "#FFFFFF",
@@ -7239,7 +7262,7 @@ export function SuperAdminGodownSection() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "10px",
+                gap: "8px",
                 boxShadow: isActive ? "0 8px 22px rgba(124, 58, 237, 0.35)" : "0 2px 8px rgba(0,0,0,0.03)"
               }}
               onMouseOver={(e) => { if (!isActive) e.currentTarget.style.transform = "translateY(-2px)"; }}
@@ -7261,6 +7284,33 @@ export function SuperAdminGodownSection() {
               }}>
                 {gProducts.length}
               </span>
+
+              {godownList.length > 1 && (
+                <span
+                  title={`Delete ${gName}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteGodown(gName);
+                  }}
+                  style={{
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    padding: "3px 6px",
+                    borderRadius: "50%",
+                    background: isActive ? "rgba(255, 255, 255, 0.2)" : "#FEE2E2",
+                    color: isActive ? "#FFFFFF" : "#EF4444",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.2s",
+                    marginLeft: "2px"
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.15)")}
+                  onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
+                >
+                  🗑️
+                </span>
+              )}
             </button>
           );
         })}
@@ -7275,6 +7325,31 @@ export function SuperAdminGodownSection() {
             <span style={{ fontSize: 12, background: "#F3EEFF", color: "#7C3AED", padding: "4px 12px", borderRadius: "10px", fontWeight: 700 }}>
               {activeProducts.length} Products | Total Qty: {activeTotalQty} | Value: ₹{activeTotalCost.toLocaleString()}
             </span>
+            {godownList.length > 1 && (
+              <button
+                type="button"
+                onClick={() => handleDeleteGodown(activeTab)}
+                style={{
+                  background: "#FEF2F2",
+                  color: "#DC2626",
+                  border: "1px solid #FCA5A5",
+                  borderRadius: "999px",
+                  padding: "4px 12px",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  transition: "all 0.2s"
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.background = "#FEE2E2")}
+                onMouseOut={(e) => (e.currentTarget.style.background = "#FEF2F2")}
+                title={`Delete ${activeTab}`}
+              >
+                🗑️ Delete Godown
+              </button>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <DownloadDropdown
