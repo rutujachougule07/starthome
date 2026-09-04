@@ -417,6 +417,64 @@ export function normalizeQuotationDoc(d: any): Quotation {
   };
 }
 
+export function normalizeOrderDoc(d: any): Order {
+  if (!d) {
+    return {
+      id: `ord_${Date.now()}`,
+      customerId: "",
+      customerName: "Unknown",
+      productId: "",
+      productName: "Product",
+      qty: 1,
+      total: 0,
+      createdBy: "Employee",
+      status: "Pending",
+      date: new Date().toISOString().slice(0, 10),
+    };
+  }
+  const data = typeof d.data === "function" ? d.data() : d;
+  const id = d.id || data.id || `ord_${Date.now()}`;
+
+  let rawStatus = String(data.status || "Pending").trim();
+  let status: "Pending" | "Approved" | "Rejected" | "Delivered" = "Pending";
+  const sLower = rawStatus.toLowerCase();
+  if (sLower === "approved" || sLower === "accept" || sLower === "accepted") {
+    status = "Approved";
+  } else if (sLower === "rejected" || sLower === "decline" || sLower === "declined" || sLower === "cancelled") {
+    status = "Rejected";
+  } else if (sLower === "delivered" || sLower === "completed") {
+    status = "Delivered";
+  } else {
+    // Treat "pending", "new", "created", "submitted", "requested", or empty as Pending
+    status = "Pending";
+  }
+
+  return {
+    id,
+    customerId: data.customerId || data.customer_id || "",
+    customerName: data.customerName || data.customer_name || data.customer || "Customer",
+    productId: data.productId || data.product_id || "",
+    productName: data.productName || data.product_name || data.product || "Product",
+    qty: Number(data.qty ?? data.quantity ?? 1),
+    total: Number(data.total ?? data.totalPrice ?? data.amount ?? 0),
+    discount: data.discount !== undefined ? Number(data.discount) : undefined,
+    createdBy: data.createdBy || data.created_by || data.employeeName || data.assignedToName || "Employee",
+    status,
+    date: data.date || data.createdAt || new Date().toISOString().slice(0, 10),
+    assignedTo: data.assignedTo || data.assigned_to || undefined,
+    assignedToName: data.assignedToName || data.assigned_to_name || undefined,
+    sentToEmployee: data.sentToEmployee !== undefined ? Boolean(data.sentToEmployee) : undefined,
+    customerBargain: data.customerBargain || undefined,
+    docType: data.docType || "Bill",
+    docTypes: Array.isArray(data.docTypes) ? data.docTypes : undefined,
+    estimateType: data.estimateType || undefined,
+    paymentMode: data.paymentMode || undefined,
+    bookingExpiryDate: data.bookingExpiryDate || undefined,
+    isIncentive: data.isIncentive !== undefined ? Boolean(data.isIncentive) : undefined,
+    serialNumber: data.serialNumber || undefined,
+  };
+}
+
 export const StoreContext = createContext<(State & { login: (username: string, password: string) => Promise<Role | null>; logout: () => void; setState: (updater: (s: State) => State) => void; uid: (prefix: string) => string; }) | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -515,7 +573,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         updateCollectionState("customers", list);
       }),
       onSnapshot(collection(db, "orders"), (snap) => {
-        const list = snap.docs.map((d) => d.data() as Order);
+        const list = snap.docs.map((d) => normalizeOrderDoc({ id: d.id, ...d.data() }));
         updateCollectionState("orders", list);
       }),
       onSnapshot(collection(db, "tasks"), (snap) => {
