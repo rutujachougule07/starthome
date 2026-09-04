@@ -449,6 +449,16 @@ export function normalizeOrderDoc(d: any): Order {
     status = "Pending";
   }
 
+  const sentToEmployee = data.sentToEmployee !== undefined ? Boolean(data.sentToEmployee) : false;
+  const createdBy = data.createdBy || data.created_by || data.employeeName || data.assignedToName || "Employee";
+
+  // If order was created via Android app or Employee (e.g. SALE_ id or createdBy Employee)
+  // AND Admin/Manager has not approved it yet (sentToEmployee is false),
+  // force status to "Pending" so Admin and Manager get Approve & Reject buttons!
+  if (!sentToEmployee && (createdBy.toLowerCase().includes("employee") || id.includes("SALE_") || id.startsWith("SALE_"))) {
+    status = "Pending";
+  }
+
   return {
     id,
     customerId: data.customerId || data.customer_id || "",
@@ -458,12 +468,12 @@ export function normalizeOrderDoc(d: any): Order {
     qty: Number(data.qty ?? data.quantity ?? 1),
     total: Number(data.total ?? data.totalPrice ?? data.amount ?? 0),
     discount: data.discount !== undefined ? Number(data.discount) : undefined,
-    createdBy: data.createdBy || data.created_by || data.employeeName || data.assignedToName || "Employee",
+    createdBy,
     status,
     date: data.date || data.createdAt || new Date().toISOString().slice(0, 10),
     assignedTo: data.assignedTo || data.assigned_to || undefined,
     assignedToName: data.assignedToName || data.assigned_to_name || undefined,
-    sentToEmployee: data.sentToEmployee !== undefined ? Boolean(data.sentToEmployee) : undefined,
+    sentToEmployee,
     customerBargain: data.customerBargain || undefined,
     docType: data.docType || "Bill",
     docTypes: Array.isArray(data.docTypes) ? data.docTypes : undefined,
