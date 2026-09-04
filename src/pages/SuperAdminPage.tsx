@@ -7195,7 +7195,7 @@ export function SuperAdminGodownSection() {
         <button
           onClick={() => setShowAddGodown(true)}
           style={{
-            background: "linear-gradient(135deg, #059669 0%, #10B981 100%)",
+            background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
             color: "#FFFFFF",
             border: "none",
             borderRadius: "999px",
@@ -7203,7 +7203,7 @@ export function SuperAdminGodownSection() {
             fontSize: "14px",
             fontWeight: 700,
             cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)",
+            boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)",
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
@@ -7353,7 +7353,7 @@ export function SuperAdminGodownSection() {
               <button
                 type="submit"
                 style={{
-                  background: "linear-gradient(135deg, #059669 0%, #10B981 100%)",
+                  background: "linear-gradient(135deg, #7C3AED 0%, #D946EF 100%)",
                   color: "#FFFFFF",
                   border: "none",
                   borderRadius: "999px",
@@ -7361,7 +7361,7 @@ export function SuperAdminGodownSection() {
                   fontSize: "14px",
                   fontWeight: 700,
                   cursor: "pointer",
-                  boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)"
+                  boxShadow: "0 4px 14px rgba(124, 58, 237, 0.3)"
                 }}
               >
                 Create Godown
