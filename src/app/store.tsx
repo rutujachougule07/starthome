@@ -28,6 +28,23 @@ export interface User {
   branchAccess?: string;
 }
 export interface Product { id: string; name: string; category: string; price: number; stock: number; status: string; sku: string; image: string; qty: number; cost: number; incentive: number; supplier: string; date: string; warranty?: string; model?: string; brand?: string; location?: "Shop" | "Godown 1" | "Godown 2" | "Display"; assignedEmployeeId?: string; incentiveSeen?: boolean; serialNumbers?: string[]; batches?: Product[]; }
+
+export function getProductUnitPrice(p?: { price?: number; cost?: number; qty?: number; stock?: number; unitPrice?: number } | null): number {
+  if (!p) return 0;
+  if (p.unitPrice && p.unitPrice > 0) {
+    return p.unitPrice;
+  }
+  const rawPrice = Number(p.price || 0);
+  const rawCost = Number(p.cost || 0);
+
+  if (rawPrice > 0) {
+    return rawPrice;
+  }
+  if (rawCost > 0) {
+    return rawCost;
+  }
+  return 0;
+}
 export interface Customer { id: string; name: string; email: string; phone: string; address: string; status: string; }
 export interface Order { id: string; customerId: string; customerName: string; productId: string; productName: string; qty: number; total: number; discount?: number; createdBy: string; status: "Pending" | "Approved" | "Rejected" | "Delivered"; date: string; assignedTo?: string; assignedToName?: string; sentToEmployee?: boolean; customerBargain?: string; docType?: "Bill" | "Order Copy" | "Estimate"; docTypes?: ("Bill" | "Order Copy" | "Estimate")[]; estimateType?: "Cash" | "Online" | "Financial"; paymentMode?: "Cash" | "Online" | "Financial"; bookingExpiryDate?: string; isIncentive?: boolean; serialNumber?: string; }
 export interface Task { id: string; title: string; assignedTo: string; assignedToName: string; customerId?: string; status: "Pending" | "In Progress" | "Completed"; date: string; proofNote?: string; proofUrl?: string; }
@@ -249,6 +266,10 @@ const syncCollection = async (
           batch.set(doc(db, "employees", newItem.employeeId), empClean, { merge: true });
           batch.set(doc(db, "users", newItem.employeeId), cleanItem, { merge: true });
         }
+      } else if (colName === "orders") {
+        batch.set(doc(db, "sales", newItem.id), cleanItem, { merge: true });
+        batch.set(doc(db, "employee_orders", newItem.id), cleanItem, { merge: true });
+        batch.set(doc(db, "sales_orders", newItem.id), cleanItem, { merge: true });
       }
       hasChanges = true;
     }
@@ -260,6 +281,10 @@ const syncCollection = async (
       batch.delete(doc(db, colName, oldItem.id));
       if (colName === "users") {
         batch.delete(doc(db, "employees", oldItem.id));
+      } else if (colName === "orders") {
+        batch.delete(doc(db, "sales", oldItem.id));
+        batch.delete(doc(db, "employee_orders", oldItem.id));
+        batch.delete(doc(db, "sales_orders", oldItem.id));
       }
       hasChanges = true;
     }
@@ -449,15 +474,11 @@ export function normalizeOrderDoc(d: any): Order {
     status = "Pending";
   }
 
-  const sentToEmployee = data.sentToEmployee !== undefined ? Boolean(data.sentToEmployee) : false;
-  const createdBy = data.createdBy || data.created_by || data.employeeName || data.assignedToName || "Employee";
-
-  // If order was created via Android app or Employee (e.g. SALE_ id or createdBy Employee)
-  // AND Admin/Manager has not approved it yet (sentToEmployee is false),
-  // force status to "Pending" so Admin and Manager get Approve & Reject buttons!
-  if (!sentToEmployee && (createdBy.toLowerCase().includes("employee") || id.includes("SALE_") || id.startsWith("SALE_"))) {
-    status = "Pending";
+  let sentToEmployee = data.sentToEmployee === true || data.sentToEmployee === "true";
+  if (status === "Approved" || status === "Delivered") {
+    sentToEmployee = true;
   }
+  const createdBy = data.createdBy || data.created_by || data.employeeName || data.assignedToName || "Employee";
 
   return {
     id,
@@ -537,6 +558,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       );
       updateCollectionState("users", merged);
     };
+    let ordersList1: Order[] = [];
+    let ordersList2: Order[] = [];
+    let ordersList3: Order[] = [];
+    let ordersList4: Order[] = [];
+    let hasLoadedOrders1 = false;
+
+    const mergeAndSetOrders = () => {
+      const combinedMap = new Map<string, Order>();
+
+      // 1. Add active items from primary "orders" collection
+      ordersList1.forEach((o) => {
+        if (o && o.id && (o as any).isDeleted !== true && o.status !== ("Deleted" as any)) {
+          combinedMap.set(o.id, o);
+        }
+      });
+
+      // 2. Add items from secondary collections ONLY if they are not deleted in primary "orders"
+      [...ordersList2, ...ordersList3, ...ordersList4].forEach((o) => {
+        if (o && o.id && (o as any).isDeleted !== true && o.status !== ("Deleted" as any)) {
+          if (hasLoadedOrders1 && !ordersList1.some((item) => item.id === o.id)) {
+            // Item was deleted in primary "orders" collection (e.g. from Android app)
+            return;
+          }
+          combinedMap.set(o.id, o);
+        }
+      });
+
+      updateCollectionState("orders", Array.from(combinedMap.values()));
+    };
 
     // 1. Immediately subscribe to Firestore collections without waiting for network seed check
     const unsubscribers = [
@@ -583,8 +633,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         updateCollectionState("customers", list);
       }),
       onSnapshot(collection(db, "orders"), (snap) => {
-        const list = snap.docs.map((d) => normalizeOrderDoc({ id: d.id, ...d.data() }));
-        updateCollectionState("orders", list);
+        hasLoadedOrders1 = true;
+        ordersList1 = snap.docs.map((d) => normalizeOrderDoc({ id: d.id, ...d.data() }));
+        mergeAndSetOrders();
+      }),
+      onSnapshot(collection(db, "sales"), (snap) => {
+        ordersList2 = snap.docs.map((d) => normalizeOrderDoc({ id: d.id, ...d.data() }));
+        mergeAndSetOrders();
+      }),
+      onSnapshot(collection(db, "employee_orders"), (snap) => {
+        ordersList3 = snap.docs.map((d) => normalizeOrderDoc({ id: d.id, ...d.data() }));
+        mergeAndSetOrders();
+      }),
+      onSnapshot(collection(db, "sales_orders"), (snap) => {
+        ordersList4 = snap.docs.map((d) => normalizeOrderDoc({ id: d.id, ...d.data() }));
+        mergeAndSetOrders();
       }),
       onSnapshot(collection(db, "tasks"), (snap) => {
         const list = snap.docs.map((d) => d.data() as Task);

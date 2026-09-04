@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Plus } from "lucide-react";
-import { useStore, loadCurrentUser, Customer, Product, Order, Task } from "../app/store";
+import { useStore, loadCurrentUser, Customer, Product, Order, Task, getProductUnitPrice } from "../app/store";
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm, BarcodeScannerModal, QuotationsSection } from "./SuperAdminPage";
 import { getAutoProductImage } from "../utils/autoProductImage";
@@ -599,8 +599,9 @@ function OrderUpdates() {
               const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
               const brandStr = product?.brand ? ` (${product.brand})` : "";
               const isIncentiveOrder = product && (product.incentive ?? 0) > 0;
-              const orderBasePrice = Math.round(o.total / (1 - ((o.discount || 0) / 100)));
-              const orderUnitPrice = Math.round(orderBasePrice / o.qty);
+              const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
+              const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
+              const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
               return (
                 <div key={o.id} className="data-card" style={{ borderLeft: "4px solid #F59E0B", background: "#FFFBEB" }}>
@@ -636,6 +637,17 @@ function OrderUpdates() {
                   </div>
 
                   <div className="data-card-body">
+                    <div className="data-row">
+                      <span className="data-label">Document Method</span>
+                      <span className="data-value" style={{
+                        fontWeight: 800,
+                        color: o.docType === "Order Copy" ? "#6D28D9" : o.docType === "Estimate" ? "#b45309" : "#0369a1"
+                      }}>
+                        {o.docTypes && o.docTypes.length > 0
+                          ? o.docTypes.map(t => t === "Order Copy" ? "📄 Order Copy" : t === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill").join(" + ")
+                          : o.docType === "Order Copy" ? "📄 Order Copy" : o.docType === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill"}
+                      </span>
+                    </div>
                     <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                     <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
                     <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
@@ -644,31 +656,13 @@ function OrderUpdates() {
 
                   <div className="data-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #FDE68A" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {o.docType === "Order Copy" ? (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ padding: "6px 12px", fontSize: 11, fontWeight: 700, background: "#F3E8FF", border: "1px solid #DDD6FE", borderRadius: 20, cursor: "pointer", color: "#6D28D9" }}
-                          onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
-                        >
-                          📄 View Order Copy
-                        </button>
-                      ) : o.docType === "Estimate" ? (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ padding: "6px 12px", fontSize: 11, fontWeight: 700, background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 20, cursor: "pointer", color: "#B45309" }}
-                          onClick={() => setActiveDoc({ order: o, type: "Estimate" })}
-                        >
-                          🏷️ View Estimate ({o.estimateType || "Cash"})
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ padding: "6px 12px", fontSize: 11, fontWeight: 700, background: "#E0F2FE", border: "1px solid #BAE6FD", borderRadius: 20, cursor: "pointer", color: "#0369A1" }}
-                          onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                        >
-                          🧾 View Bill
-                        </button>
-                      )}
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ padding: "6px 14px", fontSize: 11, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", borderRadius: 20, cursor: "pointer", color: "#0369A1" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                      >
+                        🧾 View Bill
+                      </button>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                       <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
@@ -695,8 +689,9 @@ function OrderUpdates() {
             const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
             const brandStr = product?.brand ? ` (${product.brand})` : "";
             const isIncentiveOrder = product && (product.incentive ?? 0) > 0;
-            const orderBasePrice = Math.round(o.total / (1 - ((o.discount || 0) / 100)));
-            const orderUnitPrice = Math.round(orderBasePrice / o.qty);
+            const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
+            const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
+            const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
             return (
               <div key={o.id} className="data-card" style={{ borderLeft: "4px solid var(--accent)" }}>
@@ -732,40 +727,31 @@ function OrderUpdates() {
                 </div>
 
                 <div className="data-card-body">
+                  <div className="data-row">
+                    <span className="data-label">Document Method</span>
+                    <span className="data-value" style={{
+                      fontWeight: 800,
+                      color: o.docType === "Order Copy" ? "#6D28D9" : o.docType === "Estimate" ? "#b45309" : "#0369a1"
+                    }}>
+                      {o.docTypes && o.docTypes.length > 0
+                        ? o.docTypes.map(t => t === "Order Copy" ? "📄 Order Copy" : t === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill").join(" + ")
+                        : o.docType === "Order Copy" ? "📄 Order Copy" : o.docType === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill"}
+                    </span>
+                  </div>
                   <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
                   <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{(o.total || 0).toLocaleString()}</span></div>
                 </div>
 
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%", flexWrap: "wrap" }}>
-                    {((o.docTypes && o.docTypes.includes("Bill")) || o.docType === "Bill" || (!o.docTypes && !o.docType)) && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ flex: 1, minWidth: "90px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#E0F2FE", border: "1px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                      >
-                        🧾 View Bill
-                      </button>
-                    )}
-                    {((o.docTypes && o.docTypes.includes("Estimate")) || o.docType === "Estimate") && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ flex: 1, minWidth: "110px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FEF3C7", border: "1px solid #FCD34D", color: "#B45309", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Estimate" })}
-                      >
-                        🏷️ View Estimate ({o.estimateType || "Cash"})
-                      </button>
-                    )}
-                    {((o.docTypes && o.docTypes.includes("Order Copy")) || o.docType === "Order Copy") && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ flex: 1, minWidth: "110px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#F3E8FF", border: "1px solid #DDD6FE", color: "#6D28D9", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
-                      >
-                        📄 View Order Copy
-                      </button>
-                    )}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                    >
+                      🧾 View Bill
+                    </button>
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%" }}>
@@ -813,8 +799,9 @@ function OrderUpdates() {
             const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
             const brandStr = product?.brand ? ` (${product.brand})` : "";
             const isIncentiveOrder = product && (product.incentive ?? 0) > 0;
-            const orderBasePrice = Math.round(o.total / (1 - ((o.discount || 0) / 100)));
-            const orderUnitPrice = Math.round(orderBasePrice / o.qty);
+            const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
+            const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
+            const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
             return (
               <div key={o.id} className="data-card">
@@ -865,34 +852,14 @@ function OrderUpdates() {
                 </div>
 
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%", flexWrap: "wrap" }}>
-                    {((o.docTypes && o.docTypes.includes("Bill")) || o.docType === "Bill" || (!o.docTypes && !o.docType)) && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ flex: 1, minWidth: "90px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#E0F2FE", border: "1px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                      >
-                        🧾 View Bill
-                      </button>
-                    )}
-                    {((o.docTypes && o.docTypes.includes("Estimate")) || o.docType === "Estimate") && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ flex: 1, minWidth: "110px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#FEF3C7", border: "1px solid #FCD34D", color: "#B45309", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Estimate" })}
-                      >
-                        🏷️ View Estimate ({o.estimateType || "Cash"})
-                      </button>
-                    )}
-                    {((o.docTypes && o.docTypes.includes("Order Copy")) || o.docType === "Order Copy") && (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ flex: 1, minWidth: "110px", padding: "7px 12px", fontSize: 12, fontWeight: 700, background: "#F3E8FF", border: "1px solid #DDD6FE", color: "#6D28D9", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
-                      >
-                        📄 View Order Copy
-                      </button>
-                    )}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                    >
+                      🧾 View Bill
+                    </button>
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%" }}>
@@ -988,7 +955,7 @@ function ProductsSection() {
 
   const unitPrice = useMemo(() => {
     if (!sellingProduct) return 0;
-    return sellingProduct.price;
+    return getProductUnitPrice(sellingProduct);
   }, [sellingProduct]);
 
   const myApprovedOrders = useMemo(() => {
@@ -1187,7 +1154,7 @@ function ProductsSection() {
                           <>
                             <span> · </span>
                             <span style={{ color: "#d97706", fontWeight: 700, background: "#fef3c7", padding: "2px 6px", borderRadius: "4px", fontSize: "10px" }}>
-                              💰 Incentive: {p.price > 0 ? parseFloat(((p.incentive / p.price) * 100).toFixed(1)) : 0}%
+                              💰 Incentive: {getProductUnitPrice(p) > 0 ? parseFloat(((p.incentive / getProductUnitPrice(p)) * 100).toFixed(1)) : 0}%
                             </span>
                           </>
                         )}
@@ -1195,7 +1162,7 @@ function ProductsSection() {
                     </div>
                   </td>
                   <td>{p.category}</td>
-                  <td>₹{(p.price || 0).toLocaleString()}</td>
+                  <td>₹{getProductUnitPrice(p).toLocaleString()}</td>
                   <td>{p.qty ?? p.stock}</td>
                   <td><Pill status={p.status} /></td>
                   <td><span style={{ fontWeight: 600, color: "var(--brown-dark)" }}>{p.brand || "—"}</span></td>
@@ -1293,7 +1260,7 @@ function ProductsSection() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#1E293B" }}>{sellingProduct.name}</h4>
               <span style={{ fontSize: "11px", fontWeight: 700, color: "#D97706", background: "#FEF3C7", border: "1px solid #FDE047", padding: "3px 10px", borderRadius: "20px" }}>
-                💰 Incentive: {sellingProduct.price > 0 ? Math.round((sellingProduct.incentive / sellingProduct.price) * 100) : 0}%
+                💰 Incentive: {getProductUnitPrice(sellingProduct) > 0 ? Math.round((sellingProduct.incentive / getProductUnitPrice(sellingProduct)) * 100) : 0}%
               </span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", fontSize: "12px", color: "#64748B" }}>
@@ -1985,9 +1952,6 @@ export function EmployeeIncentiveSection() {
                 fontSize: "13.5px",
                 fontWeight: 800,
                 borderRadius: "30px",
-                background: (!customerName.trim() || !customerPhone.trim()) ? "#CBD5E1" : "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
-                border: "none",
-                color: "#FFFFFF",
                 cursor: (!customerName.trim() || !customerPhone.trim()) ? "not-allowed" : "pointer",
                 boxShadow: (!customerName.trim() || !customerPhone.trim()) ? "none" : "0 6px 18px rgba(124, 58, 237, 0.35)",
                 height: "42px"
@@ -2005,13 +1969,13 @@ export function EmployeeIncentiveSection() {
 export function OrderDocumentModal({
   order,
   type,
-  onClose,
+  onClose
 }: {
   order: Order;
   type: "Bill" | "Order Copy" | "Estimate";
   onClose: () => void;
 }) {
-  const { products, customers, setState, currentUser, uid } = useStore();
+  const { products, customers, users, setState, currentUser, uid } = useStore();
   const [sentSuccess, setSentSuccess] = useState(false);
   const isAdmin = currentUser?.role === "superadmin";
 
@@ -2020,12 +1984,44 @@ export function OrderDocumentModal({
   );
   const customer = customers.find((c) => c.id === order.customerId || c.name.toLowerCase() === order.customerName.toLowerCase());
 
+  const creatorUser = users.find((u) =>
+    u.id === order.createdBy ||
+    u.username?.toLowerCase() === order.createdBy?.toLowerCase() ||
+    u.email?.toLowerCase() === order.createdBy?.toLowerCase() ||
+    u.employeeId === order.createdBy ||
+    u.name.toLowerCase() === order.createdBy?.toLowerCase()
+  );
+
+  let salesRepName = "Employee";
+  if (creatorUser) {
+    salesRepName = creatorUser.name;
+  } else if (order.assignedToName && order.assignedToName !== "Employee") {
+    salesRepName = order.assignedToName;
+  } else if (order.createdBy && order.createdBy !== "Employee") {
+    salesRepName = order.createdBy;
+  } else if (currentUser?.name) {
+    salesRepName = currentUser.name;
+  }
+
+  let rawAddress = customer?.address || "";
+  let displayAddress = rawAddress;
+  let displayBargain = order.customerBargain || "";
+
+  if (rawAddress.includes("Note:") || rawAddress.includes("note:")) {
+    const parts = rawAddress.split(/Note:|note:/i);
+    displayAddress = parts[0].replace(/\|/g, "").trim();
+    if (!displayBargain && parts[1]) {
+      displayBargain = parts[1].trim();
+    }
+  }
+
   const isIncentiveOrder = order.isIncentive || order.customerId === "c_incentive" || order.customerName === "Incentive Sell Request";
   const isCustomerDiscount = !isIncentiveOrder && !!(order.discount && order.discount > 0);
 
-  const orderBasePrice = isCustomerDiscount ? Math.round(order.total / (1 - ((order.discount || 0) / 100))) : order.total;
-  const unitPrice = Math.round(orderBasePrice / (order.qty || 1));
-  const discountVal = isCustomerDiscount ? (orderBasePrice - order.total) : 0;
+  const isApprovedOrDelivered = order.status === "Approved" || order.status === "Delivered";
+  const orderBasePrice = (isCustomerDiscount && !isApprovedOrDelivered) ? Math.round(order.total / (1 - ((order.discount || 0) / 100))) : order.total;
+  const unitPrice = isApprovedOrDelivered ? Math.round(order.total / (order.qty || 1)) : Math.round(orderBasePrice / (order.qty || 1));
+  const discountVal = (isCustomerDiscount && !isApprovedOrDelivered) ? (orderBasePrice - order.total) : 0;
   const isBill = type === "Bill";
 
   const handlePrint = () => {
@@ -2145,14 +2141,21 @@ export function OrderDocumentModal({
             <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>👤 Customer Info</div>
             <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", marginTop: "4px" }}>{order.customerName}</div>
             {customer?.phone && <div style={{ fontSize: "12px", color: "#334155", marginTop: "2px" }}>📞 {customer.phone}</div>}
-            {customer?.address && <div style={{ fontSize: "12px", color: "#334155", marginTop: "2px" }}>📍 {customer.address}</div>}
+            {displayAddress && <div style={{ fontSize: "12px", color: "#334155", marginTop: "2px" }}>📍 {displayAddress}</div>}
+            {displayBargain && (
+              <div style={{ fontSize: "12px", color: "#dc2626", marginTop: "2px", fontWeight: 600 }}>
+                🏷️ Customer Bargaining: {displayBargain.startsWith("₹") ? displayBargain : `₹${displayBargain}`}
+              </div>
+            )}
           </div>
           <div>
             <div style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>📋 Document & Payment Details</div>
             <div style={{ fontSize: "12px", color: "#334155", marginTop: "4px" }}>
-              <strong>Document Type:</strong>{" "}
-              <span style={{ fontWeight: 700, color: type === "Bill" ? "#0369a1" : type === "Estimate" ? "#b45309" : "#6D28D9" }}>
-                {type === "Bill" ? "🧾 Bill / Invoice" : type === "Estimate" ? "🏷️ Estimate" : "📄 Order Copy"}
+              <strong>Document Method:</strong>{" "}
+              <span style={{ fontWeight: 800, color: type === "Bill" ? "#0369a1" : type === "Estimate" ? "#b45309" : "#6D28D9" }}>
+                {order.docTypes && order.docTypes.length > 0
+                  ? order.docTypes.map(t => t === "Order Copy" ? "📄 Order Copy" : t === "Estimate" ? `🏷️ Estimate (${order.estimateType || "Cash"})` : "🧾 Bill").join(" + ")
+                  : (order.docType === "Order Copy" ? "📄 Order Copy" : order.docType === "Estimate" ? `🏷️ Estimate (${order.estimateType || "Cash"})` : "🧾 Bill / Invoice")}
               </span>
             </div>
             <div style={{ fontSize: "12px", color: "#334155", marginTop: "2px" }}>
@@ -2165,8 +2168,13 @@ export function OrderDocumentModal({
               </span>
             </div>
             <div style={{ fontSize: "12px", color: "#334155", marginTop: "2px" }}>
-              <strong>Sales Representative:</strong> {order.assignedToName || order.createdBy || "—"}
+              <strong>Created By:</strong> {salesRepName}
             </div>
+            {order.assignedToName && (
+              <div style={{ fontSize: "12px", color: "#334155", marginTop: "2px" }}>
+                <strong>Assigned To:</strong> {order.assignedToName}
+              </div>
+            )}
             <div style={{ fontSize: "12px", color: "#334155", marginTop: "2px" }}>
               <strong>Status:</strong> <span style={{ color: order.status === "Approved" || order.status === "Delivered" ? "#16a34a" : "#ca8a04", fontWeight: 700 }}>{order.status}</span>
             </div>
@@ -2179,9 +2187,9 @@ export function OrderDocumentModal({
                 )}
               </div>
             )}
-            {order.customerBargain && (
-              <div style={{ fontSize: "12px", color: "#dc2626", marginTop: "2px" }}>
-                <strong>Remarks / Bargaining:</strong> {order.customerBargain}
+            {order.serialNumber && (
+              <div style={{ fontSize: "12px", color: "#b45309", marginTop: "2px", fontWeight: 700 }}>
+                🏷️ Serial / Barcode: {order.serialNumber}
               </div>
             )}
           </div>
@@ -2331,11 +2339,21 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
     }
   }, [activeProducts, productId]);
 
-  const selectedProduct = activeProducts.find(p => p.id === productId);
-  const unitPrice = selectedProduct ? selectedProduct.price : 0;
+  const selectedProduct = activeProducts.find(p => p.id === productId) || activeProducts[0] || (products && products[0]) || null;
+  const unitPrice = selectedProduct ? getProductUnitPrice(selectedProduct) : 0;
   const baseTotal = unitPrice * qty;
   const discountVal = discountPct ? Math.round(((Number(discountPct) || 0) / 100) * baseTotal) : 0;
-  const finalTotal = Math.max(0, baseTotal - discountVal);
+  let finalTotal = Math.max(0, baseTotal - discountVal);
+
+  if (customerBargain && (!discountPct || discountPct === 0)) {
+    const bargainMatch = customerBargain.replace(/,/g, "").match(/(\d{3,7})/);
+    if (bargainMatch) {
+      const parsedB = parseInt(bargainMatch[1], 10);
+      if (!isNaN(parsedB) && parsedB > 0) {
+        finalTotal = parsedB;
+      }
+    }
+  }
 
   const availableSerials: string[] = useMemo(() => {
     if (!selectedProduct) return [];
@@ -2370,14 +2388,16 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
 
   const handleSubmit = () => {
     setErrorMsg("");
-    if (!customerName.trim() || !customerPhone.trim()) {
-      setErrorMsg("Please fill in customer name and phone number.");
+    if (!customerName.trim()) {
+      setErrorMsg("Please enter customer name.");
       return;
     }
-    if (!selectedProduct) {
+    const targetProd = selectedProduct || activeProducts[0] || (products && products[0]);
+    if (!targetProd) {
       setErrorMsg("Please select a product.");
       return;
     }
+    const finalPhone = customerPhone.trim() || "N/A";
 
     if (initial) {
       setState((s: any) => ({
@@ -2413,14 +2433,14 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
     let createdOrderObj: Order | null = null;
 
     setState((s: any) => {
-      let customerId = s.customers.find((c: any) => c.phone.trim() === customerPhone.trim())?.id;
+      let customerId = s.customers.find((c: any) => c.phone && c.phone.trim() === finalPhone)?.id;
       let nextCustomers = s.customers;
       if (!customerId) {
         customerId = uid("c");
         const newCust = {
           id: customerId,
           name: customerName.trim(),
-          phone: customerPhone.trim(),
+          phone: finalPhone,
           address: customerAddress.trim(),
           email: "",
           status: "Active"
@@ -2662,7 +2682,7 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
                 {activeProducts.length === 0 && <option value="">-- No Products Available --</option>}
                 {activeProducts.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} {p.brand ? `(${p.brand})` : ""} - ₹{(p.price || 0).toLocaleString()} (Stock: {p.qty ?? p.stock ?? 0})
+                    {p.name} {p.brand ? `(${p.brand})` : ""}
                   </option>
                 ))}
               </select>
@@ -2674,7 +2694,7 @@ export function EmployeeCreateOrderModal({ onClose, initial, selectedProductId, 
                     borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#7C3AED",
                     boxShadow: "0 2px 6px rgba(124, 58, 237, 0.12)"
                   }}>
-                    💰 ₹{(selectedProduct.price || 0).toLocaleString()}
+                    💰 Unit Price: ₹{getProductUnitPrice(selectedProduct).toLocaleString()}
                   </div>
                   <div style={{
                     display: "inline-flex", alignItems: "center", gap: "6px",

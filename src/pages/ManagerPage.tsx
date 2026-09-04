@@ -2,7 +2,7 @@ import { EmployeeIncentiveSection } from "./EmployeePage";
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useStore, loadCurrentUser, User, Customer, Order, Product } from "../app/store";
+import { useStore, loadCurrentUser, User, Customer, Order, Product, getProductUnitPrice } from "../app/store";
 import { DashboardLayout, StatCard, Pill, Modal, NavItem, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection, OrderApprovalSection } from "./SuperAdminPage";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
@@ -490,8 +490,9 @@ function OrdersMgmt() {
             const isProdIncentive = !!(product && (product.incentive ?? 0) > 0 && product.date && new Date(product.date) < ninetyDaysAgo);
             const isIncentiveOrder = o.isIncentive ?? isProdIncentive;
 
-            const orderBasePrice = Math.round(o.total / (1 - ((o.discount || 0) / 100)));
-            const orderUnitPrice = Math.round(orderBasePrice / o.qty);
+            const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
+            const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
+            const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
             return (
               <div key={o.id} className="data-card">
@@ -581,7 +582,8 @@ function OrdersMgmt() {
             const p = products.find((p) => p.id === productId)!;
             const orderId = uid("o");
             const notifId = uid("n");
-            const rawTotal = qty * p.price;
+            const unitPrice = getProductUnitPrice(p);
+            const rawTotal = qty * unitPrice;
             const finalDiscount = Number(discountPct) || 0;
             const calculatedTotal = Math.round(rawTotal * (1 - finalDiscount / 100));
 
@@ -661,7 +663,8 @@ function OrdersMgmt() {
           onClose={() => setEditingOrder(null)}
           onSave={(customerName, customerPhone, customerAddress, productId, qty, discountPct, assignedTo, assignedToName, customerBargain, docType, bookingExpiryDate, docTypes) => {
             const p = products.find((p) => p.id === productId)!;
-            const rawTotal = qty * p.price;
+            const unitPrice = getProductUnitPrice(p);
+            const rawTotal = qty * unitPrice;
             const finalDiscount = Number(discountPct) || 0;
             const calculatedTotal = Math.round(rawTotal * (1 - finalDiscount / 100));
 
@@ -977,7 +980,7 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
                   borderRadius: "30px", fontSize: "13px", fontWeight: 800, color: "#7C3AED",
                   boxShadow: "0 2px 6px rgba(124, 58, 237, 0.12)"
                 }}>
-                  💰 ₹{(selectedProduct.price || 0).toLocaleString()}
+                  💰 Unit Price: ₹{getProductUnitPrice(selectedProduct).toLocaleString()}
                 </div>
                 <div style={{
                   display: "inline-flex", alignItems: "center", gap: "6px",

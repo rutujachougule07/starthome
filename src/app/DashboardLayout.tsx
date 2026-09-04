@@ -66,7 +66,17 @@ export function DashboardLayout({ role, title, nav, active, onNav, children }: P
     return 0;
   };
 
-  const initials = (currentUser?.name ?? "Vaishnavi Bhosale").split(" ").map((s) => s[0]).slice(0, 2).join("");
+  const rawName = currentUser?.name?.trim();
+  const rawEmail = (currentUser?.email || currentUser?.username || "").trim();
+  const emailPrefix = rawEmail.includes("@") ? rawEmail.split("@")[0] : rawEmail;
+  const formattedEmailName = emailPrefix ? emailPrefix.replace(/[^a-zA-Z0-9]/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()) : "";
+
+  const userDisplayName = (rawName && rawName.toLowerCase() !== "employee" && rawName.toLowerCase() !== "manager" && rawName.toLowerCase() !== "super admin" && rawName.toLowerCase() !== "admin")
+    ? rawName
+    : (formattedEmailName || "User");
+
+  const roleBadgeLabel = role === "superadmin" ? "Super Admin" : (role === "manager" ? "Manager" : "Employee");
+  const initials = userDisplayName.split(" ").filter(Boolean).map((s) => s[0]).slice(0, 2).join("").toUpperCase() || "U";
 
   return (
     <div className="sham-app">
@@ -161,8 +171,8 @@ export function DashboardLayout({ role, title, nav, active, onNav, children }: P
               <div className="profile-chip">
                 <span className="avatar">{initials}</span>
                 <div style={{ fontSize: 12, lineHeight: 1.2 }}>
-                  <div style={{ fontWeight: 700 }}>{currentUser?.name}</div>
-                  <div style={{ color: "var(--brown)" }}>{title}</div>
+                  <div style={{ fontWeight: 700 }}>{userDisplayName}</div>
+                  <div style={{ color: "var(--brown)" }}>{roleBadgeLabel}</div>
                 </div>
               </div>
             </div>

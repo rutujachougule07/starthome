@@ -1,7 +1,7 @@
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useStore, loadCurrentUser, Product, User, Order, Lead, Task, Quotation, normalizeQuotationDoc } from "../app/store";
+import { useStore, loadCurrentUser, Product, User, Order, Lead, Task, Quotation, normalizeQuotationDoc, getProductUnitPrice } from "../app/store";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
@@ -3612,7 +3612,7 @@ export function OrdersTable() {
 }
 
 export function OrderApprovalSection() {
-  const { orders, products, users, setState, uid } = useStore();
+  const { orders, products, users, setState, uid, currentUser } = useStore();
   const [filter, setFilter] = useState<"all" | "Pending" | "Approved" | "Rejected">("all");
 
   const approvalOrders = useMemo(() => {
@@ -3674,11 +3674,31 @@ export function OrderApprovalSection() {
           if (o.id === id) {
             let finalTotal = o.total;
             let finalDiscount = o.discount;
-            if (status === "Approved" && newDiscountPct !== undefined) {
-              const product = s.products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
-              const basePrice = product ? product.price : Math.round(o.total / (1 - ((o.discount || 0) / 100)));
-              finalDiscount = newDiscountPct;
-              finalTotal = Math.max(0, (basePrice * o.qty) - Math.round((newDiscountPct / 100) * (basePrice * o.qty)));
+
+            let bargainPrice: number | null = null;
+            if (o.customerBargain) {
+              const cleaned = o.customerBargain.replace(/,/g, "");
+              const match = cleaned.match(/(\d{3,7})/);
+              if (match) {
+                const parsed = parseInt(match[1], 10);
+                if (!isNaN(parsed) && parsed > 0) bargainPrice = parsed;
+              }
+            }
+
+            if (status === "Approved") {
+              if (newDiscountPct !== undefined && newDiscountPct > 0) {
+                const product = s.products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
+                const basePrice = product ? getProductUnitPrice(product) : Math.round(o.total / (1 - ((o.discount || 0) / 100)));
+                finalDiscount = newDiscountPct;
+                finalTotal = Math.max(0, (basePrice * o.qty) - Math.round((newDiscountPct / 100) * (basePrice * o.qty)));
+              } else if (bargainPrice && bargainPrice > 0) {
+                finalTotal = bargainPrice;
+                const product = s.products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
+                const basePrice = product ? getProductUnitPrice(product) : 0;
+                if (basePrice > 0 && basePrice * o.qty > bargainPrice) {
+                  finalDiscount = Math.round((((basePrice * o.qty) - bargainPrice) / (basePrice * o.qty)) * 100);
+                }
+              }
             }
             return { ...o, status, discount: finalDiscount, total: finalTotal, sentToEmployee: true };
           }
@@ -3719,8 +3739,51 @@ export function OrderApprovalSection() {
             const isProdIncentive = !!(product && (product.incentive ?? 0) > 0 && product.date && new Date(product.date) < ninetyDaysAgo);
             const isIncentiveOrder = o.isIncentive ?? isProdIncentive;
 
-            const creatorUser = users.find(u => u.id === o.createdBy || u.username === o.createdBy || u.name.toLowerCase() === o.createdBy.toLowerCase());
-            const creatorName = creatorUser ? `${creatorUser.name} (${creatorUser.role === "employee" ? "Employee" : creatorUser.role === "manager" ? "Manager" : "Admin"})` : (o.assignedToName ? `${o.assignedToName} (Employee)` : o.createdBy);
+            const creatorUser = users.find(u =>
+              u.id === o.createdBy ||
+              u.username?.toLowerCase() === o.createdBy?.toLowerCase() ||
+              u.email?.toLowerCase() === o.createdBy?.toLowerCase() ||
+              u.employeeId === o.createdBy ||
+              u.name.toLowerCase() === o.createdBy?.toLowerCase()
+            );
+
+            const assignedUser = users.find(u =>
+              (o.assignedTo && (u.id === o.assignedTo || u.employeeId === o.assignedTo)) ||
+              (o.assignedToName && u.name.toLowerCase() === o.assignedToName.toLowerCase())
+            );
+
+            let empName = "";
+            if (creatorUser && creatorUser.name && creatorUser.name.toLowerCase() !== "employee") {
+              empName = creatorUser.name;
+            } else if (assignedUser && assignedUser.name && assignedUser.name.toLowerCase() !== "employee") {
+              empName = assignedUser.name;
+            } else if (o.assignedToName && o.assignedToName.toLowerCase() !== "employee") {
+              empName = o.assignedToName;
+            } else if (o.createdBy && o.createdBy.toLowerCase() !== "employee") {
+              const cleanCreatedBy = o.createdBy.includes("@") ? o.createdBy.split("@")[0] : o.createdBy;
+              empName = cleanCreatedBy.replace(/[^a-zA-Z0-9\s]/g, " ").trim();
+            }
+
+            if (!empName || empName.toLowerCase() === "employee") {
+              const emp = users.find(u => u.name && u.name.toLowerCase() !== "employee" && (u.role === "employee" || u.role === "manager")) || currentUser;
+              if (emp && emp.name && emp.name.toLowerCase() !== "employee") {
+                empName = emp.name;
+              } else if (emp && emp.email) {
+                empName = emp.email.split("@")[0];
+              } else {
+                empName = "Rutuja";
+              }
+            }
+
+            empName = empName.replace(/[^a-zA-Z0-9\s]/g, " ").trim();
+            empName = empName.charAt(0).toUpperCase() + empName.slice(1);
+            const creatorName = `${empName} (Employee)`;
+
+            const assignedDisplayName = assignedUser
+              ? assignedUser.name
+              : (o.assignedToName && o.assignedToName.toLowerCase() !== "employee"
+                  ? o.assignedToName
+                  : empName);
 
             return (
               <div key={o.id} className="data-card" style={{ width: "100%", boxSizing: "border-box", overflow: "hidden" }}>
@@ -3776,6 +3839,17 @@ export function OrderApprovalSection() {
                   )}
                   <div className="data-row"><span className="data-label">Customer</span><span className="data-value">{o.customerName}</span></div>
                   <div className="data-row">
+                    <span className="data-label">Document Method</span>
+                    <span className="data-value" style={{
+                      fontWeight: 800,
+                      color: o.docType === "Order Copy" ? "#6D28D9" : o.docType === "Estimate" ? "#b45309" : "#0369a1"
+                    }}>
+                      {o.docTypes && o.docTypes.length > 0
+                        ? o.docTypes.map(t => t === "Order Copy" ? "📄 Order Copy" : t === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill").join(" + ")
+                        : o.docType === "Order Copy" ? "📄 Order Copy" : o.docType === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill"}
+                    </span>
+                  </div>
+                  <div className="data-row">
                     <span className="data-label">Payment Mode</span>
                     <span className="data-value" style={{
                       fontWeight: 700,
@@ -3789,7 +3863,7 @@ export function OrderApprovalSection() {
                   {o.customerBargain && (
                     <div className="data-row"><span className="data-label">Bargaining</span><span className="data-value" style={{ color: "var(--danger)", fontWeight: 600, textAlign: "right" }}>{o.customerBargain}</span></div>
                   )}
-                  <div className="data-row"><span className="data-label">Assigned</span><span className="data-value">{o.assignedToName ?? "—"}</span></div>
+                  <div className="data-row"><span className="data-label">Assigned</span><span className="data-value">{assignedDisplayName}</span></div>
                 </div>
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid var(--border)", width: "100%", boxSizing: "border-box" }}>
                   {o.status === "Pending" ? (
@@ -3826,64 +3900,25 @@ export function OrderApprovalSection() {
                   </div>
                   {/* Selected Document Button Row */}
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%", boxSizing: "border-box" }}>
-                    {o.docType === "Order Copy" ? (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          fontSize: 12,
-                          justifyContent: "center",
-                          borderRadius: "10px",
-                          background: "linear-gradient(135deg, #F3E8FF 0%, #EDE9FE 100%)",
-                          border: "1.5px solid #DDD6FE",
-                          color: "#6D28D9",
-                          fontWeight: 800,
-                          boxSizing: "border-box"
-                        }}
-                        onClick={() => setActiveDoc({ order: o, type: "Order Copy" })}
-                      >
-                        📄 View Order Copy
-                      </button>
-                    ) : o.docType === "Estimate" ? (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          fontSize: 12,
-                          justifyContent: "center",
-                          borderRadius: "10px",
-                          background: "linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)",
-                          border: "1.5px solid #FCD34D",
-                          color: "#B45309",
-                          fontWeight: 800,
-                          boxSizing: "border-box"
-                        }}
-                        onClick={() => setActiveDoc({ order: o, type: "Estimate" })}
-                      >
-                        🏷️ View Estimate ({o.estimateType || "Cash"})
-                      </button>
-                    ) : (
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{
-                          width: "100%",
-                          padding: "8px 12px",
-                          fontSize: 12,
-                          justifyContent: "center",
-                          borderRadius: "10px",
-                          background: "linear-gradient(135deg, #E0F2FE 0%, #F0F9FF 100%)",
-                          border: "1.5px solid #BAE6FD",
-                          color: "#0369A1",
-                          fontWeight: 800,
-                          boxSizing: "border-box"
-                        }}
-                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                      >
-                        🧾 View Bill
-                      </button>
-                    )}
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        fontSize: 12,
+                        justifyContent: "center",
+                        borderRadius: "10px",
+                        background: "linear-gradient(135deg, #E0F2FE 0%, #F0F9FF 100%)",
+                        border: "1.5px solid #BAE6FD",
+                        color: "#0369A1",
+                        fontWeight: 800,
+                        boxSizing: "border-box",
+                        cursor: "pointer"
+                      }}
+                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                    >
+                      🧾 View Bill
+                    </button>
                   </div>
 
                   <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "6px", flexWrap: "wrap", alignItems: "center", justifyContent: "center" }}>
@@ -7465,7 +7500,7 @@ function IncentiveSellOrderModal({ product, onClose }: { product: Product; onClo
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const unitPrice = product.price || product.cost || 0;
+  const unitPrice = getProductUnitPrice(product);
   const finalTotal = unitPrice * qty;
   const incPctNum = Number(discountPct) || 0;
   const incPerUnit = incPctNum > 0 ? Math.round((incPctNum / 100) * unitPrice) : (product.incentive || 0);
@@ -8642,7 +8677,7 @@ export function SuperAdminReportsSection() {
                           <td>₹{totalCost.toLocaleString()}</td>
                           <td>{p.supplier || "—"}</td>
                           <td>{formattedDate}</td>
-                          <td>₹{(p.price || 0).toLocaleString()}</td>
+                          <td>₹{getProductUnitPrice(p).toLocaleString()}</td>
                         </tr>
                       );
                     })}
@@ -9332,7 +9367,7 @@ export function QuotationForm({
       if (p.brand) setBrand(p.brand);
       if (p.warranty) setSize(p.warranty);
       if (p.model) setModel(p.model);
-      if (p.cost || p.price) setUnitPrice(p.cost || p.price);
+      if (p) setUnitPrice(getProductUnitPrice(p));
     }
   };
 
@@ -9404,7 +9439,7 @@ export function QuotationForm({
             <option value="">-- Choose Product or Type Manually Below --</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} {p.brand ? `(${p.brand})` : ""} {p.warranty ? `- ${p.warranty}` : ""} - ₹{(p.cost || p.price || 0).toLocaleString()}
+                {p.name} {p.brand ? `(${p.brand})` : ""} {p.warranty ? `- ${p.warranty}` : ""} - ₹{getProductUnitPrice(p).toLocaleString()}
               </option>
             ))}
           </select>
