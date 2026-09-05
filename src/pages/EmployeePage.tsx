@@ -1075,9 +1075,41 @@ function ProductsSection() {
 
   return (
     <>
-      <div style={{ marginBottom: 16 }}>
-        <h2 className="page-title">Products</h2>
-        <p className="page-sub">View active and available products.</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <h2 className="page-title">Products</h2>
+          <p className="page-sub">View active and available products.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowAdd(true)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: "9999px",
+            padding: "8px 20px",
+            fontWeight: 700,
+            fontSize: "13px",
+            boxShadow: "0 4px 14px rgba(139, 92, 246, 0.35)",
+            cursor: "pointer",
+            transition: "all 0.2s ease"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 6px 20px rgba(236, 72, 153, 0.45)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 4px 14px rgba(139, 92, 246, 0.35)";
+          }}
+        >
+          <Plus size={16} strokeWidth={2.5} />
+          <span>Add Product</span>
+        </button>
       </div>
 
       <div className="stat-grid" style={{ marginBottom: 24 }}>
@@ -1088,36 +1120,6 @@ function ProductsSection() {
       <div className="panel">
         <div className="panel-head">
           <h3 className="panel-title">Catalog ({filteredProducts.length})</h3>
-          <button
-            type="button"
-            onClick={() => setShowAdd(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: "9999px",
-              padding: "8px 20px",
-              fontWeight: 700,
-              fontSize: "13px",
-              boxShadow: "0 4px 14px rgba(139, 92, 246, 0.35)",
-              cursor: "pointer",
-              transition: "all 0.2s ease"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-1px)";
-              e.currentTarget.style.boxShadow = "0 6px 20px rgba(236, 72, 153, 0.45)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 4px 14px rgba(139, 92, 246, 0.35)";
-            }}
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            <span>Add Product</span>
-          </button>
         </div>
         <div className="table-wrap">
           <table className="tbl">

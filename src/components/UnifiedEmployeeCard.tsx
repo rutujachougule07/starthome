@@ -54,49 +54,93 @@ export function UnifiedEmployeeCard({
         {/* Content List */}
         <div 
           onClick={() => setShowModal(true)}
-          style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px", marginBottom: "20px", flex: 1, cursor: "pointer" }}
+          style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "12.5px", marginBottom: "20px", flex: 1, cursor: "pointer" }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Briefcase size={14} /> ROLE
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+              <Briefcase size={14} style={{ color: "#7C3AED" }} /> ROLE
             </span>
-            <strong style={{ color: "#1E293B" }}>{employee.jobTitle || (employee.role === "manager" ? "Manager" : "Employee")}</strong>
+            <strong style={{ color: "#1E293B", textAlign: "right", maxWidth: "60%", wordBreak: "break-word" }}>
+              {employee.jobTitle || (employee.role === "manager" ? "Manager" : "Employee")}
+            </strong>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-              <UserIcon size={14} /> USERNAME
-            </span>
-            <strong style={{ color: "#1E293B" }}>{employee.username || "—"}</strong>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Key size={14} /> PASSWORD
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginTop: "2px" }}>
+              <UserIcon size={14} style={{ color: "#7C3AED" }} /> USERNAME
             </span>
             <strong
               style={{
                 color: "#1E293B",
-                maxWidth: "160px",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                textAlign: "right"
+                textAlign: "right",
+                wordBreak: "break-all",
+                overflowWrap: "anywhere",
+                fontSize: "12px",
+                lineHeight: "1.4",
+                background: "#F8FAFC",
+                padding: "2px 8px",
+                borderRadius: "6px",
+                border: "1px solid #F1F5F9",
+                maxWidth: "60%"
+              }}
+              title={employee.username}
+            >
+              {employee.username || "—"}
+            </strong>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+              <Key size={14} style={{ color: "#7C3AED" }} /> PASSWORD
+            </span>
+            <strong
+              style={{
+                color: "#1E293B",
+                textAlign: "right",
+                wordBreak: "break-all",
+                overflowWrap: "anywhere",
+                fontSize: "12px",
+                background: "#F8FAFC",
+                padding: "2px 8px",
+                borderRadius: "6px",
+                border: "1px solid #F1F5F9",
+                maxWidth: "60%"
               }}
               title={employee.password}
             >
-              {employee.password ? (employee.password.length > 18 ? `${employee.password.slice(0, 6)}...${employee.password.slice(-4)}` : employee.password) : "—"}
+              {employee.password || "—"}
             </strong>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-              <Phone size={14} /> PHONE
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+              <Phone size={14} style={{ color: "#7C3AED" }} /> PHONE
             </span>
-            <strong style={{ color: "#1E293B" }}>{employee.phone || "—"}</strong>
+            <strong style={{ color: "#1E293B", textAlign: "right" }}>{employee.phone || "—"}</strong>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", minWidth: "80px" }}>
-              <Mail size={14} /> EMAIL
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+            <span style={{ color: "#64748B", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, marginTop: "2px" }}>
+              <Mail size={14} style={{ color: "#7C3AED" }} /> EMAIL
             </span>
-            <strong style={{ color: "#1E293B", maxWidth: "160px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textAlign: "right" }} title={employee.email}>{employee.email || "—"}</strong>
+            <strong
+              style={{
+                color: "#1E293B",
+                textAlign: "right",
+                wordBreak: "break-all",
+                overflowWrap: "anywhere",
+                fontSize: "12px",
+                lineHeight: "1.4",
+                background: "#F8FAFC",
+                padding: "2px 8px",
+                borderRadius: "6px",
+                border: "1px solid #F1F5F9",
+                maxWidth: "60%"
+              }}
+              title={employee.email}
+            >
+              {employee.email || "—"}
+            </strong>
           </div>
         </div>
 

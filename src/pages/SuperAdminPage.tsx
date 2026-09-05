@@ -1292,41 +1292,75 @@ function EmployeesSection() {
 
                 {/* Info Fields Grid */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px", background: "#f8fafc", padding: "14px", borderRadius: "14px", border: "1px solid #f1f5f9" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
-                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", gap: "8px" }}>
+                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                       💼 ROLE
                     </span>
-                    <strong style={{ color: "#0f172a", fontWeight: 800 }}>{e.jobTitle ?? "Sales Associate"}</strong>
+                    <strong style={{ color: "#0f172a", fontWeight: 800, textAlign: "right", maxWidth: "60%", wordBreak: "break-word" }}>{e.jobTitle ?? "Sales Associate"}</strong>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
-                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "12px", gap: "8px" }}>
+                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginTop: "2px" }}>
                       👤 USERNAME
                     </span>
-                    <strong style={{ color: "#0f172a", fontWeight: 700 }}>{e.username ?? "—"}</strong>
+                    <strong
+                      style={{
+                        color: "#0f172a",
+                        fontWeight: 700,
+                        textAlign: "right",
+                        wordBreak: "break-all",
+                        overflowWrap: "anywhere",
+                        fontSize: "12px",
+                        background: "#ffffff",
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                        border: "1px solid #E2E8F0",
+                        maxWidth: "60%"
+                      }}
+                      title={e.username}
+                    >
+                      {e.username ?? "—"}
+                    </strong>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
-                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", gap: "8px" }}>
+                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                       🔑 PASSWORD
                     </span>
-                    <strong style={{ color: "#0f172a", fontWeight: 700, background: "#ffffff", padding: "2px 8px", borderRadius: "6px", border: "1px solid #E2E8F0" }}>
+                    <strong style={{ color: "#0f172a", fontWeight: 700, background: "#ffffff", padding: "2px 8px", borderRadius: "6px", border: "1px solid #E2E8F0", textAlign: "right", wordBreak: "break-all", maxWidth: "60%" }} title={e.password}>
                       {e.password ?? "—"}
                     </strong>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
-                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", gap: "8px" }}>
+                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                       📞 PHONE
                     </span>
-                    <strong style={{ color: "#0f172a", fontWeight: 700 }}>{e.phone ?? "—"}</strong>
+                    <strong style={{ color: "#0f172a", fontWeight: 700, textAlign: "right" }}>{e.phone ?? "—"}</strong>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px" }}>
-                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: "12px", gap: "8px" }}>
+                    <span style={{ color: "#64748b", fontWeight: 700, display: "flex", alignItems: "center", gap: 6, flexShrink: 0, marginTop: "2px" }}>
                       ✉ EMAIL
                     </span>
-                    <strong style={{ color: "#0f172a", fontWeight: 700 }}>{e.email || e.username || "—"}</strong>
+                    <strong
+                      style={{
+                        color: "#0f172a",
+                        fontWeight: 700,
+                        textAlign: "right",
+                        wordBreak: "break-all",
+                        overflowWrap: "anywhere",
+                        fontSize: "12px",
+                        background: "#ffffff",
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                        border: "1px solid #E2E8F0",
+                        maxWidth: "60%"
+                      }}
+                      title={e.email || e.username}
+                    >
+                      {e.email || e.username || "—"}
+                    </strong>
                   </div>
                 </div>
 
@@ -7319,33 +7353,6 @@ export function SuperAdminGodownSection() {
               }}>
                 {gProducts.length}
               </span>
-
-              {godownList.length > 1 && (
-                <span
-                  title={`Delete ${gName}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteGodown(gName);
-                  }}
-                  style={{
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    padding: "3px 6px",
-                    borderRadius: "50%",
-                    background: isActive ? "rgba(255, 255, 255, 0.2)" : "#FEE2E2",
-                    color: isActive ? "#FFFFFF" : "#EF4444",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.2s",
-                    marginLeft: "2px"
-                  }}
-                  onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.15)")}
-                  onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
-                >
-                  🗑️
-                </span>
-              )}
             </button>
           );
         })}

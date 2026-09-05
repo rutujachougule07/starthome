@@ -567,21 +567,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const mergeAndSetOrders = () => {
       const combinedMap = new Map<string, Order>();
 
-      // 1. Add active items from primary "orders" collection
-      ordersList1.forEach((o) => {
+      // 1. Add items from secondary collections first
+      [...ordersList2, ...ordersList3, ...ordersList4].forEach((o) => {
         if (o && o.id && (o as any).isDeleted !== true && o.status !== ("Deleted" as any)) {
+          if (hasLoadedOrders1 && !ordersList1.some((item) => item.id === o.id)) {
+            // Item was deleted in primary "orders" collection
+            return;
+          }
           combinedMap.set(o.id, o);
         }
       });
 
-      // 2. Add items from secondary collections ONLY if they are not deleted in primary "orders"
-      [...ordersList2, ...ordersList3, ...ordersList4].forEach((o) => {
+      // 2. Add/merge items from primary "orders" collection
+      ordersList1.forEach((o) => {
         if (o && o.id && (o as any).isDeleted !== true && o.status !== ("Deleted" as any)) {
-          if (hasLoadedOrders1 && !ordersList1.some((item) => item.id === o.id)) {
-            // Item was deleted in primary "orders" collection (e.g. from Android app)
-            return;
+          const existing = combinedMap.get(o.id);
+          if (!existing) {
+            combinedMap.set(o.id, o);
+          } else {
+            // Prefer non-Pending status (Approved / Delivered / Rejected) from either source
+            const finalStatus = (o.status !== "Pending") ? o.status : existing.status;
+            combinedMap.set(o.id, {
+              ...existing,
+              ...o,
+              status: finalStatus,
+              sentToEmployee: (finalStatus === "Approved" || finalStatus === "Delivered") ? true : (o.sentToEmployee || existing.sentToEmployee)
+            });
           }
-          combinedMap.set(o.id, o);
+        }
+      });
+
+      // 3. Ensure any Approved / Delivered status from secondary collections is honored if primary is still Pending
+      combinedMap.forEach((val, id) => {
+        const secApproved = [...ordersList2, ...ordersList3, ...ordersList4].find(
+          (item) => item && item.id === id && (item.status === "Approved" || item.status === "Delivered" || item.status === "Rejected")
+        );
+        if (secApproved && val.status === "Pending") {
+          combinedMap.set(id, {
+            ...val,
+            status: secApproved.status,
+            sentToEmployee: true
+          });
         }
       });
 
@@ -749,22 +775,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const uUsername = u.username ? u.username.toLowerCase().trim() : "";
       const uEmail = u.email ? u.email.toLowerCase().trim() : "";
       const uEmpId = u.employeeId ? u.employeeId.toLowerCase().trim() : "";
+      const uPhone = u.phone ? u.phone.toLowerCase().trim() : "";
 
       return (
         uUsername === searchVal ||
         uEmail === searchVal ||
         uEmpId === searchVal ||
+        uPhone === searchVal ||
         uName === searchVal ||
-        uNameNoSpace === searchVal ||
-        (uEmail && searchVal.includes(uEmail)) ||
-        (uUsername && searchVal.includes(uUsername)) ||
-        (uEmail && uEmail.split("@")[0] === searchVal.split("@")[0])
+        uNameNoSpace === searchVal
       );
     }) ?? null;
 
     const typedPass = password.trim();
 
     if (user) {
+      // Check password if configured on the user record
+      if (user.password && user.password.trim() && user.password.trim() !== typedPass) {
+        console.warn("Password mismatch for user:", user.username || user.name);
+        return null;
+      }
+
       const rawRole = (user.role ? String(user.role).toLowerCase() : "employee");
       const targetRole: Role = (rawRole === "superadmin" || rawRole === "manager") ? rawRole as Role : "employee";
       const normalizedUser: User = { ...user, password: typedPass || user.password, role: targetRole };
@@ -795,31 +826,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return entry.role;
     }
 
-    // 4. Automatic employee login fallback if user entered non-empty username & password
-    if (searchVal && typedPass) {
-      const isSuperAdmin = searchVal === "admin@gmail.com";
-      const isManager = searchVal.includes("manager");
-      const role: Role = isSuperAdmin ? "superadmin" : (isManager ? "manager" : "employee");
-
-      const autoUser: User = {
-        id: `emp_${Math.random().toString(36).slice(2, 8)}`,
-        name: searchVal.split("@")[0].replace(/[^a-zA-Z0-9]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-        username: searchVal,
-        email: searchVal.includes("@") ? searchVal : `${searchVal}@gmail.com`,
-        role: role,
-        password: typedPass,
-        status: "Verified"
-      };
-
-      saveCurrentUser(autoUser);
-      setState((s) => ({
-        ...s,
-        users: [...s.users, autoUser],
-        currentUser: autoUser
-      }));
-      return role;
-    }
-
+    // Unregistered / invalid ID & password -> Login denied
     return null;
   };
 
