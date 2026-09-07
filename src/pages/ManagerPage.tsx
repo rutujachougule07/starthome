@@ -285,6 +285,9 @@ function EmployeesMgmt() {
               </div>
               <div className="data-card-body">
                 <div className="data-row"><span className="data-label">Assignee</span><span className="data-value">{t.assignedToName}</span></div>
+                {t.dueDate && (
+                  <div className="data-row"><span className="data-label" style={{ color: "#dc2626", fontWeight: 700 }}>📅 Last Date</span><span className="data-value" style={{ color: "#dc2626", fontWeight: 700 }}>{t.dueDate}</span></div>
+                )}
               </div>
               <div className="data-card-footer" style={{ justifyContent: "flex-end" }}>
                 <button
@@ -331,13 +334,14 @@ function EmployeesMgmt() {
         <AssignForm
           employee={assignTo}
           onClose={() => setAssignTo(null)}
-          onSave={(title) => {
+          onSave={(title, dueDate, startDate) => {
             const taskId = uid("t");
             const notifId = uid("n");
+            const sDate = startDate || new Date().toISOString().slice(0, 10);
             setState((s) => ({
               ...s,
-              tasks: [...s.tasks, { id: taskId, title, assignedTo: assignTo.id, assignedToName: assignTo.name, status: "Pending", date: new Date().toISOString().slice(0, 10) }],
-              notifications: [{ id: notifId, to: "employee", from: "Manager", message: `New task: ${title}`, date: new Date().toISOString().slice(0, 10), read: false }, ...s.notifications],
+              tasks: [...s.tasks, { id: taskId, title, assignedTo: assignTo.id, assignedToName: assignTo.name, status: "Pending", date: sDate, dueDate: dueDate || undefined }],
+              notifications: [{ id: notifId, to: "employee", from: "Manager", message: `New task: ${title}${dueDate ? ` (Due: ${dueDate})` : ''}`, date: new Date().toISOString().slice(0, 10), read: false }, ...s.notifications],
             }));
             setAssignTo(null);
           }}
@@ -353,16 +357,26 @@ function EmployeesMgmt() {
   );
 }
 
-function AssignForm({ employee, onSave, onClose }: { employee: User; onSave: (title: string) => void; onClose: () => void }) {
+function AssignForm({ employee, onSave, onClose }: { employee: User; onSave: (title: string, dueDate?: string, startDate?: string) => void; onClose: () => void }) {
   const [title, setTitle] = useState("");
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [dueDate, setDueDate] = useState("");
   return (
     <Modal title={`Assign Work — ${employee.name}`} onClose={onClose}>
       <div className="form-group"><label className="form-label">Task description</label>
         <textarea className="form-textarea" rows={3} value={title} onChange={(e) => setTitle(e.target.value)} />
       </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+        <div className="form-group"><label className="form-label">Start Date</label>
+          <input type="date" className="form-input" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        </div>
+        <div className="form-group"><label className="form-label">End Date (Last Date)</label>
+          <input type="date" className="form-input" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+        </div>
+      </div>
       <div className="modal-actions">
         <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={() => title && onSave(title)}>Assign</button>
+        <button className="btn btn-primary" onClick={() => title && onSave(title, dueDate, startDate)}>Assign</button>
       </div>
     </Modal>
   );
@@ -1309,7 +1323,7 @@ function ProductsAvail() {
       const matchCat = categoryFilter === "All Products" || categoryFilter === "All" || p.category.toLowerCase().includes(categoryFilter.toLowerCase());
       let matchStock = true;
       if (stockFilter === "Low") {
-        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5;
+        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20;
       } else if (stockFilter === "InStock") {
         matchStock = (p.qty ?? p.stock ?? 0) > 0;
       } else if (stockFilter === "OutOfStock") {
@@ -1444,8 +1458,8 @@ function ProductsAvail() {
         <div className="stat-card" onClick={() => setStockFilter("Low")}>
           <span>⚠️</span>
           <div>
-            <small>Low Stock</small>
-            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5).length}</h2>
+            <small>Low Stock (&lt; 20)</small>
+            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20).length}</h2>
           </div>
         </div>
 

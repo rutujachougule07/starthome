@@ -6,7 +6,7 @@ import {
 import './styles.css';
 import { getAutoProductImage } from './utils/autoProductImage';
 
-const LOW_STOCK_THRESHOLD = 10;
+const LOW_STOCK_THRESHOLD = 20;
 
 function StockModal({ type, items, onClose }: any) {
   const isLow = type === 'low';

@@ -375,9 +375,13 @@ function LiveDashboard() {
   const { products } = useStore();
   const navigate = useNavigate();
 
+  const getQty = (p: any) => {
+    const q = p.qty !== undefined && p.qty !== null ? Number(p.qty) : (p.stock !== undefined && p.stock !== null ? Number(p.stock) : 0);
+    return isNaN(q) ? 0 : q;
+  };
   const totalProducts = products.length;
-  const lowStock = products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5).length;
-  const highStock = products.filter(p => (p.qty ?? p.stock ?? 0) >= 50).length;
+  const lowStock = products.filter(p => getQty(p) < 20).length;
+  const highStock = products.filter(p => getQty(p) >= 50).length;
 
   const incentive90Days = products.filter(p => {
     if (!p.date || !p.incentive || p.incentive <= 0) return false;
@@ -399,7 +403,7 @@ function LiveDashboard() {
 
       <div className="stat-grid" style={{ marginBottom: 4 }}>
         <StatCard icon="📦" label="TOTAL PRODUCTS" value={totalProducts} onClick={() => goTo("products")} />
-        <StatCard icon="⚠️" label="LOW STOCK (< 5)" value={lowStock} onClick={() => goTo("products")} />
+        <StatCard icon="⚠️" label="LOW STOCK (< 20)" value={lowStock} onClick={() => goTo("products")} />
         <StatCard icon="📈" label="HIGH STOCK (≥ 50)" value={highStock} onClick={() => goTo("products")} />
         <StatCard icon="💰" label="INCENTIVE (> 90 DAYS)" value={incentive90Days} onClick={() => goTo("incentive")} />
       </div>
@@ -915,29 +919,41 @@ export function EmployeeForm({
             <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>DEPARTMENT</label>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
               <span style={{ fontSize: 13 }}>🏢</span>
-              <input
+              <select
                 className="form-input"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                placeholder="e.g. Sales, Support, Android"
-                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
-              />
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
+              >
+                <option value="Sales & Operations">Sales & Operations</option>
+                <option value="Technical & Service">Technical & Service</option>
+                <option value="Warehouse & Logistics">Warehouse & Logistics</option>
+                <option value="Accounts & Finance">Accounts & Finance</option>
+                <option value="Customer Support">Customer Support</option>
+                <option value="Management">Management</option>
+              </select>
             </div>
           </div>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>DESIGNATION</label>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
-              <span style={{ fontSize: 13 }}>👔</span>
-              <input
+              <span style={{ fontSize: 13 }}>💼</span>
+              <select
                 className="form-input"
                 value={designation}
                 onChange={(e) => {
                   setDesignation(e.target.value);
                   setJobTitle(e.target.value);
                 }}
-                placeholder="e.g. Sales Associate, Technician"
-                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
-              />
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
+              >
+                <option value="Sales Associate">Sales Associate</option>
+                <option value="Field Technician">Field Technician</option>
+                <option value="Warehouse Supervisor">Warehouse Supervisor</option>
+                <option value="Delivery Executive">Delivery Executive</option>
+                <option value="Service Engineer">Service Engineer</option>
+                <option value="Inventory Executive">Inventory Executive</option>
+              </select>
             </div>
           </div>
           <div className="form-group">
@@ -976,13 +992,18 @@ export function EmployeeForm({
             <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>BRANCH ACCESS</label>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
               <span style={{ fontSize: 13 }}>🏛️</span>
-              <input
+              <select
                 className="form-input"
                 value={branchAccess}
                 onChange={(e) => setBranchAccess(e.target.value)}
-                placeholder="e.g. Sangli, Pune, All Branches"
-                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
-              />
+                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600, appearance: "auto" }}
+              >
+                <option value="Main Branch">Main Branch</option>
+                <option value="Godown 1">Godown 1</option>
+                <option value="Godown 2">Godown 2</option>
+                <option value="City Storefront">City Storefront</option>
+                <option value="All Branches">All Branches</option>
+              </select>
             </div>
           </div>
         </div>
@@ -1133,8 +1154,9 @@ export function EmployeeWorkDetailsModal({ employee, onClose }: { employee: User
                         {t.status}
                       </span>
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--light-brown)", display: "flex", alignItems: "center", gap: 4 }}>
-                      <Clock size={12} /> {t.date}
+                    <div style={{ fontSize: 11, color: "var(--light-brown)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span><Clock size={12} /> {t.date}</span>
+                      {t.dueDate && <span style={{ color: "#dc2626", fontWeight: 700 }}>📅 Last Date: {t.dueDate}</span>}
                     </div>
                   </div>
                 ))}
@@ -1492,7 +1514,7 @@ function ProductsSection() {
       const matchCat = categoryFilter === "All Products" || categoryFilter === "All" || p.category.toLowerCase().includes(categoryFilter.toLowerCase());
       let matchStock = true;
       if (stockFilter === "Low") {
-        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5;
+        matchStock = (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20;
       } else if (stockFilter === "InStock") {
         matchStock = (p.qty ?? p.stock ?? 0) > 0;
       } else if (stockFilter === "OutOfStock") {
@@ -1632,8 +1654,8 @@ function ProductsSection() {
         <div className="stat-card" onClick={() => setStockFilter("Low")}>
           <span>⚠️</span>
           <div>
-            <small>Low Stock</small>
-            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 5).length}</h2>
+            <small>Low Stock (&lt; 20)</small>
+            <h2>{products.filter(p => (p.qty ?? p.stock ?? 0) > 0 && (p.qty ?? p.stock ?? 0) < 20).length}</h2>
           </div>
         </div>
 
@@ -2700,6 +2722,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
       stock: qty,
       cost,
       price: cost,
+      unitPrice: cost,
       incentive,
       supplier,
       location: location as any,
@@ -4986,13 +5009,20 @@ export function TaskAssignmentSection() {
     }
   }, [tasks, setState]);
 
-  const handleEditTaskSave = (taskId: string, newTitle: string, newAssigneeId: string) => {
+  const handleEditTaskSave = (taskId: string, newTitle: string, newAssigneeId: string, newDueDate?: string, newStartDate?: string) => {
     const assignee = users.find(u => u.id === newAssigneeId);
     if (!assignee) return;
 
     setState((s: any) => ({
       ...s,
-      tasks: s.tasks.map((t: any) => t.id === taskId ? { ...t, title: newTitle, assignedTo: newAssigneeId, assignedToName: assignee.name } : t)
+      tasks: s.tasks.map((t: any) => t.id === taskId ? {
+        ...t,
+        title: newTitle,
+        assignedTo: newAssigneeId,
+        assignedToName: assignee.name,
+        date: newStartDate || t.date,
+        dueDate: newDueDate !== undefined ? newDueDate : t.dueDate
+      } : t)
     }));
     setEditingTask(null);
   };
@@ -5023,6 +5053,8 @@ export function TaskAssignmentSection() {
     const formData = new FormData(e.currentTarget);
     const title = formData.get("taskTitle") as string;
     const assigneeId = formData.get("assigneeId") as string;
+    const startDate = (formData.get("startDate") as string) || new Date().toISOString().slice(0, 10);
+    const dueDate = formData.get("dueDate") as string;
 
     if (!title.trim() || !assigneeId) return;
 
@@ -5043,7 +5075,8 @@ export function TaskAssignmentSection() {
           assignedTo: assigneeId,
           assignedToName: assignee.name,
           status: "Pending",
-          date: today,
+          date: startDate,
+          dueDate: dueDate || undefined,
         }
       ],
       notifications: [
@@ -5051,7 +5084,7 @@ export function TaskAssignmentSection() {
           id: notifId,
           to: assignee.role,
           from: isSuperAdmin ? "Super Admin" : "Manager",
-          message: `New task assigned: ${title.trim()}`,
+          message: `New task assigned: ${title.trim()} (Start: ${startDate}${dueDate ? `, End: ${dueDate}` : ''})`,
           date: today,
           read: false,
         },
@@ -5217,6 +5250,11 @@ export function TaskAssignmentSection() {
                               </span>
                             </div>
                           </div>
+                          {t.dueDate && (
+                            <div style={{ fontSize: "11px", fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "2px 8px", borderRadius: "6px", border: "1px solid #fee2e2", display: "inline-flex", alignItems: "center", gap: "4px", width: "fit-content" }}>
+                              📅 Last Date: {t.dueDate}
+                            </div>
+                          )}
 
                           {/* Task Proof Details for completed tasks */}
                           {t.status === "Completed" && (t.proofNote || t.proofUrl) && (
@@ -5323,6 +5361,11 @@ export function TaskAssignmentSection() {
                               <button onClick={() => handleDeleteTask(t.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#ef4444", padding: 0, fontWeight: 700 }}>✕</button>
                             </div>
                           </div>
+                          {t.dueDate && (
+                            <div style={{ fontSize: "10px", fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "2px 6px", borderRadius: "4px", border: "1px solid #fee2e2", display: "inline-flex", alignItems: "center", gap: "4px", width: "fit-content" }}>
+                              📅 Last Date: {t.dueDate}
+                            </div>
+                          )}
 
                           {/* Task Proof Details for completed manager tasks */}
                           {t.status === "Completed" && (t.proofNote || t.proofUrl) && (
@@ -5410,6 +5453,39 @@ export function TaskAssignmentSection() {
                 </select>
               </div>
             </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>START DATE</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📅</span>
+                  <input
+                    type="date"
+                    name="startDate"
+                    defaultValue={new Date().toISOString().slice(0, 10)}
+                    style={{
+                      width: "100%", border: "none", background: "transparent", padding: "6px 4px",
+                      fontSize: "13px", color: "#1E293B", fontWeight: 600, outline: "none"
+                    }}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>END DATE (LAST DATE)</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🎯</span>
+                  <input
+                    type="date"
+                    name="dueDate"
+                    style={{
+                      width: "100%", border: "none", background: "transparent", padding: "6px 4px",
+                      fontSize: "13px", color: "#1E293B", fontWeight: 600, outline: "none"
+                    }}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
             <div className="modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
               <button className="btn btn-ghost" type="button" onClick={() => setShowAssignModal(false)} style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", color: "#7C3AED", fontWeight: 700 }}>Cancel</button>
               <button className="btn btn-primary" type="submit">Assign Task</button>
@@ -5425,8 +5501,10 @@ export function TaskAssignmentSection() {
             const formData = new FormData(e.currentTarget);
             const title = formData.get("taskTitle") as string;
             const assigneeId = formData.get("assigneeId") as string;
+            const startDate = formData.get("startDate") as string;
+            const dueDate = formData.get("dueDate") as string;
             if (title.trim() && assigneeId) {
-              handleEditTaskSave(editingTask.id, title.trim(), assigneeId);
+              handleEditTaskSave(editingTask.id, title.trim(), assigneeId, dueDate, startDate);
             }
           }} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <div className="form-group">
@@ -5466,6 +5544,40 @@ export function TaskAssignmentSection() {
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>START DATE</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>📅</span>
+                  <input
+                    type="date"
+                    name="startDate"
+                    defaultValue={editingTask.date}
+                    style={{
+                      width: "100%", border: "none", background: "transparent", padding: "6px 4px",
+                      fontSize: "13px", color: "#1E293B", fontWeight: 600, outline: "none"
+                    }}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>END DATE (LAST DATE)</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🎯</span>
+                  <input
+                    type="date"
+                    name="dueDate"
+                    defaultValue={editingTask.dueDate}
+                    style={{
+                      width: "100%", border: "none", background: "transparent", padding: "6px 4px",
+                      fontSize: "13px", color: "#1E293B", fontWeight: 600, outline: "none"
+                    }}
+                    required
+                  />
+                </div>
               </div>
             </div>
             <div className="modal-actions" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
@@ -6481,7 +6593,13 @@ export function SuperAdminIncentiveSection() {
   const [incentiveSuccessMsg, setIncentiveSuccessMsg] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  const employees = useMemo(() => users.filter((u) => u.role === "employee" || u.role === "manager"), [users]);
+  const employees = useMemo(() => {
+    return users.filter((u) => {
+      if (!u || !u.name) return false;
+      const r = (u.role || "").toLowerCase().trim();
+      return r === "employee" || r === "manager" || r === "staff" || (r !== "superadmin" && u.id !== "u1" && u.name.toLowerCase() !== "super admin");
+    });
+  }, [users]);
 
   const handleAssignIncentiveSubmit = (e?: React.SyntheticEvent) => {
     if (e) e.preventDefault();
@@ -7002,13 +7120,23 @@ export function SuperAdminIncentiveSection() {
                         }}
                       >
                         <option value="">-- Select Employee --</option>
-                        <option value="all" style={{ fontWeight: 800, color: "#7C3AED" }}>👥 All Employees</option>
+                        <option value="all" style={{ fontWeight: 800, color: "#7C3AED" }}>👥 All Employees (सर्व कर्मचाऱ्यांना)</option>
                         {employees.map((u) => (
                           <option key={u.id} value={u.id}>
-                            👤 {u.name}
+                            👤 {u.name.replace(/\s+text$/i, "")}
                           </option>
                         ))}
+                        {employees.length === 0 && (
+                          <option value="" disabled style={{ color: "#64748B", fontStyle: "italic" }}>
+                            💡 (Specific Employee साठी आधी Team/Employee सेक्शन मधून "+ Add Employee" करा)
+                          </option>
+                        )}
                       </select>
+                      {employees.length === 0 && (
+                        <div style={{ background: "#FFFBEB", border: "1px solid #FCD34D", color: "#B45309", padding: "8px 12px", borderRadius: "10px", fontSize: "11px", fontWeight: 700, marginTop: "6px" }}>
+                          ⚠️ <strong>No Employees Registered Yet:</strong> Please go to the <strong>"Add Employee / Manager"</strong> tab in sidebar to create employee accounts first.
+                        </div>
+                      )}
                     </div>
 
                     {/* 2. Quantity & Incentive (%) (Side by Side) */}
@@ -9366,13 +9494,95 @@ export function QuotationForm({
   const [status, setStatus] = useState<"Draft" | "Sent" | "Approved" | "Closed">(initial?.status ?? "Draft");
   const [notes, setNotes] = useState(initial?.notes ?? "");
 
+  const [isCustomSize, setIsCustomSize] = useState(false);
+
+  const availableSizeOptions = useMemo(() => {
+    const pName = (productName || "").toLowerCase().trim();
+    if (!pName) {
+      return [];
+    }
+
+    const sizeMap: { keywords: string[]; sizes: string[] }[] = [
+      {
+        keywords: ["tv", "television", "smart tv", "led", "oled", "qled", "screen"],
+        sizes: ["24 Inch", "32 Inch", "40 Inch", "43 Inch", "50 Inch", "55 Inch", "65 Inch", "75 Inch", "85 Inch"]
+      },
+      {
+        keywords: ["ac", "air conditioner", "cooler", "split ac", "window ac"],
+        sizes: ["0.8 Ton", "1 Ton", "1.5 Ton", "2 Ton", "2.5 Ton"]
+      },
+      {
+        keywords: ["fridge", "refrigerator", "deep freezer"],
+        sizes: ["180 L", "190 L", "210 L", "240 L", "260 L", "300 L", "350 L", "400 L", "500 L", "600 L"]
+      },
+      {
+        keywords: ["washing machine", "washer", "dryer"],
+        sizes: ["6 kg", "6.5 kg", "7 kg", "7.5 kg", "8 kg", "8.5 kg", "9 kg", "10 kg"]
+      },
+      {
+        keywords: ["cctv", "camera", "dvr", "nvr", "security camera"],
+        sizes: ["2 MP", "3 MP", "4 MP", "5 MP", "8 MP", "4 Channel", "8 Channel", "16 Channel", "32 Channel"]
+      },
+      {
+        keywords: ["purifier", "water purifier", "ro"],
+        sizes: ["6 Litres", "7 Litres", "8 Litres", "10 Litres", "12 Litres"]
+      },
+      {
+        keywords: ["geyser", "water heater"],
+        sizes: ["3 Litres", "6 Litres", "10 Litres", "15 Litres", "25 Litres"]
+      },
+      {
+        keywords: ["fan", "ceiling fan"],
+        sizes: ["600 mm", "900 mm", "1200 mm", "1400 mm"]
+      },
+      {
+        keywords: ["oven", "microwave"],
+        sizes: ["20 Litres", "23 Litres", "28 Litres", "32 Litres"]
+      }
+    ];
+
+    let matchedSizes: string[] = [];
+    for (const item of sizeMap) {
+      if (item.keywords.some(kw => pName.includes(kw))) {
+        matchedSizes = [...item.sizes];
+        break;
+      }
+    }
+
+    // Include sizes from inventory products matching pName
+    const storeSizes = products
+      .filter(p => p.warranty && pName && (p.name.toLowerCase().includes(pName) || pName.includes(p.name.toLowerCase())))
+      .map(p => p.warranty as string);
+
+    let combined = Array.from(new Set([...matchedSizes, ...storeSizes]));
+
+    if (combined.length === 0) {
+      combined = [
+        "32 Inch", "43 Inch", "55 Inch", "65 Inch",
+        "1.5 Ton", "2 Ton",
+        "190 L", "260 L", "300 L",
+        "7 kg", "8 kg",
+        "2 MP", "4 MP", "8 Channel", "16 Channel",
+        "Standard"
+      ];
+    }
+
+    if (size && !combined.includes(size)) {
+      combined.push(size);
+    }
+    return combined;
+  }, [products, productName, size]);
+
   const handleSelectProduct = (pId: string) => {
     setSelectedProductId(pId);
     const p = products.find((x) => x.id === pId);
     if (p) {
       setProductName(p.name);
       if (p.brand) setBrand(p.brand);
-      if (p.warranty) setSize(p.warranty);
+      if (p.warranty) {
+        setSize(p.warranty);
+        setIsCustomSize(false);
+      }
       if (p.model) setModel(p.model);
       if (p) setUnitPrice(getProductUnitPrice(p));
     }
@@ -9476,13 +9686,29 @@ export function QuotationForm({
           </div>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11, color: "#7C3AED", fontWeight: 800 }}>SIZE / MODEL</label>
-            <input
-              className="form-input"
-              value={size || model ? `${size} ${model}`.trim() : ""}
+            <select
+              className="form-select"
+              value={size}
               onChange={(e) => setSize(e.target.value)}
-              placeholder="e.g. 55 Inch Crystal 4K"
-              style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, fontWeight: 600 }}
-            />
+              disabled={!productName.trim()}
+              style={{
+                width: "100%",
+                background: !productName.trim() ? "#F1F5F9" : "#F8FAFC",
+                border: "1px solid #F3EEFF",
+                borderRadius: 12,
+                padding: "10px",
+                fontWeight: 600,
+                appearance: "auto",
+                cursor: !productName.trim() ? "not-allowed" : "pointer"
+              }}
+            >
+              <option value="">
+                {!productName.trim() ? "-- Select Product Name First --" : "-- Select Size / Model --"}
+              </option>
+              {availableSizeOptions.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
         </div>
 

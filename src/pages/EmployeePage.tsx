@@ -265,7 +265,10 @@ function Overview() {
                 <Pill status={t.status} />
               </div>
               <div className="data-card-body">
-                <div className="data-row"><span className="data-label">Date</span><span className="data-value">{t.date}</span></div>
+                <div className="data-row"><span className="data-label">📅 Start Date</span><span className="data-value">{t.date}</span></div>
+                {t.dueDate && (
+                  <div className="data-row"><span className="data-label" style={{ color: "#dc2626", fontWeight: 700 }}>🎯 End Date (Last Date)</span><span className="data-value" style={{ color: "#dc2626", fontWeight: 700 }}>{t.dueDate}</span></div>
+                )}
               </div>
             </div>
           ))}
@@ -363,7 +366,13 @@ function TasksSection() {
                 <Pill status={t.status} />
               </div>
               <div className="data-card-body">
-                <div className="data-row"><span className="data-label">Date</span><span className="data-value">{t.date}</span></div>
+                <div className="data-row"><span className="data-label">📅 Start Date</span><span className="data-value">{t.date}</span></div>
+                {t.dueDate && (
+                  <div className="data-row" style={{ marginTop: 4, background: "#FEF2F2", padding: "6px 10px", borderRadius: "8px", border: "1px solid #FEE2E2" }}>
+                    <span className="data-label" style={{ color: "#DC2626", fontWeight: 800 }}>🎯 End Date (Last Date)</span>
+                    <span className="data-value" style={{ color: "#DC2626", fontWeight: 800 }}>{t.dueDate}</span>
+                  </div>
+                )}
                 {(t.proofNote || t.proofUrl) && (
                   <div style={{ marginTop: 12, background: "var(--biscuit-light)", padding: "10px", borderRadius: "8px", border: "1px dashed var(--border)" }}>
                     <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--brown-dark)", marginBottom: "6px" }}>📎 Task Proof Attached:</div>

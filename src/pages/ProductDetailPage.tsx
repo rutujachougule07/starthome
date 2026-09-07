@@ -147,7 +147,9 @@ export function ProductDetailPage() {
   const minCost = costs.length > 0 ? Math.min(...costs) : 0;
   const maxCost = costs.length > 0 ? Math.max(...costs) : 0;
   const costDifference = maxCost - minCost;
-  const averageCost = costs.length > 0 ? costs.reduce((sum, val) => sum + val, 0) / costs.length : 0;
+  const totalBatchCost = batchList.reduce((sum, b) => sum + ((b.cost || 0) * (b.qty ?? b.stock ?? 0)), 0);
+  const totalBatchQty = batchList.reduce((sum, b) => sum + (b.qty ?? b.stock ?? 0), 0);
+  const averageCost = totalBatchQty > 0 ? totalBatchCost / totalBatchQty : (costs.length > 0 ? costs.reduce((sum, val) => sum + val, 0) / costs.length : 0);
 
   const startEditingBatch = (b: Batch, idx: number) => {
     setEditingBatch({ ...b, _index: idx });

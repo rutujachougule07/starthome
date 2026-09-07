@@ -27,7 +27,7 @@ export interface User {
   punchSetting?: string;
   branchAccess?: string;
 }
-export interface Product { id: string; name: string; category: string; price: number; stock: number; status: string; sku: string; image: string; qty: number; cost: number; incentive: number; supplier: string; date: string; warranty?: string; model?: string; brand?: string; location?: "Shop" | "Godown 1" | "Godown 2" | "Display"; assignedEmployeeId?: string; incentiveSeen?: boolean; serialNumbers?: string[]; batches?: Product[]; }
+export interface Product { id: string; name: string; category: string; price: number; stock: number; status: string; sku: string; image: string; qty: number; cost: number; incentive: number; supplier: string; date: string; warranty?: string; model?: string; brand?: string; location?: "Shop" | "Godown 1" | "Godown 2" | "Display"; assignedEmployeeId?: string; incentiveSeen?: boolean; serialNumbers?: string[]; batches?: Product[]; unitPrice?: number; }
 
 export function getProductUnitPrice(p?: { price?: number; cost?: number; qty?: number; stock?: number; unitPrice?: number } | null): number {
   if (!p) return 0;
@@ -36,18 +36,27 @@ export function getProductUnitPrice(p?: { price?: number; cost?: number; qty?: n
   }
   const rawPrice = Number(p.price || 0);
   const rawCost = Number(p.cost || 0);
+  const q = Number(p.qty ?? p.stock ?? 1);
 
+  let baseVal = 0;
   if (rawPrice > 0) {
-    return rawPrice;
+    baseVal = rawPrice;
+  } else if (rawCost > 0) {
+    baseVal = rawCost;
   }
-  if (rawCost > 0) {
-    return rawCost;
+
+  if (baseVal <= 0) return 0;
+
+  // If quantity > 1 and baseVal represents total batch cost/price (e.g. 900 for 9 items), calculate unit price = baseVal / q
+  if (q > 1 && baseVal > q && baseVal % q === 0) {
+    return Math.round(baseVal / q);
   }
-  return 0;
+
+  return baseVal;
 }
 export interface Customer { id: string; name: string; email: string; phone: string; address: string; status: string; }
 export interface Order { id: string; customerId: string; customerName: string; productId: string; productName: string; qty: number; total: number; discount?: number; createdBy: string; status: "Pending" | "Approved" | "Rejected" | "Delivered"; date: string; assignedTo?: string; assignedToName?: string; sentToEmployee?: boolean; customerBargain?: string; docType?: "Bill" | "Order Copy" | "Estimate"; docTypes?: ("Bill" | "Order Copy" | "Estimate")[]; estimateType?: "Cash" | "Online" | "Financial"; paymentMode?: "Cash" | "Online" | "Financial"; bookingExpiryDate?: string; isIncentive?: boolean; serialNumber?: string; }
-export interface Task { id: string; title: string; assignedTo: string; assignedToName: string; customerId?: string; status: "Pending" | "In Progress" | "Completed"; date: string; proofNote?: string; proofUrl?: string; }
+export interface Task { id: string; title: string; assignedTo: string; assignedToName: string; customerId?: string; status: "Pending" | "In Progress" | "Completed"; date: string; dueDate?: string; proofNote?: string; proofUrl?: string; }
 export interface Notification { id: string; to: Role | "all"; from: string; message: string; date: string; read: boolean; }
 export interface Lead { id: string; name: string; phone: string; email?: string; source?: string; product?: string; brand?: string; gender?: "Male" | "Female" | "Other"; status: "New" | "Cold" | "Warm" | "Hot" | "Enrolled" | "Cancelled"; followUpDate?: string; notes?: string; date: string; assignedTo?: string; city?: string; address?: string; createdBy?: string; }
 export interface Quotation { id: string; customerName: string; customerPhone?: string; productId?: string; productName: string; brand?: string; size?: string; model?: string; qty: number; unitPrice: number; totalPrice: number; discount?: number; discountType?: "percent" | "amount"; finalPrice: number; date: string; createdBy: string; createdById?: string; status: "Draft" | "Sent" | "Approved" | "Closed"; notes?: string; }
