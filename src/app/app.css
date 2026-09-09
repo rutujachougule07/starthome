@@ -1320,7 +1320,8 @@ table.tbl {
 
 .pill-approved,
 .pill-active,
-.pill-completed {
+.pill-completed,
+.pill-delivered {
   background: #d8ead9;
   color: var(--success);
 }

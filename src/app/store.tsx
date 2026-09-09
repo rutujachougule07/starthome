@@ -55,7 +55,7 @@ export function getProductUnitPrice(p?: { price?: number; cost?: number; qty?: n
   return baseVal;
 }
 export interface Customer { id: string; name: string; email: string; phone: string; address: string; status: string; }
-export interface Order { id: string; customerId: string; customerName: string; productId: string; productName: string; qty: number; total: number; discount?: number; createdBy: string; status: "Pending" | "Approved" | "Rejected" | "Delivered"; date: string; assignedTo?: string; assignedToName?: string; sentToEmployee?: boolean; customerBargain?: string; docType?: "Bill" | "Order Copy" | "Estimate"; docTypes?: ("Bill" | "Order Copy" | "Estimate")[]; estimateType?: "Cash" | "Online" | "Financial"; paymentMode?: "Cash" | "Online" | "Financial"; bookingExpiryDate?: string; isIncentive?: boolean; serialNumber?: string; }
+export interface Order { id: string; customerId: string; customerName: string; productId: string; productName: string; qty: number; total: number; discount?: number; createdBy: string; status: "Pending" | "Approved" | "Rejected" | "Delivered"; date: string; assignedTo?: string; assignedToName?: string; sentToEmployee?: boolean; customerBargain?: string; docType?: "Bill" | "Order Copy" | "Estimate"; docTypes?: ("Bill" | "Order Copy" | "Estimate")[]; estimateType?: "Cash" | "Online" | "Financial"; paymentMode?: "Cash" | "Online" | "Financial"; bookingExpiryDate?: string; isIncentive?: boolean; serialNumber?: string; incentiveAmount?: number; }
 export interface Task { id: string; title: string; assignedTo: string; assignedToName: string; customerId?: string; status: "Pending" | "In Progress" | "Completed"; date: string; dueDate?: string; proofNote?: string; proofUrl?: string; }
 export interface Notification { id: string; to: Role | "all"; from: string; message: string; date: string; read: boolean; }
 export interface Lead { id: string; name: string; phone: string; email?: string; source?: string; product?: string; brand?: string; gender?: "Male" | "Female" | "Other"; status: "New" | "Cold" | "Warm" | "Hot" | "Enrolled" | "Cancelled"; followUpDate?: string; notes?: string; date: string; assignedTo?: string; city?: string; address?: string; createdBy?: string; }
@@ -512,6 +512,7 @@ export function normalizeOrderDoc(d: any): Order {
     bookingExpiryDate: data.bookingExpiryDate || undefined,
     isIncentive: data.isIncentive !== undefined ? Boolean(data.isIncentive) : undefined,
     serialNumber: data.serialNumber || undefined,
+    incentiveAmount: data.incentiveAmount !== undefined ? Number(data.incentiveAmount) : undefined,
   };
 }
 
@@ -635,7 +636,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }),
       onSnapshot(collection(db, "products"), (snap) => {
         const list = snap.docs.map((d) => {
-          const item = d.data() as Product;
+          const rawData = d.data();
+          const rawCost = Number(rawData.cost || rawData.unitCost || rawData.unit_cost || rawData.costPrice || rawData.unitPrice || rawData.price || rawData.amount || rawData.rate || rawData.mrp || rawData.Cost || rawData.Price || 0);
+          const rawPrice = Number(rawData.price || rawData.unitPrice || rawData.sellingPrice || rawData.cost || rawData.Price || 0);
+          const finalCost = rawCost > 0 ? rawCost : (rawPrice > 0 ? rawPrice : 0);
+          const finalPrice = rawPrice > 0 ? rawPrice : (finalCost > 0 ? finalCost : 0);
+
+          const item: Product = {
+            ...rawData,
+            id: d.id,
+            cost: finalCost,
+            price: finalPrice,
+          } as Product;
           if (!item.serialNumbers || !Array.isArray(item.serialNumbers) || item.serialNumbers.length === 0 || !item.serialNumbers.some(s => s && typeof s === "string" && s.trim())) {
             try {
               const searchKeys = [

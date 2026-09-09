@@ -291,6 +291,7 @@ export function Pill({ status }: { status: string }) {
   const map: Record<string, string> = {
     "Pending": "pending",
     "Approved": "approved",
+    "Delivered": "delivered",
     "Rejected": "rejected",
     "Active": "active",
     "Inactive": "inactive",

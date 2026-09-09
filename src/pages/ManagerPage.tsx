@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useStore, loadCurrentUser, User, Customer, Order, Product, getProductUnitPrice } from "../app/store";
 import { DashboardLayout, StatCard, Pill, Modal, NavItem, BarChart } from "../app/DashboardLayout";
-import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection, OrderApprovalSection } from "./SuperAdminPage";
+import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection, OrderApprovalSection, getProductUnitCost } from "./SuperAdminPage";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
 import { Search, Download, Plus, SlidersHorizontal } from "lucide-react";
 import { db } from "./firebase";
@@ -39,7 +39,7 @@ export function ManagerPage({ tab = "overview" }: ManagerPageProps) {
   if (!user || user.role !== "manager") return <Navigate to="/login" />;
 
   const pendingApprovals = store.orders.filter(
-    (o) => o.status === "Pending" && !o.isIncentive && o.customerId !== "c_incentive" && o.customerName !== "Incentive Sell Request"
+    (o) => o.status === "Pending" && o.customerName !== "Incentive Sell Request"
   ).length;
 
   return (
@@ -186,7 +186,7 @@ export function ManagerPage({ tab = "overview" }: ManagerPageProps) {
         {active === "quotations" && <QuotationsSection />}
         {active === "orders" && <OrderApprovalSection />}
         {active === "products" && <ProductsAvail />}
-        {active === "incentive" && <SuperAdminIncentiveSection />}
+        {active === "incentive" && <EmployeeIncentiveSection />}
         {active === "notifications" && <NotificationsSection role="manager" />}
         {active === "profile" && <ProfileSection />}
       </DashboardLayout>
@@ -199,13 +199,15 @@ function Overview({ onNav }: { onNav: (tab: string) => void }) {
   const emp = users.filter((u) => u.role === "employee").length;
   const pending = orders.filter((o) => o.status === "Pending").length;
 
-  const incentive90Days = useMemo(() => {
-    return products.filter(p => {
-      if (!p.date || !p.incentive || p.incentive <= 0) return false;
-      const diffTime = new Date().getTime() - new Date(p.date).getTime();
-      const diffDays = diffTime / (1000 * 60 * 60 * 24);
-      return diffDays > 90;
-    }).length;
+  const incentiveCount = useMemo(() => {
+    const fromProducts = products.filter(p => Number(p.incentive || (p as any).incentiveAmount || (p as any).employeeIncentive || 0) > 0 || Boolean((p as any).assignedEmployeeId)).length;
+    const fromOrders = orders.filter(o => o.isIncentive).length;
+    return Math.max(fromProducts, fromOrders);
+  }, [products, orders]);
+
+  const getQty = (p: Product) => (p as any).qty ?? (p as any).stock ?? 0;
+  const highStock = useMemo(() => {
+    return products.filter(p => getQty(p) >= 50).length;
   }, [products]);
 
   return (
@@ -219,8 +221,8 @@ function Overview({ onNav }: { onNav: (tab: string) => void }) {
         <StatCard icon="🧑‍💼" label="Customers" value={customers.length} onClick={() => onNav("leads")} />
         <StatCard icon="🧾" label="Orders" value={orders.length} onClick={() => onNav("orders")} />
         <StatCard icon="⏳" label="Pending Approvals" value={pending} onClick={() => onNav("orders")} />
-        <StatCard icon="✅" label="Tasks Completed" value={tasks.filter((t) => t.status === "Completed").length} onClick={() => onNav("task-assign")} />
-        <StatCard icon="💰" label="INCENTIVE (> 90 DAYS)" value={incentive90Days} onClick={() => onNav("incentive")} />
+        <StatCard icon="📈" label="HIGH STOCK (>= 50)" value={highStock} onClick={() => onNav("products")} />
+        <StatCard icon="💰" label="TOTAL INCENTIVES" value={incentiveCount} onClick={() => onNav("incentive")} />
       </div>
 
     </>
@@ -502,11 +504,22 @@ function OrdersMgmt() {
             const ninetyDaysAgo = new Date();
             ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
             const isProdIncentive = !!(product && (product.incentive ?? 0) > 0 && product.date && new Date(product.date) < ninetyDaysAgo);
-            const isIncentiveOrder = o.isIncentive ?? isProdIncentive;
+            const isIncentiveOrder = !!(
+              o.isIncentive ||
+              o.customerId === "c_incentive" ||
+              o.customerName === "Incentive Sell Request" ||
+              isProdIncentive ||
+              (product && (product.incentive ?? 0) > 0)
+            );
 
             const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
             const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
             const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
+
+            const unitIncentive = (product?.incentive && product.incentive > 0)
+              ? product.incentive
+              : (o.discount && o.discount > 0 ? Math.round((orderUnitPrice * o.discount) / 100) : 0);
+            const totalIncentiveEarned = unitIncentive * o.qty;
 
             return (
               <div key={o.id} className="data-card">
@@ -545,6 +558,7 @@ function OrdersMgmt() {
                   <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
                   <div className="data-row"><span className="data-label">Assigned</span><span className="data-value">{o.assignedToName ?? "—"}</span></div>
+
                 </div>
                 <div className="data-card-footer" style={{ justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontWeight: 700, color: "var(--brown-dark)", fontSize: 16 }}>₹{(o.total || 0).toLocaleString()}</span>
@@ -578,8 +592,12 @@ function OrdersMgmt() {
                         </button>
                       )
                     )}
-                    <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
-                    <button className="btn btn-circle btn-circle-danger" onClick={() => remove(o.id)} title="Delete Order">🗑️</button>
+                    {!isIncentiveOrder && (
+                      <>
+                        <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                        <button className="btn btn-circle btn-circle-danger" onClick={() => remove(o.id)} title="Delete Order">🗑️</button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1344,15 +1362,19 @@ function ProductsAvail() {
     const map = new Map<string, Product & { batches: Product[] }>();
     filteredProducts.forEach(p => {
       const key = `${(p.name || "").trim().toLowerCase()}___${(p.brand || "").trim().toLowerCase()}`;
+      const pCost = getProductUnitCost(p);
       if (map.has(key)) {
         const existing = map.get(key)!;
         existing.qty = (existing.qty ?? existing.stock ?? 0) + (p.qty ?? p.stock ?? 0);
         existing.stock = existing.qty;
+        if (!existing.cost || existing.cost === 0) {
+          if (pCost > 0) existing.cost = pCost;
+        }
         if (!existing.sku && p.sku) existing.sku = p.sku;
         else if (existing.sku && existing.sku.length > 20 && p.sku && p.sku.length <= 20) existing.sku = p.sku;
-        existing.batches.push(p);
+        existing.batches.push({ ...p, cost: pCost > 0 ? pCost : p.cost });
       } else {
-        map.set(key, { ...p, batches: [p] });
+        map.set(key, { ...p, cost: pCost > 0 ? pCost : (p.cost || 0), batches: [{ ...p, cost: pCost > 0 ? pCost : (p.cost || 0) }] });
       }
     });
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -1494,7 +1516,8 @@ function ProductsAvail() {
             </thead>
             <tbody>
               {groupedProducts.map((p) => {
-                const totalValue = (p.qty ?? p.stock ?? 0) * p.cost;
+                const unitCost = getProductUnitCost(p);
+                const totalValue = (p.qty ?? p.stock ?? 0) * unitCost;
                 const formattedDate = p.date ? (
                   p.date.includes("T") || p.date.includes(":") ? (
                     new Date(p.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })
@@ -1548,7 +1571,7 @@ function ProductsAvail() {
                     <td>
                       <span style={{ fontWeight: 800, fontSize: 15, color: "#1E293B" }}>{p.qty ?? p.stock ?? 0}</span>
                     </td>
-                    <td>₹{(p.cost || 0).toLocaleString()}</td>
+                    <td>₹{unitCost.toLocaleString()}</td>
                     <td style={{ fontWeight: 600 }}>₹{totalValue.toLocaleString()}</td>
                     <td>{p.supplier}</td>
                     <td>{formattedDate}</td>

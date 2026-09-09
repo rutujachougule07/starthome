@@ -531,11 +531,247 @@ function CustomerComm() {
   );
 }
 
+function IncentiveSaleModal({
+  order,
+  onClose,
+  onSubmitted
+}: {
+  order: Order;
+  onClose: () => void;
+  onSubmitted: () => void;
+}) {
+  const { products, setState, uid, currentUser } = useStore();
+  const product = products.find(p => p.id === order.productId || p.name.toLowerCase() === order.productName.toLowerCase());
+
+  const unitIncentive = (order.incentiveAmount && order.incentiveAmount > 0)
+    ? order.incentiveAmount
+    : ((product?.incentive && product.incentive > 0)
+      ? product.incentive
+      : (order.discount && order.discount > 0 ? Math.round(((order.total / (1 - ((order.discount || 0) / 100))) * order.discount) / 100) : 0));
+  const totalIncentiveEarned = unitIncentive * order.qty;
+
+  const [customerName, setCustomerName] = useState(order.customerName === "Incentive Sell Request" ? "" : order.customerName);
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
+  const [sellingPrice, setSellingPrice] = useState<number>(order.total || 0);
+  const [paymentMode, setPaymentMode] = useState<"Cash" | "Online" | "Financial">("Cash");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customerName.trim()) {
+      setErrorMsg("Please enter Customer Name.");
+      return;
+    }
+    if (!customerPhone.trim()) {
+      setErrorMsg("Please enter Customer Phone Number.");
+      return;
+    }
+    if (!customerAddress.trim()) {
+      setErrorMsg("Please enter Customer Address.");
+      return;
+    }
+    if (!sellingPrice || sellingPrice <= 0) {
+      setErrorMsg("Please enter a valid Selling Price.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const notifId = uid("n");
+
+    setState((s) => {
+      let customerId = s.customers.find((c) => c.phone.trim() === customerPhone.trim())?.id;
+      let nextCustomers = s.customers;
+      if (!customerId) {
+        customerId = uid("c");
+        const newCust = {
+          id: customerId,
+          name: customerName.trim(),
+          phone: customerPhone.trim(),
+          address: customerAddress.trim(),
+          email: "",
+          status: "Active"
+        };
+        nextCustomers = [...s.customers, newCust];
+      }
+
+      const updatedOrders = s.orders.map((o) => {
+        if (o.id === order.id) {
+          return {
+            ...o,
+            customerId,
+            customerName: customerName.trim(),
+            phone: customerPhone.trim(),
+            address: customerAddress.trim(),
+            total: Number(sellingPrice),
+            paymentMode,
+            estimateType: paymentMode,
+            status: "Pending" as const,
+            sentToEmployee: true,
+            date: today
+          };
+        }
+        return o;
+      });
+
+      const notifMsg = `✨ Incentive Sale Request submitted by ${currentUser?.name || "Employee"} for ${customerName.trim()} (Product: ${order.productName}, Price: ₹${sellingPrice.toLocaleString()})`;
+
+      return {
+        ...s,
+        customers: nextCustomers,
+        orders: updatedOrders,
+        notifications: [
+          {
+            id: notifId,
+            to: "superadmin",
+            from: currentUser?.name || "Employee",
+            message: notifMsg,
+            date: today,
+            read: false
+          },
+          ...s.notifications
+        ]
+      };
+    });
+
+    onSubmitted();
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "12px" }}>
+      <div className="modal-card animated scaleUp" onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "14px", padding: "16px 20px", maxWidth: "480px", width: "100%", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 40px rgba(0,0,0,0.2)", border: "1px solid #FEF3C7" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", borderBottom: "1px solid #FDE68A", paddingBottom: "8px" }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "16px", color: "#92400E", display: "flex", alignItems: "center", gap: "6px" }}>
+              ✨ Sell Incentive Product
+            </h3>
+            <span style={{ fontSize: "11px", color: "#B45309" }}>Enter customer details to submit for Admin approval</span>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "#6B7280" }}>✕</button>
+        </div>
+
+        <div style={{ background: "#FFFBEB", border: "1px solid #FDE047", borderRadius: "8px", padding: "8px 12px", marginBottom: "10px" }}>
+          <div style={{ fontSize: "12px", fontWeight: 700, color: "#78350F" }}>Product: {order.productName}</div>
+          <div style={{ fontSize: "11px", color: "#92400E", marginTop: "2px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "6px" }}>
+            <span>Assigned Quantity: {order.qty} unit(s)</span>
+            {totalIncentiveEarned > 0 && (
+              <span style={{ color: "#B45309", fontWeight: 800, background: "#FEF3C7", padding: "2px 6px", borderRadius: "6px", border: "1px solid #FCD34D" }}>
+                💰 Your Incentive: ₹{totalIncentiveEarned.toLocaleString()}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {errorMsg && (
+          <div style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FCA5A5", padding: "6px 10px", borderRadius: "6px", fontSize: "12px", marginBottom: "10px", fontWeight: 600 }}>
+            ⚠️ {errorMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "2px" }}>Customer Name *</label>
+              <input
+                type="text"
+                className="form-input"
+                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
+                placeholder="e.g. Rahul Sharma"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "2px" }}>Phone Number *</label>
+              <input
+                type="tel"
+                className="form-input"
+                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
+                placeholder="e.g. 9876543210"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "2px" }}>Customer Address *</label>
+            <input
+              type="text"
+              className="form-input"
+              style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
+              placeholder="e.g. Flat 102, Green Park, Pune"
+              value={customerAddress}
+              onChange={(e) => setCustomerAddress(e.target.value)}
+              required
+            />
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "2px" }}>Selling Price (₹) *</label>
+              <input
+                type="number"
+                className="form-input"
+                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px", fontWeight: 700, color: "#D97706" }}
+                value={sellingPrice}
+                onChange={(e) => setSellingPrice(Number(e.target.value))}
+                min={0}
+                required
+              />
+            </div>
+
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "2px" }}>Payment Mode</label>
+              <select
+                className="form-select"
+                style={{ width: "100%", padding: "6px 10px", borderRadius: "6px", border: "1px solid #D1D5DB", fontSize: "13px" }}
+                value={paymentMode}
+                onChange={(e) => setPaymentMode(e.target.value as any)}
+              >
+                <option value="Cash">💵 Cash</option>
+                <option value="Online">💳 Online / UPI</option>
+                <option value="Financial">🏦 Finance / EMI</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "6px", paddingTop: "8px", borderTop: "1px solid #E5E7EB" }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={onClose}
+              style={{ padding: "6px 14px", borderRadius: "6px", fontSize: "12px" }}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn btn-warning"
+              style={{ padding: "6px 16px", borderRadius: "6px", fontWeight: 700, fontSize: "12px", background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)", color: "#FFF", border: "none" }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Submitting..." : "Submit for Admin Approval 🚀"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function OrderUpdates() {
   const { orders, products, currentUser, setState, uid } = useStore();
   const [activeDoc, setActiveDoc] = useState<{ order: Order; type: "Bill" | "Order Copy" | "Estimate" } | null>(null);
   const [showAddOrder, setShowAddOrder] = useState(false);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [sellingIncentiveOrder, setSellingIncentiveOrder] = useState<Order | null>(null);
 
   const handleDeleteOrder = (id: string) => {
     if (confirm("Are you sure you want to delete this order?")) {
@@ -607,19 +843,31 @@ function OrderUpdates() {
             {myPendingOrders.map((o) => {
               const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
               const brandStr = product?.brand ? ` (${product.brand})` : "";
-              const isIncentiveOrder = product && (product.incentive ?? 0) > 0;
+              const isAnIncentiveOrder = !!(
+                o.isIncentive ||
+                o.customerId === "c_incentive" ||
+                o.customerName === "Incentive Sell Request" ||
+                (product && (product.incentive ?? 0) > 0)
+              );
               const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
               const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
               const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
+              const unitIncentive = (o.incentiveAmount && o.incentiveAmount > 0)
+                ? o.incentiveAmount
+                : ((product?.incentive && product.incentive > 0)
+                  ? product.incentive
+                  : (o.discount && o.discount > 0 ? Math.round((orderUnitPrice * o.discount) / 100) : 0));
+              const totalIncentiveEarned = unitIncentive * o.qty;
+
               return (
-                <div key={o.id} className="data-card" style={{ borderLeft: "4px solid #F59E0B", background: "#FFFBEB" }}>
+                <div key={o.id} className="data-card" style={{ borderLeft: isAnIncentiveOrder ? "4px solid #F59E0B" : "4px solid #F59E0B", background: "#FFFBEB" }}>
                   <div className="data-card-header">
                     <div>
                       <h4 className="data-card-title">Order #{o.id}</h4>
                       <span className="data-card-subtitle" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
                         <span>{o.customerName}</span>
-                        {isIncentiveOrder ? (
+                        {isAnIncentiveOrder ? (
                           <span className="pill" style={{ background: "#fef3c7", color: "#d97706", border: "1px solid #fde047", fontSize: "10px", padding: "2px 6px" }}>
                             ✨ Incentive
                           </span>
@@ -628,7 +876,7 @@ function OrderUpdates() {
                             Regular
                           </span>
                         )}
-                        {o.docType && (
+                        {!isAnIncentiveOrder && o.docType && (
                           <span className="pill" style={{
                             background: o.docType === "Bill" ? "#e0f2fe" : "#f3e8ff",
                             color: o.docType === "Bill" ? "#0369a1" : "#6D28D9",
@@ -646,37 +894,51 @@ function OrderUpdates() {
                   </div>
 
                   <div className="data-card-body">
-                    <div className="data-row">
-                      <span className="data-label">Document Method</span>
-                      <span className="data-value" style={{
-                        fontWeight: 800,
-                        color: o.docType === "Order Copy" ? "#6D28D9" : o.docType === "Estimate" ? "#b45309" : "#0369a1"
-                      }}>
-                        {o.docTypes && o.docTypes.length > 0
-                          ? o.docTypes.map(t => t === "Order Copy" ? "📄 Order Copy" : t === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill").join(" + ")
-                          : o.docType === "Order Copy" ? "📄 Order Copy" : o.docType === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill"}
-                      </span>
-                    </div>
+                    {!isAnIncentiveOrder && (
+                      <div className="data-row">
+                        <span className="data-label">Document Method</span>
+                        <span className="data-value" style={{
+                          fontWeight: 800,
+                          color: o.docType === "Order Copy" ? "#6D28D9" : o.docType === "Estimate" ? "#b45309" : "#0369a1"
+                        }}>
+                          {o.docTypes && o.docTypes.length > 0
+                            ? o.docTypes.map(t => t === "Order Copy" ? "📄 Order Copy" : t === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill").join(" + ")
+                            : o.docType === "Order Copy" ? "📄 Order Copy" : o.docType === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill"}
+                        </span>
+                      </div>
+                    )}
                     <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                     <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
                     <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{o.total.toLocaleString()}</span></div>
+                    {isAnIncentiveOrder && (
+                      <div className="data-row" style={{ background: "linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)", padding: "8px 12px", borderRadius: "10px", marginTop: "6px", border: "1px solid #FCD34D", boxShadow: "0 2px 6px rgba(217, 119, 6, 0.12)" }}>
+                        <span className="data-label" style={{ color: "#92400E", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>💰 YOUR INCENTIVE</span>
+                        <span className="data-value" style={{ color: "#B45309", fontWeight: 800, fontSize: "14px" }}>
+                          ₹{totalIncentiveEarned.toLocaleString()} {unitIncentive > 0 && o.qty > 1 ? `(₹${unitIncentive.toLocaleString()}/unit)` : ""}
+                        </span>
+                      </div>
+                    )}
                     <div className="data-row"><span className="data-label">Status</span><span className="data-value" style={{ color: "#D97706", fontWeight: 700 }}>⏳ Submitted for Approval</span></div>
                   </div>
 
                   <div className="data-card-footer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #FDE68A" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        style={{ padding: "6px 14px", fontSize: 11, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", borderRadius: 20, cursor: "pointer", color: "#0369A1" }}
-                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                      >
-                        🧾 View Bill
-                      </button>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
-                      <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
-                    </div>
+                    {!isAnIncentiveOrder && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: "6px 14px", fontSize: 11, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", borderRadius: 20, cursor: "pointer", color: "#0369A1" }}
+                          onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                        >
+                          🧾 View Bill
+                        </button>
+                      </div>
+                    )}
+                    {!isAnIncentiveOrder && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                        <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -697,10 +959,22 @@ function OrderUpdates() {
           {myOrders.map((o) => {
             const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
             const brandStr = product?.brand ? ` (${product.brand})` : "";
-            const isIncentiveOrder = product && (product.incentive ?? 0) > 0;
+            const isAnIncentiveOrder = !!(
+              o.isIncentive ||
+              o.customerId === "c_incentive" ||
+              o.customerName === "Incentive Sell Request" ||
+              (product && (product.incentive ?? 0) > 0)
+            );
             const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
             const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
             const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
+
+            const unitIncentive = (o.incentiveAmount && o.incentiveAmount > 0)
+              ? o.incentiveAmount
+              : ((product?.incentive && product.incentive > 0)
+                ? product.incentive
+                : (o.discount && o.discount > 0 ? Math.round((orderUnitPrice * o.discount) / 100) : 0));
+            const totalIncentiveEarned = unitIncentive * o.qty;
 
             return (
               <div key={o.id} className="data-card" style={{ borderLeft: "4px solid var(--accent)" }}>
@@ -709,7 +983,7 @@ function OrderUpdates() {
                     <h4 className="data-card-title">Order #{o.id}</h4>
                     <span className="data-card-subtitle" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
                       <span>{o.customerName}</span>
-                      {isIncentiveOrder ? (
+                      {isAnIncentiveOrder ? (
                         <span className="pill" style={{ background: "#fef3c7", color: "#d97706", border: "1px solid #fde047", fontSize: "10px", padding: "2px 6px" }}>
                           ✨ Incentive
                         </span>
@@ -718,7 +992,7 @@ function OrderUpdates() {
                           Regular
                         </span>
                       )}
-                      {o.docType && (
+                      {!isAnIncentiveOrder && o.docType && (
                         <span className="pill" style={{
                           background: o.docType === "Bill" ? "#e0f2fe" : "#f3e8ff",
                           color: o.docType === "Bill" ? "#0369a1" : "#6D28D9",
@@ -736,59 +1010,118 @@ function OrderUpdates() {
                 </div>
 
                 <div className="data-card-body">
-                  <div className="data-row">
-                    <span className="data-label">Document Method</span>
-                    <span className="data-value" style={{
-                      fontWeight: 800,
-                      color: o.docType === "Order Copy" ? "#6D28D9" : o.docType === "Estimate" ? "#b45309" : "#0369a1"
-                    }}>
-                      {o.docTypes && o.docTypes.length > 0
-                        ? o.docTypes.map(t => t === "Order Copy" ? "📄 Order Copy" : t === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill").join(" + ")
-                        : o.docType === "Order Copy" ? "📄 Order Copy" : o.docType === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill"}
-                    </span>
-                  </div>
+                  {!isAnIncentiveOrder && (
+                    <div className="data-row">
+                      <span className="data-label">Document Method</span>
+                      <span className="data-value" style={{
+                        fontWeight: 800,
+                        color: o.docType === "Order Copy" ? "#6D28D9" : o.docType === "Estimate" ? "#b45309" : "#0369a1"
+                      }}>
+                        {o.docTypes && o.docTypes.length > 0
+                          ? o.docTypes.map(t => t === "Order Copy" ? "📄 Order Copy" : t === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill").join(" + ")
+                          : o.docType === "Order Copy" ? "📄 Order Copy" : o.docType === "Estimate" ? `🏷️ Estimate (${o.estimateType || "Cash"})` : "🧾 Bill"}
+                      </span>
+                    </div>
+                  )}
                   <div className="data-row"><span className="data-label">Product</span><span className="data-value">{o.productName}{brandStr} (x{o.qty})</span></div>
                   <div className="data-row"><span className="data-label">Unit Price</span><span className="data-value">₹{orderUnitPrice.toLocaleString()}</span></div>
                   <div className="data-row"><span className="data-label">Total</span><span className="data-value" style={{ fontWeight: 700 }}>₹{(o.total || 0).toLocaleString()}</span></div>
+                  {isAnIncentiveOrder && (
+                    <div className="data-row" style={{ background: "linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)", padding: "8px 12px", borderRadius: "10px", marginTop: "6px", border: "1px solid #FCD34D", boxShadow: "0 2px 6px rgba(217, 119, 6, 0.12)" }}>
+                      <span className="data-label" style={{ color: "#92400E", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>💰 YOUR INCENTIVE</span>
+                      <span className="data-value" style={{ color: "#B45309", fontWeight: 800, fontSize: "14px" }}>
+                        ₹{totalIncentiveEarned.toLocaleString()} {unitIncentive > 0 && o.qty > 1 ? `(₹${unitIncentive.toLocaleString()}/unit)` : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                    >
-                      🧾 View Bill
-                    </button>
-                  </div>
+                  {isAnIncentiveOrder && (o.customerName === "Incentive Sell Request" || !o.customerName || o.customerName === "") && (
+                    <div style={{ width: "100%", marginTop: "4px" }}>
+                      <button
+                        className="btn btn-warning btn-sm"
+                        style={{
+                          width: "100%",
+                          padding: "8px 14px",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+                          color: "#FFFFFF",
+                          borderRadius: 20,
+                          cursor: "pointer",
+                          border: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          boxShadow: "0 3px 10px rgba(217, 119, 6, 0.25)"
+                        }}
+                        onClick={() => setSellingIncentiveOrder(o)}
+                      >
+                        🛍️ Complete Customer Sale
+                      </button>
+                    </div>
+                  )}
+
+                  {!isAnIncentiveOrder && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                      >
+                        🧾 View Bill
+                      </button>
+                    </div>
+                  )}
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%" }}>
-                    <div>
-                      {o.status === "Approved" ? (
-                        <button
-                          className="btn btn-success btn-sm"
-                          style={{ padding: "6px 14px", fontSize: 11, borderRadius: 20, background: "linear-gradient(135deg, #06B6D4 0%, #0D9488 100%)", color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 800, boxShadow: "0 3px 10px rgba(13, 148, 136, 0.25)" }}
-                          onClick={() => {
-                            if (confirm("Mark this order as delivered?")) {
-                              setState((s) => ({
-                                ...s,
-                                orders: s.orders.map((order) => order.id === o.id ? { ...order, status: "Delivered" } : order)
-                              }));
-                            }
-                          }}
-                        >
-                          🚚 Mark Delivered
-                        </button>
-                      ) : (
-                        <span style={{ fontSize: 11, color: "#10B981", fontWeight: 700, background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "4px 12px", borderRadius: 20 }}>Completed</span>
-                      )}
-                    </div>
+                    {(!isAnIncentiveOrder || (o.customerName && o.customerName !== "Incentive Sell Request")) && (
+                      <div>
+                        {o.status === "Approved" ? (
+                          <button
+                            className="btn btn-success btn-sm"
+                            style={{ padding: "6px 14px", fontSize: 11, borderRadius: 20, background: "linear-gradient(135deg, #06B6D4 0%, #0D9488 100%)", color: "#FFFFFF", border: "none", cursor: "pointer", fontWeight: 800, boxShadow: "0 3px 10px rgba(13, 148, 136, 0.25)" }}
+                            onClick={() => {
+                              if (confirm("Mark this order as delivered?")) {
+                                const today = new Date().toISOString().slice(0, 10);
+                                const notifId = uid("n");
+                                const typeLabel = isAnIncentiveOrder ? "✨ Incentive Sale" : "📄 Regular Order";
+                                const notifMsg = `🚚 Order #${o.id} for ${o.customerName} (${typeLabel}) has been marked DELIVERED by ${currentUser?.name || "Employee"}`;
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
-                      <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
-                    </div>
+                                setState((s) => ({
+                                  ...s,
+                                  orders: s.orders.map((order) => order.id === o.id ? { ...order, status: "Delivered" } : order),
+                                  notifications: [
+                                    {
+                                      id: notifId,
+                                      to: "all",
+                                      from: currentUser?.name || "Employee",
+                                      message: notifMsg,
+                                      date: today,
+                                      read: false
+                                    },
+                                    ...s.notifications
+                                  ]
+                                }));
+                              }
+                            }}
+                          >
+                            🚚 Mark Delivered
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 11, color: "#10B981", fontWeight: 700, background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "4px 12px", borderRadius: 20 }}>Completed</span>
+                        )}
+                      </div>
+                    )}
+
+                    {!isAnIncentiveOrder && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                        <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -807,10 +1140,20 @@ function OrderUpdates() {
           {otherOrders.map((o) => {
             const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
             const brandStr = product?.brand ? ` (${product.brand})` : "";
-            const isIncentiveOrder = product && (product.incentive ?? 0) > 0;
+            const isAnIncentiveOrder = !!(
+              o.isIncentive ||
+              o.customerId === "c_incentive" ||
+              o.customerName === "Incentive Sell Request" ||
+              (product && (product.incentive ?? 0) > 0)
+            );
             const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
             const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
             const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
+
+            const unitIncentive = (product?.incentive && product.incentive > 0)
+              ? product.incentive
+              : (o.discount && o.discount > 0 ? Math.round((orderUnitPrice * o.discount) / 100) : 0);
+            const totalIncentiveEarned = unitIncentive * o.qty;
 
             return (
               <div key={o.id} className="data-card">
@@ -819,7 +1162,7 @@ function OrderUpdates() {
                     <h4 className="data-card-title">Order #{o.id}</h4>
                     <span className="data-card-subtitle" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
                       <span>{o.customerName}</span>
-                      {isIncentiveOrder ? (
+                      {isAnIncentiveOrder ? (
                         <span className="pill" style={{ background: "#fef3c7", color: "#d97706", border: "1px solid #fde047", fontSize: "10px", padding: "2px 6px" }}>
                           ✨ Incentive
                         </span>
@@ -828,7 +1171,7 @@ function OrderUpdates() {
                           Regular
                         </span>
                       )}
-                      {o.docType && (
+                      {!isAnIncentiveOrder && o.docType && (
                         <span className="pill" style={{
                           background: o.docType === "Bill" ? "#e0f2fe" : o.docType === "Estimate" ? "#fef3c7" : "#f3e8ff",
                           color: o.docType === "Bill" ? "#0369a1" : o.docType === "Estimate" ? "#b45309" : "#6D28D9",
@@ -861,15 +1204,17 @@ function OrderUpdates() {
                 </div>
 
                 <div className="data-card-footer" style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #E2E8F0" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
-                      onClick={() => setActiveDoc({ order: o, type: "Bill" })}
-                    >
-                      🧾 View Bill
-                    </button>
-                  </div>
+                  {!isAnIncentiveOrder && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%" }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ flex: 1, padding: "7px 12px", fontSize: 12, fontWeight: 800, background: "#E0F2FE", border: "1.5px solid #BAE6FD", color: "#0369A1", borderRadius: 20, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}
+                        onClick={() => setActiveDoc({ order: o, type: "Bill" })}
+                      >
+                        🧾 View Bill
+                      </button>
+                    </div>
+                  )}
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", width: "100%" }}>
                     <div>
@@ -893,10 +1238,12 @@ function OrderUpdates() {
                       )}
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
-                      <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
-                    </div>
+                    {!isAnIncentiveOrder && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <button className="btn btn-circle" onClick={() => setEditingOrder(o)} title="Edit Order">✏️</button>
+                        <button className="btn btn-circle btn-circle-danger" onClick={() => handleDeleteOrder(o.id)} title="Delete Order">🗑️</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -926,6 +1273,14 @@ function OrderUpdates() {
           order={activeDoc.order}
           type={activeDoc.type}
           onClose={() => setActiveDoc(null)}
+        />
+      )}
+
+      {sellingIncentiveOrder && (
+        <IncentiveSaleModal
+          order={sellingIncentiveOrder}
+          onClose={() => setSellingIncentiveOrder(null)}
+          onSubmitted={() => setSellingIncentiveOrder(null)}
         />
       )}
     </>
@@ -1539,10 +1894,10 @@ export function EmployeeIncentiveSection() {
   const [incSellError, setIncSellError] = useState("");
   const [incSellSuccess, setIncSellSuccess] = useState("");
 
-  const isEmployee = currentUser?.role === "employee";
+  const isStaff = currentUser?.role === "employee" || currentUser?.role === "manager";
 
   const incentiveProducts = products.filter(p => {
-    if (isEmployee) {
+    if (isStaff) {
       return p.incentive > 0 && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id);
     }
     return p.incentive > 0;

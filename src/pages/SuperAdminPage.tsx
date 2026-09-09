@@ -28,6 +28,25 @@ const NAV: NavItem[] = [
   { key: "incentive", label: "Incentive", icon: "💰" },
 ];
 
+export function getProductUnitCost(p: any): number {
+  if (!p) return 0;
+  const direct = Number(
+    p.cost ?? p.unitCost ?? p.unit_cost ?? p.costPrice ?? 
+    p.unitPrice ?? p.price ?? p.amount ?? p.rate ?? p.mrp ?? 
+    p.Cost ?? p.Price ?? 0
+  );
+  if (!isNaN(direct) && direct > 0) return direct;
+
+  if (Array.isArray(p.batches) && p.batches.length > 0) {
+    for (const b of p.batches) {
+      const bCost = getProductUnitCost(b);
+      if (bCost > 0) return bCost;
+    }
+  }
+
+  return 0;
+}
+
 interface SuperAdminPageProps {
   tab?: string;
 }
@@ -199,7 +218,7 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
   const navigate = useNavigate();
   const [showNotification, setShowNotification] = useState(true);
 
-  const pendingApprovals = store.orders.filter(o => o.status === "Pending" && !o.isIncentive && o.customerId !== "c_incentive" && o.customerName !== "Incentive Sell Request").length;
+  const pendingApprovals = store.orders.filter(o => o.status === "Pending" && o.customerName !== "Incentive Sell Request").length;
 
   const setActive = (tab: string) => {
     navigate({ to: "/super-admin", search: { tab } });
@@ -372,7 +391,7 @@ export function SuperAdminPage({ tab = "live" }: SuperAdminPageProps) {
 }
 
 function LiveDashboard() {
-  const { products } = useStore();
+  const { products, orders } = useStore();
   const navigate = useNavigate();
 
   const getQty = (p: any) => {
@@ -383,14 +402,15 @@ function LiveDashboard() {
   const lowStock = products.filter(p => getQty(p) < 20).length;
   const highStock = products.filter(p => getQty(p) >= 50).length;
 
-  const incentive90Days = products.filter(p => {
-    if (!p.date || !p.incentive || p.incentive <= 0) return false;
-    const diffTime = new Date().getTime() - new Date(p.date).getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    return diffDays > 90;
-  }).length;
+  const incentiveCount = useMemo(() => {
+    const fromProducts = products.filter(p => Number(p.incentive || (p as any).incentiveAmount || (p as any).employeeIncentive || 0) > 0 || Boolean((p as any).assignedEmployeeId)).length;
+    const fromOrders = orders.filter(o => o.isIncentive).length;
+    return Math.max(fromProducts, fromOrders);
+  }, [products, orders]);
 
   const goTo = (tab: string) => navigate({ to: "/super-admin", search: { tab } });
+
+  const deliveredCount = orders.filter(o => o.status === "Delivered").length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -404,8 +424,8 @@ function LiveDashboard() {
       <div className="stat-grid" style={{ marginBottom: 4 }}>
         <StatCard icon="📦" label="TOTAL PRODUCTS" value={totalProducts} onClick={() => goTo("products")} />
         <StatCard icon="⚠️" label="LOW STOCK (< 20)" value={lowStock} onClick={() => goTo("products")} />
-        <StatCard icon="📈" label="HIGH STOCK (≥ 50)" value={highStock} onClick={() => goTo("products")} />
-        <StatCard icon="💰" label="INCENTIVE (> 90 DAYS)" value={incentive90Days} onClick={() => goTo("incentive")} />
+        <StatCard icon="📈" label="HIGH STOCK (>= 50)" value={highStock} onClick={() => goTo("products")} />
+        <StatCard icon="💰" label="TOTAL INCENTIVES" value={incentiveCount} onClick={() => goTo("incentive")} />
       </div>
 
       <DashboardLeadPipelineOverview />
@@ -1535,15 +1555,19 @@ function ProductsSection() {
     const map = new Map<string, Product & { batches: Product[] }>();
     filteredProducts.forEach(p => {
       const key = `${(p.name || "").trim().toLowerCase()}___${(p.brand || "").trim().toLowerCase()}`;
+      const pCost = getProductUnitCost(p);
       if (map.has(key)) {
         const existing = map.get(key)!;
         existing.qty = (existing.qty ?? existing.stock ?? 0) + (p.qty ?? p.stock ?? 0);
         existing.stock = existing.qty;
+        if (!existing.cost || existing.cost === 0) {
+          if (pCost > 0) existing.cost = pCost;
+        }
         if (!existing.sku && p.sku) existing.sku = p.sku;
         else if (existing.sku && existing.sku.length > 20 && p.sku && p.sku.length <= 20) existing.sku = p.sku;
-        existing.batches.push(p);
+        existing.batches.push({ ...p, cost: pCost > 0 ? pCost : p.cost });
       } else {
-        map.set(key, { ...p, batches: [p] });
+        map.set(key, { ...p, cost: pCost > 0 ? pCost : (p.cost || 0), batches: [{ ...p, cost: pCost > 0 ? pCost : (p.cost || 0) }] });
       }
     });
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -1694,7 +1718,8 @@ function ProductsSection() {
             </thead>
             <tbody>
               {groupedProducts.map((p) => {
-                const totalValue = (p.qty ?? p.stock ?? 0) * p.cost;
+                const unitCost = getProductUnitCost(p);
+                const totalValue = (p.qty ?? p.stock ?? 0) * unitCost;
                 const formattedDate = p.date ? new Date(p.date).toLocaleDateString("en-GB", {
                   day: "2-digit",
                   month: "short",
@@ -1746,7 +1771,7 @@ function ProductsSection() {
                     <td>
                       <span style={{ fontWeight: 800, fontSize: 15, color: "#1E293B" }}>{p.qty ?? p.stock ?? 0}</span>
                     </td>
-                    <td>₹{(p.cost || 0).toLocaleString()}</td>
+                    <td>₹{(unitCost || 0).toLocaleString()}</td>
                     <td style={{ fontWeight: 600 }}>₹{(totalValue || 0).toLocaleString()}</td>
                     <td>{p.supplier}</td>
                     <td>{formattedDate}</td>
@@ -3670,10 +3695,10 @@ export function OrdersTable() {
 
 export function OrderApprovalSection() {
   const { orders, products, users, setState, uid, currentUser } = useStore();
-  const [filter, setFilter] = useState<"all" | "Pending" | "Approved" | "Rejected">("all");
+  const [filter, setFilter] = useState<"all" | "Pending" | "Approved" | "Rejected" | "Delivered">("all");
 
   const approvalOrders = useMemo(() => {
-    return orders.filter((o) => !o.isIncentive && o.customerId !== "c_incentive" && o.customerName !== "Incentive Sell Request");
+    return orders.filter((o) => o.customerName !== "Incentive Sell Request");
   }, [orders]);
 
   const list = filter === "all" ? approvalOrders : approvalOrders.filter((o) => o.status === filter);
@@ -3777,10 +3802,11 @@ export function OrderApprovalSection() {
         <div className="panel-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginBottom: "16px" }}>
           <h3 className="panel-title" style={{ margin: 0 }}>Orders ({list.length})</h3>
           <select className="form-select" style={{ maxWidth: 180, width: "100%" }} value={filter} onChange={(e) => setFilter(e.target.value as any)}>
-            <option value="all">All</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
+            <option value="all">All Statuses</option>
+            <option value="Pending">⏳ Pending</option>
+            <option value="Approved">✅ Approved</option>
+            <option value="Delivered">🚚 Delivered</option>
+            <option value="Rejected">❌ Rejected</option>
           </select>
         </div>
         <div className={list.length > 0 ? "card-grid" : ""}>
@@ -4557,9 +4583,25 @@ export function UpcomingFollowUps() {
   const navigate = useNavigate();
   const isSuperAdmin = currentUser?.role === "superadmin";
 
+  const parseDateForReminder = (dStr?: string): Date | null => {
+    if (!dStr || typeof dStr !== "string") return null;
+    let d = new Date(dStr);
+    if (!isNaN(d.getTime())) return d;
+    const parts = dStr.trim().split(/[-/]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      } else {
+        d = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+      }
+      if (!isNaN(d.getTime())) return d;
+    }
+    return null;
+  };
+
   const userLeads = useMemo(() => {
     if (currentUser?.role === "employee" || currentUser?.role === "manager") {
-      return leads.filter(l => l.assignedTo === currentUser.id || (l.createdBy && l.createdBy === currentUser.name));
+      return leads.filter(l => !l.assignedTo || l.assignedTo === "all" || l.assignedTo === currentUser.id || (l.createdBy && l.createdBy === currentUser.name));
     }
     return leads;
   }, [leads, currentUser]);
@@ -4576,12 +4618,13 @@ export function UpcomingFollowUps() {
       ...s,
       leads: s.leads.map(lead => lead.id === leadId ? { ...lead, followUpDate: undefined } : lead)
     }));
+    setDoc(doc(db, "leads", leadId), { followUpDate: "" }, { merge: true }).catch(() => {});
   };
 
   const getRelativeDays = (dateStr: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const target = new Date(dateStr);
+    const target = parseDateForReminder(dateStr) || new Date(dateStr);
     target.setHours(0, 0, 0, 0);
     const diffTime = target.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -4593,7 +4636,7 @@ export function UpcomingFollowUps() {
 
   const formatFollowUpDate = (dStr: string) => {
     try {
-      const date = new Date(dStr);
+      const date = parseDateForReminder(dStr) || new Date(dStr);
       return date.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
@@ -4616,8 +4659,22 @@ export function UpcomingFollowUps() {
     return colors[status] || "#38BDF8";
   };
 
-  const upcoming = userLeads.filter(l => l.followUpDate && new Date(l.followUpDate) >= new Date(new Date().setHours(0, 0, 0, 0)));
-  upcoming.sort((a, b) => new Date(a.followUpDate!).getTime() - new Date(b.followUpDate!).getTime());
+  const upcoming = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return userLeads.filter(l => {
+      if (!l.followUpDate) return false;
+      const parsed = parseDateForReminder(l.followUpDate);
+      if (!parsed) return false;
+      const t = new Date(parsed);
+      t.setHours(0, 0, 0, 0);
+      return t >= today;
+    }).sort((a, b) => {
+      const dA = parseDateForReminder(a.followUpDate!)?.getTime() || 0;
+      const dB = parseDateForReminder(b.followUpDate!)?.getTime() || 0;
+      return dA - dB;
+    });
+  }, [userLeads]);
 
   return (
     <div className="panel p-4 sm:p-6" style={{ background: "rgba(255, 255, 255, 0.72)", backdropFilter: "blur(22px)", WebkitBackdropFilter: "blur(22px)", borderRadius: "24px", border: "1px solid rgba(255, 255, 255, 0.5)", boxShadow: "0 15px 40px rgba(0, 0, 0, 0.06)" }}>
@@ -4672,7 +4729,7 @@ export function UpcomingFollowUps() {
                         display: "inline-block"
                       }}
                     />
-                    <strong style={{ fontSize: "15px", fontWeight: 700, color: "#5c4115" }} className="truncate">{l.name}</strong>
+                    <strong style={{ fontSize: "15px", fontWeight: 700, color: "#1E293B" }}>{l.name}</strong>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
                     <span
@@ -4710,29 +4767,36 @@ export function UpcomingFollowUps() {
                   </div>
                 </div>
 
-                {/* Details Section */}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 pt-1 text-xs sm:text-sm">
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#8a6632" }} className="min-w-0">
-                    <Briefcase size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
-                    <span className="truncate">{l.product || "N/A"}{l.brand ? ` - ${l.brand}` : ""}</span>
+                {/* Details Section - Full Info without Truncation */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingTop: "4px" }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "6px", fontSize: "13px", color: "#5c4115" }}>
+                    <Briefcase size={14} style={{ color: "#7C3AED", marginTop: "2px", flexShrink: 0 }} />
+                    <span style={{ fontWeight: 600, color: "#1E293B", wordBreak: "break-word" }}>
+                      {l.product || "N/A"}{l.brand ? ` - ${l.brand}` : ""}
+                    </span>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#8a6632" }} className="min-w-0">
-                    <Calendar size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
-                    <span className="whitespace-nowrap">{formatFollowUpDate(l.followUpDate!)}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#8a6632" }} className="min-w-0">
-                    <Phone size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
-                    <span className="whitespace-nowrap">{l.phone}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#8a6632" }} className="min-w-0">
-                    <UserIcon size={14} style={{ color: "#a8a29e", flexShrink: 0 }} />
-                    <span className="truncate">Added By: <strong style={{ color: "#5c4115" }}>
-                      {l.createdBy || "System"}
-                      {(() => {
-                        const creator = users.find(u => u.username === l.createdBy || u.name === l.createdBy);
-                        return creator?.role ? ` (${creator.role.charAt(0).toUpperCase() + creator.role.slice(1)})` : "";
-                      })()}
-                    </strong></span>
+
+                  <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "6px 14px", fontSize: "12px", color: "#64748B", marginTop: "2px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                      <Calendar size={13} style={{ color: "#7C3AED", flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, color: "#334155" }}>{formatFollowUpDate(l.followUpDate!)}</span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
+                      <Phone size={13} style={{ color: "#7C3AED", flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, color: "#334155" }}>{l.phone}</span>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <UserIcon size={13} style={{ color: "#7C3AED", flexShrink: 0 }} />
+                      <span style={{ color: "#64748B" }}>Added By: <strong style={{ color: "#334155", fontWeight: 700 }}>
+                        {l.createdBy || "System"}
+                        {(() => {
+                          const creator = users.find(u => u.username === l.createdBy || u.name === l.createdBy);
+                          return creator?.role ? ` (${creator.role.charAt(0).toUpperCase() + creator.role.slice(1)})` : "";
+                        })()}
+                      </strong></span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -5658,6 +5722,7 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
       ...s,
       leads: s.leads.map((l) => (l.id === lead.id ? { ...l, status } : l)),
     }));
+    setDoc(doc(db, "leads", lead.id), { status }, { merge: true }).catch(() => {});
   };
 
   const handleNotesBlur = () => {
@@ -5666,6 +5731,7 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
         ...s,
         leads: s.leads.map((l) => (l.id === lead.id ? { ...l, notes: localNotes || undefined } : l)),
       }));
+      setDoc(doc(db, "leads", lead.id), { notes: localNotes || "" }, { merge: true }).catch(() => {});
     }
   };
 
@@ -5678,6 +5744,7 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
       ...s,
       leads: s.leads.map((l) => (l.id === lead.id ? { ...l, followUpDate: localDate } : l)),
     }));
+    setDoc(doc(db, "leads", lead.id), { followUpDate: localDate }, { merge: true }).catch(() => {});
     setReminderToast(true);
     setTimeout(() => setReminderToast(false), 3000);
   };
@@ -5688,6 +5755,7 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
       ...s,
       leads: s.leads.map((l) => (l.id === lead.id ? { ...l, followUpDate: undefined } : l)),
     }));
+    setDoc(doc(db, "leads", lead.id), { followUpDate: "" }, { merge: true }).catch(() => {});
   };
 
   const handleAssignChange = (assignedTo: string) => {
@@ -5695,6 +5763,7 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
       ...s,
       leads: s.leads.map((l) => (l.id === lead.id ? { ...l, assignedTo: assignedTo || undefined } : l)),
     }));
+    setDoc(doc(db, "leads", lead.id), { assignedTo: assignedTo || "" }, { merge: true }).catch(() => {});
   };
 
   const getStatusBadgeStyle = (status: Lead["status"]) => {
@@ -5711,7 +5780,19 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
 
   const formatReminderDate = (dStr: string) => {
     try {
-      const date = new Date(dStr);
+      if (!dStr) return "";
+      let date = new Date(dStr);
+      if (isNaN(date.getTime())) {
+        const parts = dStr.trim().split(/[-/]/);
+        if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            date = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          } else {
+            date = new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+          }
+        }
+      }
+      if (isNaN(date.getTime())) return dStr;
       return date.toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
@@ -5938,7 +6019,7 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
           )}
 
           {/* Alert Set Banner */}
-          {lead.followUpDate && (
+          {(lead.followUpDate || localDate) && (
             <div style={{
               background: "#F5F3FF",
               border: "1px solid #DDD6FE",
@@ -5950,7 +6031,7 @@ export function LeadCard({ lead, onDelete, onEdit }: { lead: Lead; onDelete: (id
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 700, color: "#6D28D9" }}>
                 <span>🔔</span>
-                <span>Reminder set for: {formatReminderDate(lead.followUpDate)}</span>
+                <span>Reminder set for: {formatReminderDate(lead.followUpDate || localDate)}</span>
               </div>
               <button
                 type="button"
@@ -6156,20 +6237,32 @@ export function LeadsSection() {
     if (!formName || !formPhone) return;
 
     if (editingLead) {
+      const updatedData = {
+        name: formName,
+        phone: formPhone,
+        email: formEmail || "",
+        source: formSource || "",
+        product: formProduct || "",
+        brand: formBrand || "",
+        gender: (formGender as any) || "",
+        status: formStatus,
+        followUpDate: formFollowUpDate || "",
+        notes: formNotes || "",
+        assignedTo: formAssignedTo || "",
+        city: formCity || "",
+      };
       setState((s) => ({
         ...s,
         leads: s.leads.map((l) =>
           l.id === editingLead.id
             ? {
               ...l,
-              name: formName,
-              phone: formPhone,
+              ...updatedData,
               email: formEmail || undefined,
               source: formSource || undefined,
               product: formProduct || undefined,
               brand: formBrand || undefined,
               gender: (formGender as any) || undefined,
-              status: formStatus,
               followUpDate: formFollowUpDate || undefined,
               notes: formNotes || undefined,
               assignedTo: formAssignedTo || undefined,
@@ -6178,10 +6271,12 @@ export function LeadsSection() {
             : l
         ),
       }));
+      setDoc(doc(db, "leads", editingLead.id), updatedData, { merge: true }).catch(() => {});
       setEditingLead(null);
     } else {
+      const newLeadId = uid("l");
       const newLead: Lead = {
-        id: uid("l"),
+        id: newLeadId,
         name: formName,
         phone: formPhone,
         email: formEmail || undefined,
@@ -6201,6 +6296,7 @@ export function LeadsSection() {
         ...s,
         leads: [newLead, ...s.leads],
       }));
+      setDoc(doc(db, "leads", newLeadId), newLead, { merge: true }).catch(() => {});
     }
     setShowAddModal(false);
   };
@@ -6211,6 +6307,7 @@ export function LeadsSection() {
       ...s,
       leads: s.leads.filter((l) => l.id !== id),
     }));
+    deleteDoc(doc(db, "leads", id)).catch(() => {});
   };
 
   const userLeads = useMemo(() => {
@@ -6574,7 +6671,7 @@ export function LeadsSection() {
 
 export function SuperAdminIncentiveSection() {
   const isMobile = useIsMobile();
-  const { products, setState, users, currentUser } = useStore();
+  const { products, orders, setState, users, currentUser } = useStore();
   const [editing, setEditing] = useState<Product | null>(null);
   const [incentiveMode, setIncentiveMode] = useState<boolean>(false);
   const [viewingBatches, setViewingBatches] = useState<Product & { batches: Product[] } | null>(null);
@@ -6600,6 +6697,37 @@ export function SuperAdminIncentiveSection() {
       return r === "employee" || r === "manager" || r === "staff" || (r !== "superadmin" && u.id !== "u1" && u.name.toLowerCase() !== "super admin");
     });
   }, [users]);
+
+  const activeIncentiveOrders = useMemo(() => {
+    return (orders || []).filter(o =>
+      o.isIncentive ||
+      o.customerId === "c_incentive" ||
+      o.customerName === "Incentive Sell Request"
+    );
+  }, [orders]);
+
+  const handleRevokeIncentiveOrder = (orderId: string, productName: string, assignedToName?: string) => {
+    if (!confirm(`Are you sure you want to revoke & delete the assigned incentive for "${productName}" (${assignedToName || "Employee"})?`)) return;
+
+    setState((s: any) => ({
+      ...s,
+      orders: (s.orders || []).filter((o: any) => o.id !== orderId),
+      notifications: [
+        {
+          id: `n_${Date.now()}`,
+          to: "all",
+          from: currentUser?.name || "Super Admin",
+          message: `⚠️ Incentive assignment for ${productName} (Order #${orderId}) was revoked/deleted by ${currentUser?.name || "Admin"}.`,
+          date: new Date().toLocaleString(),
+          read: false
+        },
+        ...(s.notifications || [])
+      ]
+    }));
+    deleteDoc(doc(db, "orders", orderId)).catch(() => { });
+    setIncentiveSuccessMsg(`🗑️ Incentive assignment for "${productName}" successfully revoked & deleted!`);
+    setTimeout(() => setIncentiveSuccessMsg(""), 4000);
+  };
 
   const handleAssignIncentiveSubmit = (e?: React.SyntheticEvent) => {
     if (e) e.preventDefault();
@@ -6658,14 +6786,15 @@ export function SuperAdminIncentiveSection() {
       productName: selectedProductForIncentive.name,
       qty: qtyVal,
       total: unitPrice * qtyVal,
-      discount: 0,
+      discount: discountVal,
       createdBy: currentUser?.name || "Super Admin",
       status: "Approved",
       date: today,
       assignedTo: targetEmpId === "all" ? "all" : (selectedUser?.id || targetEmpId),
       assignedToName: assignedEmpName,
       sentToEmployee: true,
-      isIncentive: true
+      isIncentive: true,
+      incentiveAmount: incentiveFormAmount >= 0 ? incentiveFormAmount : 0
     };
 
     setState((s: any) => ({
@@ -6778,6 +6907,73 @@ export function SuperAdminIncentiveSection() {
         </div>
       )}
 
+      {/* Active Assigned Incentives List with Delete/Revoke Option */}
+      {activeIncentiveOrders.length > 0 && (
+        <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "18px 20px", marginBottom: "24px", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", border: "1px solid #FEF3C7" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
+            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#92400E", display: "flex", alignItems: "center", gap: "8px" }}>
+              🎯 Active Assigned Incentives ({activeIncentiveOrders.length})
+            </h3>
+            <span style={{ fontSize: "12px", color: "#B45309", background: "#FEF3C7", padding: "3px 10px", borderRadius: "20px", border: "1px solid #FCD34D", fontWeight: 700 }}>
+              Admin Control
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "14px" }}>
+            {activeIncentiveOrders.map((o) => {
+              const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
+              const unitIncentive = (o.incentiveAmount && o.incentiveAmount > 0) ? o.incentiveAmount : (product?.incentive || 0);
+              const totalInc = unitIncentive * o.qty;
+
+              return (
+                <div key={o.id} style={{ background: "#FFFBEB", borderRadius: "12px", padding: "14px", border: "1px solid #FDE68A", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "10px" }}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                      <div>
+                        <div style={{ fontSize: "14px", fontWeight: 800, color: "#78350F" }}>{o.productName}</div>
+                        <div style={{ fontSize: "12px", color: "#92400E", marginTop: "2px" }}>Order #{o.id} · {o.date}</div>
+                      </div>
+                      <span style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FCD34D", fontSize: "11px", fontWeight: 800, padding: "2px 8px", borderRadius: "12px" }}>
+                        {o.customerName === "Incentive Sell Request" ? "⏳ Awaiting Employee Sale" : `👤 ${o.customerName}`}
+                      </span>
+                    </div>
+
+                    <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px", fontSize: "12px", color: "#4B5563" }}>
+                      <div>👤 <strong>Assigned To:</strong> {o.assignedToName || "Employee"}</div>
+                      <div>📦 <strong>Quantity:</strong> {o.qty} unit(s)</div>
+                      <div style={{ color: "#B45309", fontWeight: 800, marginTop: "2px" }}>
+                        💰 <strong>Incentive:</strong> ₹{unitIncentive.toLocaleString()}/unit {totalInc > 0 && `(Total: ₹${totalInc.toLocaleString()})`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid #FDE68A", paddingTop: "8px", marginTop: "4px" }}>
+                    <button
+                      onClick={() => handleRevokeIncentiveOrder(o.id, o.productName, o.assignedToName)}
+                      style={{
+                        background: "#FEF2F2",
+                        color: "#DC2626",
+                        border: "1px solid #FCA5A5",
+                        borderRadius: "8px",
+                        padding: "6px 14px",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}
+                      title="Delete / Revoke this assigned incentive"
+                    >
+                      🗑️ Delete / Revoke Incentive
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Table Body / Rows */}
       <div>
