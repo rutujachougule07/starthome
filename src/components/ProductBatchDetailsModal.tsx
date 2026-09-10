@@ -4,12 +4,14 @@ export function ProductBatchDetailsModal({
   onClose,
   onEditBatch,
   onDeleteBatch,
+  onAddBatch,
 }: {
   product: any;
   isAdmin?: boolean;
   onClose: () => void;
   onEditBatch?: (batch: any) => void;
   onDeleteBatch?: (batchId: any) => void;
+  onAddBatch?: (product: any) => void;
 }) {
   if (!product) return null;
 
@@ -151,9 +153,31 @@ export function ProductBatchDetailsModal({
         })()}
 
         {/* Batch History Section */}
-        <h4 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: 800, color: "#5B21B6" }}>
-          Batch History
-        </h4>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <h4 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#5B21B6" }}>
+            Batch History
+          </h4>
+          {onAddBatch && (
+            <button
+              onClick={() => onAddBatch(product)}
+              style={{
+                background: "#7C3AED",
+                color: "#FFFFFF",
+                border: "none",
+                borderRadius: "10px",
+                padding: "6px 14px",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px"
+              }}
+            >
+              <span>+</span> Add New Batch
+            </button>
+          )}
+        </div>
 
         <div style={{ overflowX: "auto", borderRadius: "12px", border: "1px solid #E2E8F0", marginBottom: "24px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>

@@ -7,6 +7,8 @@ import { useStore, loadCurrentUser, Customer, Product, Order, Task, getProductUn
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm, BarcodeScannerModal, QuotationsSection } from "./SuperAdminPage";
 import { getAutoProductImage } from "../utils/autoProductImage";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "./firebase";
 
 const NAV: NavItem[] = [
   { key: "overview", label: "Live Dashboard", icon: "📡" },
@@ -543,11 +545,12 @@ function IncentiveSaleModal({
   const { products, setState, uid, currentUser } = useStore();
   const product = products.find(p => p.id === order.productId || p.name.toLowerCase() === order.productName.toLowerCase());
 
+  const hasCustomerDiscount = !!(order.discount && order.discount > 0 && order.discount < 100 && !order.isIncentive && order.customerId !== "c_incentive" && order.customerName !== "Incentive Sell Request");
   const unitIncentive = (order.incentiveAmount && order.incentiveAmount > 0)
     ? order.incentiveAmount
     : ((product?.incentive && product.incentive > 0)
       ? product.incentive
-      : (order.discount && order.discount > 0 ? Math.round(((order.total / (1 - ((order.discount || 0) / 100))) * order.discount) / 100) : 0));
+      : (hasCustomerDiscount ? Math.round(((order.total / (1 - (order.discount! / 100))) * order.discount!) / 100) : 0));
   const totalIncentiveEarned = unitIncentive * order.qty;
 
   const [customerName, setCustomerName] = useState(order.customerName === "Incentive Sell Request" ? "" : order.customerName);
@@ -850,14 +853,15 @@ function OrderUpdates() {
                 (product && (product.incentive ?? 0) > 0)
               );
               const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
-              const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
+              const hasCustomerDiscount = !!(o.discount && o.discount > 0 && o.discount < 100 && !isAnIncentiveOrder);
+              const orderBasePrice = (hasCustomerDiscount && !isApprovedOrDelivered) ? Math.round(o.total / (1 - (o.discount! / 100))) : o.total;
               const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
               const unitIncentive = (o.incentiveAmount && o.incentiveAmount > 0)
                 ? o.incentiveAmount
                 : ((product?.incentive && product.incentive > 0)
                   ? product.incentive
-                  : (o.discount && o.discount > 0 ? Math.round((orderUnitPrice * o.discount) / 100) : 0));
+                  : (hasCustomerDiscount ? Math.round((orderUnitPrice * o.discount!) / 100) : 0));
               const totalIncentiveEarned = unitIncentive * o.qty;
 
               return (
@@ -966,14 +970,15 @@ function OrderUpdates() {
               (product && (product.incentive ?? 0) > 0)
             );
             const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
-            const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
+            const hasCustomerDiscount = !!(o.discount && o.discount > 0 && o.discount < 100 && !isAnIncentiveOrder);
+            const orderBasePrice = (hasCustomerDiscount && !isApprovedOrDelivered) ? Math.round(o.total / (1 - (o.discount! / 100))) : o.total;
             const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
             const unitIncentive = (o.incentiveAmount && o.incentiveAmount > 0)
               ? o.incentiveAmount
               : ((product?.incentive && product.incentive > 0)
                 ? product.incentive
-                : (o.discount && o.discount > 0 ? Math.round((orderUnitPrice * o.discount) / 100) : 0));
+                : (hasCustomerDiscount ? Math.round((orderUnitPrice * o.discount!) / 100) : 0));
             const totalIncentiveEarned = unitIncentive * o.qty;
 
             return (
@@ -1147,12 +1152,13 @@ function OrderUpdates() {
               (product && (product.incentive ?? 0) > 0)
             );
             const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
-            const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
+            const hasCustomerDiscount = !!(o.discount && o.discount > 0 && o.discount < 100 && !isAnIncentiveOrder);
+            const orderBasePrice = (hasCustomerDiscount && !isApprovedOrDelivered) ? Math.round(o.total / (1 - (o.discount! / 100))) : o.total;
             const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
             const unitIncentive = (product?.incentive && product.incentive > 0)
               ? product.incentive
-              : (o.discount && o.discount > 0 ? Math.round((orderUnitPrice * o.discount) / 100) : 0);
+              : (hasCustomerDiscount ? Math.round((orderUnitPrice * o.discount!) / 100) : 0);
             const totalIncentiveEarned = unitIncentive * o.qty;
 
             return (
@@ -1437,6 +1443,35 @@ function ProductsSection() {
     });
   }, [products, categoryFilter]);
 
+  const displayProducts = useMemo(() => {
+    const map = new Map<string, Product & { batches?: Product[] }>();
+    filteredProducts.forEach((p) => {
+      const key = `${(p.name || "").trim().toLowerCase()}___${(p.brand || "").trim().toLowerCase()}`;
+      const pBatches = Array.isArray(p.batches) && p.batches.length > 0 ? p.batches : [p];
+
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        const existingBatches = existing.batches || [];
+        const batchMap = new Map<string, Product>();
+        [...existingBatches, ...pBatches].forEach((b) => {
+          const bKey = b.id || `${b.date}_${b.qty}_${b.cost}`;
+          if (!batchMap.has(bKey)) batchMap.set(bKey, b);
+        });
+        const mergedBatches = Array.from(batchMap.values());
+        const calcQty = mergedBatches.reduce((sum, b) => sum + (b.qty ?? b.stock ?? 0), 0);
+        existing.batches = mergedBatches;
+        existing.qty = calcQty;
+        existing.stock = calcQty;
+        if (!existing.sku && p.sku) existing.sku = p.sku;
+      } else {
+        const initialBatches = pBatches;
+        const calcQty = initialBatches.reduce((sum, b) => sum + (b.qty ?? b.stock ?? 0), 0);
+        map.set(key, { ...p, qty: calcQty, stock: calcQty, batches: initialBatches });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [filteredProducts]);
+
   return (
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -1444,36 +1479,6 @@ function ProductsSection() {
           <h2 className="page-title">Products</h2>
           <p className="page-sub">View active and available products.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowAdd(true)}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)",
-            color: "#FFFFFF",
-            border: "none",
-            borderRadius: "9999px",
-            padding: "8px 20px",
-            fontWeight: 700,
-            fontSize: "13px",
-            boxShadow: "0 4px 14px rgba(139, 92, 246, 0.35)",
-            cursor: "pointer",
-            transition: "all 0.2s ease"
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 6px 20px rgba(236, 72, 153, 0.45)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "0 4px 14px rgba(139, 92, 246, 0.35)";
-          }}
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          <span>Add Product</span>
-        </button>
       </div>
 
       <div className="stat-grid" style={{ marginBottom: 24 }}>
@@ -1483,7 +1488,7 @@ function ProductsSection() {
 
       <div className="panel">
         <div className="panel-head">
-          <h3 className="panel-title">Catalog ({filteredProducts.length})</h3>
+          <h3 className="panel-title">Catalog ({displayProducts.length})</h3>
         </div>
         <div className="table-wrap">
           <table className="tbl">
@@ -1499,7 +1504,7 @@ function ProductsSection() {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((p) => (
+              {displayProducts.map((p) => (
                 <tr key={p.id}>
                   <td>
                     <div>
@@ -1533,28 +1538,57 @@ function ProductsSection() {
                   <td><Pill status={p.status} /></td>
                   <td><span style={{ fontWeight: 600, color: "var(--brown-dark)" }}>{p.brand || "—"}</span></td>
                   <td>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => setSelectedProductForOrder(p)}
-                      style={{
-                        background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
-                        fontWeight: 800,
-                        borderRadius: "20px",
-                        padding: "6px 14px",
-                        fontSize: "12px",
-                        border: "none",
-                        color: "#FFFFFF",
-                        cursor: "pointer",
-                        boxShadow: "0 3px 10px rgba(124, 58, 237, 0.25)",
-                        whiteSpace: "nowrap"
-                      }}
-                    >
-                      🛒 Add to Sell
-                    </button>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setSelectedProductForOrder(p)}
+                        style={{
+                          background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+                          fontWeight: 800,
+                          borderRadius: "20px",
+                          padding: "6px 14px",
+                          fontSize: "12px",
+                          border: "none",
+                          color: "#FFFFFF",
+                          cursor: "pointer",
+                          boxShadow: "0 3px 10px rgba(124, 58, 237, 0.25)",
+                          whiteSpace: "nowrap"
+                        }}
+                      >
+                        🛒 Add to Sell
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-circle"
+                        title="View Product & Batch Details"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          localStorage.setItem("product_detail_preview", JSON.stringify(p));
+                          localStorage.setItem("product_detail_role", "employee");
+                          navigate({ to: "/product-detail" });
+                        }}
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "50%",
+                          background: "#F5F3FF",
+                          border: "1px solid #E9D8FD",
+                          color: "#7C3AED",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "14px",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        ℹ️
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
-              {filteredProducts.length === 0 && (
+              {displayProducts.length === 0 && (
                 <tr>
                   <td colSpan={7} className="empty">No products available.</td>
                 </tr>
@@ -1567,12 +1601,18 @@ function ProductsSection() {
       {showAdd && (
         <ProductForm
           hideIncentiveFields={true}
-          title="Add Product"
+          title="Add New Stock / Batch"
           onClose={() => setShowAdd(false)}
-          onSave={(d) => {
-            const nextId = uid("p");
-            setState((s) => ({ ...s, products: [...s.products, { id: nextId, ...d }] }));
+          onSave={async (d) => {
             setShowAdd(false);
+            const nextId = uid("p");
+            const newProd = { id: nextId, ...d };
+            try {
+              await setDoc(doc(db, "products", nextId), newProd, { merge: true });
+            } catch (err) {
+              console.error("Error adding product/batch to Firestore:", err);
+            }
+            setState((s) => ({ ...s, products: [...s.products, newProd] }));
           }}
         />
       )}
@@ -2024,7 +2064,7 @@ export function EmployeeIncentiveSection() {
             </thead>
             <tbody>
               {incentiveProducts.map((p) => {
-                const canSell = isEmployee && p.incentive > 0 && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id);
+                const canSell = isStaff && p.incentive > 0 && (p.assignedEmployeeId === "all" || p.assignedEmployeeId === currentUser?.id);
                 return (
                   <tr key={p.id}>
                     <td>
@@ -2382,7 +2422,7 @@ export function OrderDocumentModal({
   }
 
   const isIncentiveOrder = order.isIncentive || order.customerId === "c_incentive" || order.customerName === "Incentive Sell Request";
-  const isCustomerDiscount = !isIncentiveOrder && !!(order.discount && order.discount > 0);
+  const isCustomerDiscount = !isIncentiveOrder && !!(order.discount && order.discount > 0 && order.discount < 100);
 
   const isApprovedOrDelivered = order.status === "Approved" || order.status === "Delivered";
   const orderBasePrice = (isCustomerDiscount && !isApprovedOrDelivered) ? Math.round(order.total / (1 - ((order.discount || 0) / 100))) : order.total;

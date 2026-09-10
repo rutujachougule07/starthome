@@ -1556,18 +1556,30 @@ function ProductsSection() {
     filteredProducts.forEach(p => {
       const key = `${(p.name || "").trim().toLowerCase()}___${(p.brand || "").trim().toLowerCase()}`;
       const pCost = getProductUnitCost(p);
+      const pBatches = Array.isArray(p.batches) && p.batches.length > 0 ? p.batches : [{ ...p, cost: pCost > 0 ? pCost : p.cost }];
+
       if (map.has(key)) {
         const existing = map.get(key)!;
-        existing.qty = (existing.qty ?? existing.stock ?? 0) + (p.qty ?? p.stock ?? 0);
-        existing.stock = existing.qty;
+        const existingBatches = existing.batches || [];
+        const batchMap = new Map<string, Product>();
+        [...existingBatches, ...pBatches].forEach((b) => {
+          const bKey = b.id || `${b.date}_${b.qty}_${b.cost}`;
+          if (!batchMap.has(bKey)) batchMap.set(bKey, b);
+        });
+        const mergedBatches = Array.from(batchMap.values());
+        const calcQty = mergedBatches.reduce((sum, b) => sum + (b.qty ?? b.stock ?? 0), 0);
+        existing.batches = mergedBatches;
+        existing.qty = calcQty;
+        existing.stock = calcQty;
         if (!existing.cost || existing.cost === 0) {
           if (pCost > 0) existing.cost = pCost;
         }
         if (!existing.sku && p.sku) existing.sku = p.sku;
         else if (existing.sku && existing.sku.length > 20 && p.sku && p.sku.length <= 20) existing.sku = p.sku;
-        existing.batches.push({ ...p, cost: pCost > 0 ? pCost : p.cost });
       } else {
-        map.set(key, { ...p, cost: pCost > 0 ? pCost : (p.cost || 0), batches: [{ ...p, cost: pCost > 0 ? pCost : (p.cost || 0) }] });
+        const initialBatches = pBatches;
+        const calcQty = initialBatches.reduce((sum, b) => sum + (b.qty ?? b.stock ?? 0), 0);
+        map.set(key, { ...p, cost: pCost > 0 ? pCost : (p.cost || 0), qty: calcQty, stock: calcQty, batches: initialBatches });
       }
     });
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -2757,6 +2769,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
       assignedEmployeeId,
       serialNumbers
     });
+    onClose();
   };
 
   const modalTitle = initial ? "Edit Stock Entry" : "+ New Stock Entry";
@@ -3770,7 +3783,8 @@ export function OrderApprovalSection() {
             if (status === "Approved") {
               if (newDiscountPct !== undefined && newDiscountPct > 0) {
                 const product = s.products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
-                const basePrice = product ? getProductUnitPrice(product) : Math.round(o.total / (1 - ((o.discount || 0) / 100)));
+                const safeDisc = (o.discount && o.discount > 0 && o.discount < 100) ? o.discount : 0;
+                const basePrice = product ? getProductUnitPrice(product) : (safeDisc > 0 ? Math.round(o.total / (1 - (safeDisc / 100))) : o.total);
                 finalDiscount = newDiscountPct;
                 finalTotal = Math.max(0, (basePrice * o.qty) - Math.round((newDiscountPct / 100) * (basePrice * o.qty)));
               } else if (bargainPrice && bargainPrice > 0) {
@@ -3813,14 +3827,15 @@ export function OrderApprovalSection() {
           {list.map((o) => {
             const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
             const brandStr = product?.brand ? ` (${product.brand})` : "";
-            const orderBasePrice = Math.round(o.total / (1 - ((o.discount || 0) / 100)));
-            const currentDiscount = editDiscounts[o.id] !== undefined ? editDiscounts[o.id] : (o.discount || 0);
-            const calculatedTotal = o.status === "Pending" ? Math.max(0, orderBasePrice - Math.round((currentDiscount / 100) * orderBasePrice)) : o.total;
-
             const ninetyDaysAgo = new Date();
             ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
             const isProdIncentive = !!(product && (product.incentive ?? 0) > 0 && product.date && new Date(product.date) < ninetyDaysAgo);
-            const isIncentiveOrder = o.isIncentive ?? isProdIncentive;
+            const isIncentiveOrder = !!(o.isIncentive || isProdIncentive || o.customerId === "c_incentive" || o.customerName === "Incentive Sell Request");
+
+            const hasValidCustomerDiscount = !!(o.discount && o.discount > 0 && o.discount < 100 && !isIncentiveOrder);
+            const orderBasePrice = hasValidCustomerDiscount ? Math.round(o.total / (1 - (o.discount! / 100))) : (product ? (getProductUnitPrice(product) * o.qty) : o.total);
+            const currentDiscount = editDiscounts[o.id] !== undefined ? editDiscounts[o.id] : (hasValidCustomerDiscount ? o.discount! : 0);
+            const calculatedTotal = o.status === "Pending" ? Math.max(0, orderBasePrice - Math.round((currentDiscount / 100) * orderBasePrice)) : o.total;
 
             const creatorUser = users.find(u =>
               u.id === o.createdBy ||
@@ -3964,7 +3979,7 @@ export function OrderApprovalSection() {
                       />
                     </div>
                   ) : (
-                    o.discount && o.discount > 0 ? (
+                    hasValidCustomerDiscount ? (
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "var(--brown)", flexWrap: "wrap", gap: "4px" }}>
                         <span>Discount Applied:</span>
                         <span style={{ fontWeight: 600 }}>{o.discount}%</span>
@@ -6699,18 +6714,44 @@ export function SuperAdminIncentiveSection() {
   }, [users]);
 
   const activeIncentiveOrders = useMemo(() => {
-    return (orders || []).filter(o =>
+    const list = (orders || []).filter(o =>
       o.isIncentive ||
       o.customerId === "c_incentive" ||
       o.customerName === "Incentive Sell Request"
     );
+    return list.sort((a, b) => {
+      const aCompleted = a.customerName !== "Incentive Sell Request";
+      const bCompleted = b.customerName !== "Incentive Sell Request";
+      if (!aCompleted && bCompleted) return -1;
+      if (aCompleted && !bCompleted) return 1;
+      return 0;
+    });
   }, [orders]);
 
   const handleRevokeIncentiveOrder = (orderId: string, productName: string, assignedToName?: string) => {
+    const targetOrder = (orders || []).find((o) => o.id === orderId);
+    if (targetOrder && targetOrder.customerName !== "Incentive Sell Request") {
+      alert(`⚠️ This incentive sale is already completed with customer "${targetOrder.customerName}" and cannot be deleted or revoked.`);
+      return;
+    }
     if (!confirm(`Are you sure you want to revoke & delete the assigned incentive for "${productName}" (${assignedToName || "Employee"})?`)) return;
+
+    const restoreQty = targetOrder?.qty || 1;
+    let remainingToRestore = restoreQty;
+    const updatedProducts = (products || []).map((prod: any) => {
+      if (prod && (prod.id === targetOrder?.productId || prod.name.toLowerCase() === productName.toLowerCase()) && remainingToRestore > 0) {
+        const currentQty = prod.qty ?? prod.stock ?? 0;
+        const newQty = currentQty + remainingToRestore;
+        remainingToRestore = 0;
+        setDoc(doc(db, "products", prod.id), { qty: newQty, stock: newQty }, { merge: true }).catch(() => {});
+        return { ...prod, qty: newQty, stock: newQty };
+      }
+      return prod;
+    });
 
     setState((s: any) => ({
       ...s,
+      products: updatedProducts,
       orders: (s.orders || []).filter((o: any) => o.id !== orderId),
       notifications: [
         {
@@ -6744,7 +6785,13 @@ export function SuperAdminIncentiveSection() {
       return;
     }
 
-    const maxAvailable = selectedProductForIncentive.qty ?? selectedProductForIncentive.stock ?? 1;
+    const activeIncentiveOrdersForSelected = (orders || []).filter(o =>
+      (o.isIncentive || o.customerId === "c_incentive" || o.customerName === "Incentive Sell Request") &&
+      (o.productId === selectedProductForIncentive.id || (selectedProductForIncentive.batches || []).some(b => b.id === o.productId) || o.productName.toLowerCase() === selectedProductForIncentive.name.toLowerCase())
+    );
+    const assignedQtyForSelected = activeIncentiveOrdersForSelected.reduce((sum, o) => sum + (o.qty || 0), 0);
+    const maxAvailable = Math.max(0, (selectedProductForIncentive.qty ?? selectedProductForIncentive.stock ?? 1) - assignedQtyForSelected);
+
     if (qtyVal > maxAvailable) {
       setIncentiveFormError(`Quantity cannot exceed available stock (${maxAvailable} units)`);
       return;
@@ -6797,17 +6844,31 @@ export function SuperAdminIncentiveSection() {
       incentiveAmount: incentiveFormAmount >= 0 ? incentiveFormAmount : 0
     };
 
+    let remainingToDeduct = qtyVal;
+    const updatedProds = (products || []).map((prod: any) => {
+      if (prod && batchIds.includes(prod.id) && remainingToDeduct > 0) {
+        const currentQty = prod.qty ?? prod.stock ?? 0;
+        const deduct = Math.min(currentQty, remainingToDeduct);
+        remainingToDeduct -= deduct;
+        const newQty = Math.max(0, currentQty - deduct);
+        const updatedProd = {
+          ...prod,
+          qty: newQty,
+          stock: newQty,
+          assignedEmployeeId: targetEmpId,
+          incentive: incentiveFormAmount >= 0 ? incentiveFormAmount : prod.incentive,
+        };
+        setDoc(doc(db, "products", prod.id), { qty: newQty, stock: newQty, assignedEmployeeId: targetEmpId, incentive: updatedProd.incentive }, { merge: true }).catch(() => { });
+        return updatedProd;
+      }
+      return prod;
+    });
+
+    setDoc(doc(db, "orders", newOrder.id), newOrder, { merge: true }).catch(() => { });
+
     setState((s: any) => ({
       ...s,
-      products: (s.products || []).map((prod: any) =>
-        prod && batchIds.includes(prod.id)
-          ? {
-            ...prod,
-            assignedEmployeeId: targetEmpId,
-            incentive: incentiveFormAmount >= 0 ? incentiveFormAmount : prod.incentive,
-          }
-          : prod
-      ),
+      products: updatedProds,
       orders: [newOrder, ...(s.orders || [])],
       notifications: [newNotification, ...(s.notifications || [])]
     }));
@@ -6907,79 +6968,18 @@ export function SuperAdminIncentiveSection() {
         </div>
       )}
 
-      {/* Active Assigned Incentives List with Delete/Revoke Option */}
-      {activeIncentiveOrders.length > 0 && (
-        <div style={{ background: "#FFFFFF", borderRadius: "16px", padding: "18px 20px", marginBottom: "24px", boxShadow: "0 4px 16px rgba(0,0,0,0.06)", border: "1px solid #FEF3C7" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "8px" }}>
-            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 800, color: "#92400E", display: "flex", alignItems: "center", gap: "8px" }}>
-              🎯 Active Assigned Incentives ({activeIncentiveOrders.length})
-            </h3>
-            <span style={{ fontSize: "12px", color: "#B45309", background: "#FEF3C7", padding: "3px 10px", borderRadius: "20px", border: "1px solid #FCD34D", fontWeight: 700 }}>
-              Admin Control
-            </span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "14px" }}>
-            {activeIncentiveOrders.map((o) => {
-              const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
-              const unitIncentive = (o.incentiveAmount && o.incentiveAmount > 0) ? o.incentiveAmount : (product?.incentive || 0);
-              const totalInc = unitIncentive * o.qty;
-
-              return (
-                <div key={o.id} style={{ background: "#FFFBEB", borderRadius: "12px", padding: "14px", border: "1px solid #FDE68A", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "10px" }}>
-                  <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
-                      <div>
-                        <div style={{ fontSize: "14px", fontWeight: 800, color: "#78350F" }}>{o.productName}</div>
-                        <div style={{ fontSize: "12px", color: "#92400E", marginTop: "2px" }}>Order #{o.id} · {o.date}</div>
-                      </div>
-                      <span style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FCD34D", fontSize: "11px", fontWeight: 800, padding: "2px 8px", borderRadius: "12px" }}>
-                        {o.customerName === "Incentive Sell Request" ? "⏳ Awaiting Employee Sale" : `👤 ${o.customerName}`}
-                      </span>
-                    </div>
-
-                    <div style={{ marginTop: "10px", display: "flex", flexDirection: "column", gap: "4px", fontSize: "12px", color: "#4B5563" }}>
-                      <div>👤 <strong>Assigned To:</strong> {o.assignedToName || "Employee"}</div>
-                      <div>📦 <strong>Quantity:</strong> {o.qty} unit(s)</div>
-                      <div style={{ color: "#B45309", fontWeight: 800, marginTop: "2px" }}>
-                        💰 <strong>Incentive:</strong> ₹{unitIncentive.toLocaleString()}/unit {totalInc > 0 && `(Total: ₹${totalInc.toLocaleString()})`}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid #FDE68A", paddingTop: "8px", marginTop: "4px" }}>
-                    <button
-                      onClick={() => handleRevokeIncentiveOrder(o.id, o.productName, o.assignedToName)}
-                      style={{
-                        background: "#FEF2F2",
-                        color: "#DC2626",
-                        border: "1px solid #FCA5A5",
-                        borderRadius: "8px",
-                        padding: "6px 14px",
-                        fontSize: "12px",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px"
-                      }}
-                      title="Delete / Revoke this assigned incentive"
-                    >
-                      🗑️ Delete / Revoke Incentive
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Table Body / Rows */}
       <div>
         {paginatedProducts.map((p) => {
           const hasUnseen = p.batches.some(b => !b.incentiveSeen);
           const assignedEmp = p.assignedEmployeeId || p.batches.find(b => b.assignedEmployeeId)?.assignedEmployeeId || "";
+
+          const activeIncentiveOrdersForProd = (orders || []).filter(o =>
+            (o.isIncentive || o.customerId === "c_incentive" || o.customerName === "Incentive Sell Request") &&
+            (o.productId === p.id || p.batches.some(b => b.id === o.productId) || o.productName.toLowerCase() === p.name.toLowerCase())
+          );
+          const activeAssignedIncentiveQty = activeIncentiveOrdersForProd.reduce((sum, o) => sum + (o.qty || 0), 0);
+          const availableUnits = Math.max(0, (p.qty ?? p.stock ?? 0) - activeAssignedIncentiveQty);
 
           return (
             <div className="product-card-premium" key={p.id}>
@@ -7032,7 +7032,7 @@ export function SuperAdminIncentiveSection() {
                   }}
                   title="Click to view batch & product details"
                 >
-                  <span className="num">{p.qty ?? p.stock}</span>
+                  <span className="num">{availableUnits}</span>
                   <span className="lbl">Units</span>
                   {hasUnseen && <div style={{ position: "absolute", top: "2px", right: "2px", width: "10px", height: "10px", background: "#ef4444", borderRadius: "50%", border: "2px solid white" }}></div>}
                 </div>
@@ -7056,7 +7056,7 @@ export function SuperAdminIncentiveSection() {
                     setIncentiveFormEmpId(assignedEmp || (employees[0]?.id || "all"));
                     setIncentiveFormPercent("");
                     setIncentiveFormAmount(p.incentive || 0);
-                    setIncentiveFormQty(p.qty ?? p.stock ?? 1);
+                    setIncentiveFormQty(availableUnits > 0 ? 1 : 0);
                     setIncentiveFormNotes("");
                     setIncentiveFormError("");
                     setShowGiveIncentiveModal(true);
@@ -7076,6 +7076,101 @@ export function SuperAdminIncentiveSection() {
           </div>
         )}
       </div>
+
+      {/* Active Assigned Incentives List with Delete/Revoke Option */}
+      {activeIncentiveOrders.length > 0 && (
+        <div style={{ background: "#FFFFFF", borderRadius: "14px", padding: "14px 16px", marginTop: "24px", marginBottom: "20px", boxShadow: "0 4px 16px rgba(0,0,0,0.05)", border: "1px solid #FEF3C7" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
+            <h3 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#92400E", display: "flex", alignItems: "center", gap: "6px" }}>
+              🎯 Active Assigned Incentives ({activeIncentiveOrders.length})
+            </h3>
+            <span style={{ fontSize: "11px", color: "#B45309", background: "#FEF3C7", padding: "2px 8px", borderRadius: "16px", border: "1px solid #FCD34D", fontWeight: 700 }}>
+              Admin Control
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "10px" }}>
+            {activeIncentiveOrders.map((o) => {
+              const product = products.find(p => p.id === o.productId || p.name.toLowerCase() === o.productName.toLowerCase());
+              const unitIncentive = (o.incentiveAmount && o.incentiveAmount > 0) ? o.incentiveAmount : (product?.incentive || 0);
+              const totalInc = unitIncentive * o.qty;
+              const isSaleCompleted = o.customerName !== "Incentive Sell Request";
+
+              return (
+                <div key={o.id} style={{ background: isSaleCompleted ? "#F0FDF4" : "#FFFBEB", borderRadius: "10px", padding: "10px 12px", border: isSaleCompleted ? "1px solid #BBF7D0" : "1px solid #FDE68A", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "6px" }}>
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: 800, color: isSaleCompleted ? "#166534" : "#78350F", lineHeight: "1.2" }}>{o.productName}</div>
+                        <div style={{ fontSize: "10.5px", color: isSaleCompleted ? "#15803D" : "#92400E", marginTop: "2px" }}>Order #{o.id} · {o.date}</div>
+                      </div>
+                      <span style={{
+                        background: isSaleCompleted ? "#DCFCE7" : "#FEF3C7",
+                        color: isSaleCompleted ? "#15803D" : "#D97706",
+                        border: isSaleCompleted ? "1px solid #86EFAC" : "1px solid #FCD34D",
+                        fontSize: "10px",
+                        fontWeight: 800,
+                        padding: "1px 6px",
+                        borderRadius: "10px",
+                        whiteSpace: "nowrap"
+                      }}>
+                        {isSaleCompleted ? `✅ Sale Completed (${o.customerName})` : "⏳ Awaiting Employee Sale"}
+                      </span>
+                    </div>
+
+                    <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "2px", fontSize: "11px", color: "#4B5563" }}>
+                      <div>👤 <strong>Assigned To:</strong> {o.assignedToName || "Employee"}</div>
+                      <div>📦 <strong>Quantity:</strong> {o.qty} unit(s)</div>
+                      <div style={{ color: isSaleCompleted ? "#15803D" : "#B45309", fontWeight: 800, marginTop: "1px" }}>
+                        💰 <strong>Incentive:</strong> ₹{unitIncentive.toLocaleString()}/unit {totalInc > 0 && `(Total: ₹${totalInc.toLocaleString()})`}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "flex-end", borderTop: isSaleCompleted ? "1px solid #BBF7D0" : "1px solid #FDE68A", paddingTop: "6px", marginTop: "2px" }}>
+                    {isSaleCompleted ? (
+                      <span style={{
+                        background: "#ECFDF5",
+                        color: "#047857",
+                        border: "1px solid #A7F3D0",
+                        borderRadius: "6px",
+                        padding: "3px 8px",
+                        fontSize: "10px",
+                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "3px"
+                      }}>
+                        🔒 Sale Completed (Locked)
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleRevokeIncentiveOrder(o.id, o.productName, o.assignedToName)}
+                        style={{
+                          background: "#FEF2F2",
+                          color: "#DC2626",
+                          border: "1px solid #FCA5A5",
+                          borderRadius: "6px",
+                          padding: "4px 10px",
+                          fontSize: "10.5px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "3px"
+                        }}
+                        title="Delete / Revoke this assigned incentive"
+                      >
+                        🗑️ Delete / Revoke Incentive
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
 
 
@@ -7344,7 +7439,7 @@ export function SuperAdminIncentiveSection() {
                           </span>
                           {selectedProductForIncentive && (
                             <span style={{ fontSize: "10px", fontWeight: 700, color: "#64748B", whiteSpace: "nowrap" }}>
-                              Max: <strong style={{ color: "#7C3AED", fontWeight: 800 }}>{selectedProductForIncentive.qty ?? selectedProductForIncentive.stock ?? 1}</strong>
+                              Max: <strong style={{ color: "#7C3AED", fontWeight: 800 }}>{Math.max(0, (selectedProductForIncentive.qty ?? selectedProductForIncentive.stock ?? 1) - ((orders || []).filter(o => (o.isIncentive || o.customerId === "c_incentive" || o.customerName === "Incentive Sell Request") && (o.productId === selectedProductForIncentive.id || (selectedProductForIncentive.batches || []).some(b => b.id === o.productId) || o.productName.toLowerCase() === selectedProductForIncentive.name.toLowerCase())).reduce((sum, o) => sum + (o.qty || 0), 0)))}</strong>
                             </span>
                           )}
                         </div>

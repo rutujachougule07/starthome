@@ -513,12 +513,13 @@ function OrdersMgmt() {
             );
 
             const isApprovedOrDelivered = o.status === "Approved" || o.status === "Delivered";
-            const orderBasePrice = (o.discount && o.discount > 0 && !isApprovedOrDelivered) ? Math.round(o.total / (1 - ((o.discount || 0) / 100))) : o.total;
+            const hasCustomerDiscount = !!(o.discount && o.discount > 0 && o.discount < 100 && !isIncentiveOrder);
+            const orderBasePrice = (hasCustomerDiscount && !isApprovedOrDelivered) ? Math.round(o.total / (1 - (o.discount! / 100))) : o.total;
             const orderUnitPrice = isApprovedOrDelivered ? Math.round(o.total / o.qty) : Math.round(orderBasePrice / o.qty);
 
             const unitIncentive = (product?.incentive && product.incentive > 0)
               ? product.incentive
-              : (o.discount && o.discount > 0 ? Math.round((orderUnitPrice * o.discount) / 100) : 0);
+              : (hasCustomerDiscount ? Math.round((orderUnitPrice * o.discount!) / 100) : 0);
             const totalIncentiveEarned = unitIncentive * o.qty;
 
             return (
@@ -1363,18 +1364,30 @@ function ProductsAvail() {
     filteredProducts.forEach(p => {
       const key = `${(p.name || "").trim().toLowerCase()}___${(p.brand || "").trim().toLowerCase()}`;
       const pCost = getProductUnitCost(p);
+      const pBatches = Array.isArray(p.batches) && p.batches.length > 0 ? p.batches : [{ ...p, cost: pCost > 0 ? pCost : p.cost }];
+
       if (map.has(key)) {
         const existing = map.get(key)!;
-        existing.qty = (existing.qty ?? existing.stock ?? 0) + (p.qty ?? p.stock ?? 0);
-        existing.stock = existing.qty;
+        const existingBatches = existing.batches || [];
+        const batchMap = new Map<string, Product>();
+        [...existingBatches, ...pBatches].forEach((b) => {
+          const bKey = b.id || `${b.date}_${b.qty}_${b.cost}`;
+          if (!batchMap.has(bKey)) batchMap.set(bKey, b);
+        });
+        const mergedBatches = Array.from(batchMap.values());
+        const calcQty = mergedBatches.reduce((sum, b) => sum + (b.qty ?? b.stock ?? 0), 0);
+        existing.batches = mergedBatches;
+        existing.qty = calcQty;
+        existing.stock = calcQty;
         if (!existing.cost || existing.cost === 0) {
           if (pCost > 0) existing.cost = pCost;
         }
         if (!existing.sku && p.sku) existing.sku = p.sku;
         else if (existing.sku && existing.sku.length > 20 && p.sku && p.sku.length <= 20) existing.sku = p.sku;
-        existing.batches.push({ ...p, cost: pCost > 0 ? pCost : p.cost });
       } else {
-        map.set(key, { ...p, cost: pCost > 0 ? pCost : (p.cost || 0), batches: [{ ...p, cost: pCost > 0 ? pCost : (p.cost || 0) }] });
+        const initialBatches = pBatches;
+        const calcQty = initialBatches.reduce((sum, b) => sum + (b.qty ?? b.stock ?? 0), 0);
+        map.set(key, { ...p, cost: pCost > 0 ? pCost : (p.cost || 0), qty: calcQty, stock: calcQty, batches: initialBatches });
       }
     });
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));

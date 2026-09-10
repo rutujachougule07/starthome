@@ -694,6 +694,7 @@ export function ProductDetailPage() {
 
       {showAddBatchModal && (
         <ProductForm
+          hideIncentiveFields={role === "employee"}
           title={`Add New Batch for ${data.name}`}
           initial={{
             name: data.name,
@@ -717,6 +718,7 @@ export function ProductDetailPage() {
           } as any}
           onClose={() => setShowAddBatchModal(false)}
           onSave={async (formData) => {
+            setShowAddBatchModal(false);
             const nextId = `${data.id || "p"}_b_${Date.now().toString(36)}`;
             const newBatchObj: ProductData = {
               ...formData,
@@ -728,24 +730,33 @@ export function ProductDetailPage() {
               warranty: data.warranty
             };
 
-            try {
-              await setDoc(doc(db, "products", nextId), newBatchObj, { merge: true });
-            } catch (err) {
-              console.error("Error adding batch to Firestore:", err);
-            }
-
             const updatedBatches = [...batchList, newBatchObj];
             const newQty = updatedBatches.reduce((acc, item) => acc + (item.qty ?? item.stock ?? 0), 0);
             const updatedData = { ...data, qty: newQty, stock: newQty, batches: updatedBatches };
 
+            try {
+              await setDoc(doc(db, "products", nextId), newBatchObj, { merge: true });
+              if (data.id) {
+                await setDoc(doc(db, "products", data.id), {
+                  qty: newQty,
+                  stock: newQty,
+                  batches: updatedBatches
+                }, { merge: true });
+              }
+            } catch (err) {
+              console.error("Error adding batch to Firestore:", err);
+            }
+
             setState((s) => ({
               ...s,
-              products: [...s.products, newBatchObj as any]
+              products: [
+                ...s.products.map((p) => (p.id === data.id ? ({ ...p, ...updatedData } as any) : p)),
+                newBatchObj as any
+              ]
             }));
 
             setData(updatedData as any);
             localStorage.setItem("product_detail_preview", JSON.stringify(updatedData));
-            setShowAddBatchModal(false);
           }}
         />
       )}
