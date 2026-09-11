@@ -1479,6 +1479,26 @@ function ProductsSection() {
           <h2 className="page-title">Products</h2>
           <p className="page-sub">View active and available products.</p>
         </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowAdd(true)}
+          style={{
+            background: "linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)",
+            fontWeight: 800,
+            borderRadius: "20px",
+            padding: "8px 18px",
+            fontSize: "13px",
+            border: "none",
+            color: "#FFFFFF",
+            cursor: "pointer",
+            boxShadow: "0 3px 12px rgba(124, 58, 237, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px"
+          }}
+        >
+          📦 + Add Product
+        </button>
       </div>
 
       <div className="stat-grid" style={{ marginBottom: 24 }}>
@@ -1487,8 +1507,24 @@ function ProductsSection() {
       </div>
 
       <div className="panel">
-        <div className="panel-head">
+        <div className="panel-head" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 className="panel-title">Catalog ({displayProducts.length})</h3>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowAdd(true)}
+            style={{
+              background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
+              fontWeight: 700,
+              borderRadius: "16px",
+              padding: "6px 14px",
+              fontSize: "12px",
+              border: "none",
+              color: "#FFFFFF",
+              cursor: "pointer"
+            }}
+          >
+            + Add Product
+          </button>
         </div>
         <div className="table-wrap">
           <table className="tbl">
