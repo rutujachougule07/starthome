@@ -37,9 +37,10 @@ export function LoginPage() {
       <div className="login-wrap" style={{ background: "radial-gradient(1100px 620px at 10% -8%, rgba(124,58,237,0.22) 0%, transparent 62%), radial-gradient(900px 560px at 92% 6%, rgba(236,72,153,0.18) 0%, transparent 60%), radial-gradient(1000px 700px at 55% 110%, rgba(56,189,248,0.2) 0%, transparent 62%), #F8FAFC" }}>
         <form className="login-card" onSubmit={submit} style={{ background: "rgba(255, 255, 255, 0.70)", backdropFilter: "saturate(180%) blur(22px)", border: "1px solid rgba(255, 255, 255, 0.45)", borderRadius: "22px", boxShadow: "0 28px 60px -18px rgba(124, 58, 237, 0.35)" }}>
           <div className="login-logo" style={{ background: "#FFFFFF", boxShadow: "0 14px 30px -8px rgba(124, 58, 237, 0.2), 0 4px 12px rgba(0,0,0,0.05)", borderRadius: "24px", padding: "10px", width: "150px", height: "150px", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img src="/logo.png" alt="Star Home Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            <img src="/logo.png" alt="Star Home Appliances Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
-          <p className="login-sub" style={{ color: "#64748B", fontSize: "14px", marginTop: "8px", textAlign: "center" }}>Smart Management System — Sign in to continue</p>
+          <h2 style={{ textAlign: "center", fontWeight: 800, margin: "8px 0 4px", fontSize: "22px", color: "#1E293B", letterSpacing: "-0.5px" }}>Star Home Appliances</h2>
+          <p className="login-sub" style={{ color: "#64748B", fontSize: "14px", marginTop: "4px", textAlign: "center" }}>Smart Management System — Sign in to continue</p>
 
           {error && <div className="alert-error">{error}</div>}
 

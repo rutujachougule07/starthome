@@ -432,8 +432,8 @@ export function PieChart({ data }: { data: { label: string; value: number; color
   );
 }
 
-export function Modal({ title, onClose, children, className }: { title: string; onClose: () => void; children: ReactNode; className?: string }) {
-  const maxWidth = className?.includes("modal-report-preview") ? 1200 : className?.includes("modal-lg") ? 880 : 680;
+export function Modal({ title, onClose, children, className }: { title: ReactNode; onClose: () => void; children: ReactNode; className?: string }) {
+  const maxWidth = className?.includes("modal-report-preview") ? 1200 : className?.includes("modal-lg") ? 880 : className?.includes("modal-compact") ? 480 : className?.includes("modal-sm") ? 520 : 680;
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

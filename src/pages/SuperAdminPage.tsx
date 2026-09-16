@@ -1,7 +1,7 @@
 import { Navigate, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useStore, loadCurrentUser, Product, User, Order, Lead, Task, Quotation, normalizeQuotationDoc, getProductUnitPrice } from "../app/store";
+import { useStore, loadCurrentUser, Product, User, Order, Lead, Task, Quotation, normalizeQuotationDoc, getProductUnitPrice, formatQuotationDate } from "../app/store";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
@@ -8360,7 +8360,7 @@ export function downloadSectionPDF(sectionTitle: string, tableHeaders: string[],
   // Document Title Header
   doc.setFontSize(16);
   doc.setTextColor(30, 41, 59);
-  doc.text(`Smart Home Systems - ${sectionTitle}`, 14, 16);
+  doc.text(`Star Home Appliances - ${sectionTitle}`, 14, 16);
 
   // Metadata Subtitle
   doc.setFontSize(9);
@@ -9454,11 +9454,13 @@ export function QuotationsSection() {
   const setState = store?.setState;
   const uid = store?.uid;
   const [search, setSearch] = useState("");
+  const [filterTab, setFilterTab] = useState<"All" | "Accepted" | "Sent" | "Draft" | "Expired" | "Rejected">("All");
   const [showForm, setShowForm] = useState(false);
   const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
   const [viewQuotation, setViewQuotation] = useState<Quotation | null>(null);
 
-  const filteredQuotations = useMemo(() => {
+  // Filter user permissions
+  const myQuotations = useMemo(() => {
     const isSuperAdmin = currentUser?.role === "superadmin";
     const myId = currentUser?.id;
     const myEmpId = currentUser?.employeeId;
@@ -9466,25 +9468,55 @@ export function QuotationsSection() {
 
     return (quotations || []).map((q) => normalizeQuotationDoc(q)).filter((q) => {
       if (!q) return false;
-
-      // Rule: Admin sees ALL; Employee/Manager sees ONLY quotations added by themselves!
       if (!isSuperAdmin) {
         const matchesId = q.createdById && (q.createdById === myId || q.createdById === myEmpId);
         const matchesName = q.createdBy && myName && q.createdBy.toLowerCase().trim() === myName;
         if (!matchesId && !matchesName) return false;
       }
+      return true;
+    });
+  }, [quotations, currentUser]);
 
+  // Statistics
+  const totalQuotes = myQuotations.length;
+  const totalValue = useMemo(() => {
+    return myQuotations.reduce((sum, q) => {
+      const disc = getQuotationDiscount(q);
+      return sum + (disc.finalPrice || 0);
+    }, 0);
+  }, [myQuotations]);
+
+  // Filtered by status and search
+  const filteredQuotations = useMemo(() => {
+    return myQuotations.filter((q) => {
+      const st = String(q.status || "").toLowerCase();
+      // Tab filter
+      if (filterTab === "Accepted") {
+        if (st !== "approved" && st !== "accepted") return false;
+      } else if (filterTab === "Sent") {
+        if (st !== "sent") return false;
+      } else if (filterTab === "Draft") {
+        if (st !== "draft") return false;
+      } else if (filterTab === "Expired") {
+        if (st !== "expired" && st !== "closed") return false;
+      } else if (filterTab === "Rejected") {
+        if (st !== "rejected") return false;
+      }
+
+      // Search query
       const query = search.toLowerCase().trim();
       if (!query) return true;
       return (
+        (q.id || "").toLowerCase().includes(query) ||
         (q.customerName || "").toLowerCase().includes(query) ||
+        (q.customerPhone || "").toLowerCase().includes(query) ||
         (q.productName || "").toLowerCase().includes(query) ||
         (q.brand && q.brand.toLowerCase().includes(query)) ||
         (q.createdBy && q.createdBy.toLowerCase().includes(query)) ||
         (q.status && q.status.toLowerCase().includes(query))
       );
     });
-  }, [quotations, currentUser, search]);
+  }, [myQuotations, filterTab, search]);
 
   const handleDelete = (id: string) => {
     if (!confirm("Are you sure you want to delete this quotation?")) return;
@@ -9583,131 +9615,349 @@ export function QuotationsSection() {
     window.open(pdfUrl, "_blank");
   };
 
+  const getStatusBadgeStyle = (stRaw?: string) => {
+    const st = String(stRaw || "").toLowerCase();
+    if (st === "approved" || st === "accepted") {
+      return { bg: "#DCFCE7", color: "#166534", label: "Accepted" };
+    }
+    if (st === "sent") {
+      return { bg: "#E0F2FE", color: "#0369A1", label: "Sent" };
+    }
+    if (st === "expired" || st === "closed") {
+      return { bg: "#FEF3C7", color: "#B45309", label: "Expired" };
+    }
+    if (st === "rejected") {
+      return { bg: "#FEE2E2", color: "#B91C1C", label: "Rejected" };
+    }
+    return { bg: "#F1F5F9", color: "#475569", label: "Draft" };
+  };
+
   return (
-    <div style={{ padding: "4px" }}>
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "4px" }}>
+      {/* Top Header matching screenshot */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 800, color: "#5B21B6" }}>
-            📑 Quotations & Price Estimates
+          <h2 style={{ margin: 0, fontSize: "26px", fontWeight: 800, color: "#1E1B4B", letterSpacing: "-0.5px" }}>
+            Quotations
           </h2>
-          <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#64748B" }}>
-            {currentUser?.role === "superadmin"
-              ? "View and manage all customer quotations created by team members."
-              : "View, create, and manage your customer price quotations."}
+          <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#64748B", fontWeight: 500 }}>
+            Create and manage customer appliance price estimates
           </p>
         </div>
         <button
-          className="btn btn-primary"
           onClick={() => { setEditingQuotation(null); setShowForm(true); }}
-          style={{ padding: "10px 18px", borderRadius: "12px", background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)", color: "#FFF", fontWeight: 700, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+          style={{
+            padding: "10px 22px",
+            borderRadius: "9999px",
+            background: "linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)",
+            color: "#FFFFFF",
+            fontWeight: 700,
+            fontSize: "14px",
+            border: "none",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            boxShadow: "0 4px 14px rgba(79, 70, 229, 0.35)",
+            transition: "all 0.2s ease"
+          }}
         >
-          ➕ Create New Quotation
+          <span>+ Create</span>
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div style={{ background: "#FFFFFF", padding: "14px 18px", borderRadius: "16px", border: "1px solid #E2E8F0", marginBottom: "20px", display: "flex", alignItems: "center", gap: "12px" }}>
-        <span style={{ fontSize: "16px" }}>🔍</span>
+      {/* Metric Cards Grid matching screenshot */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+        {/* Total Quotes Card */}
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: "20px",
+            padding: "18px 22px",
+            border: "1px solid #F1F5F9",
+            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
+            display: "flex",
+            alignItems: "center",
+            gap: "16px"
+          }}
+        >
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              background: "#F3E8FF",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "22px",
+              flexShrink: 0
+            }}
+          >
+            <span style={{ color: "#7C3AED" }}>📄</span>
+          </div>
+          <div>
+            <div style={{ fontSize: "12px", color: "#64748B", fontWeight: 600, marginBottom: "2px" }}>
+              Total Quotes
+            </div>
+            <div style={{ fontSize: "26px", fontWeight: 800, color: "#1E293B", lineHeight: 1.1 }}>
+              {totalQuotes}
+            </div>
+          </div>
+        </div>
+
+        {/* Total Value Card */}
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: "20px",
+            padding: "18px 22px",
+            border: "1px solid #F1F5F9",
+            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.03)",
+            display: "flex",
+            alignItems: "center",
+            gap: "16px"
+          }}
+        >
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              background: "#DCFCE7",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "22px",
+              flexShrink: 0
+            }}
+          >
+            <span style={{ color: "#16A34A" }}>📊</span>
+          </div>
+          <div>
+            <div style={{ fontSize: "12px", color: "#64748B", fontWeight: 600, marginBottom: "2px" }}>
+              Total Value
+            </div>
+            <div style={{ fontSize: "26px", fontWeight: 800, color: "#16A34A", lineHeight: 1.1 }}>
+              ₹{totalValue.toLocaleString()}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Input Box matching screenshot */}
+      <div
+        style={{
+          background: "#FFFFFF",
+          padding: "12px 18px",
+          borderRadius: "16px",
+          border: "1px solid #E2E8F0",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.02)"
+        }}
+      >
+        <span style={{ fontSize: "18px", color: "#94A3B8" }}>🔍</span>
         <input
           type="text"
-          placeholder="Search by customer name, product name, brand, or added by..."
+          placeholder="Search quotation ID, customer, phone, product..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          style={{ width: "100%", border: "none", outline: "none", fontSize: "14px", fontWeight: 500, color: "#1E293B" }}
+          style={{
+            width: "100%",
+            border: "none",
+            outline: "none",
+            fontSize: "14px",
+            fontWeight: 500,
+            color: "#1E293B",
+            background: "transparent"
+          }}
         />
       </div>
 
-      {/* Quotations Table */}
-      <div style={{ background: "#FFFFFF", borderRadius: "16px", border: "1px solid #E2E8F0", overflowX: "auto", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13.5px" }}>
-          <thead>
-            <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-              <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>CUSTOMER NAME</th>
-              <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>PRODUCT DETAILS</th>
-              <th style={{ padding: "14px 18px", textAlign: "left", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>ADDED BY</th>
-              <th style={{ padding: "14px 18px", textAlign: "center", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>QTY</th>
-              <th style={{ padding: "14px 18px", textAlign: "right", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>UNIT PRICE</th>
-              <th style={{ padding: "14px 18px", textAlign: "right", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>TOTAL PRICE</th>
-              <th style={{ padding: "14px 18px", textAlign: "center", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>STATUS</th>
-              <th style={{ padding: "14px 18px", textAlign: "right", color: "#5B21B6", fontWeight: 800, fontSize: "11px", letterSpacing: "0.5px" }}>ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredQuotations.map((q, idx) => (
-              <tr key={q.id || idx} style={{ borderBottom: idx === filteredQuotations.length - 1 ? "none" : "1px solid #F1F5F9" }}>
-                <td style={{ padding: "16px 18px" }}>
-                  <div style={{ fontWeight: 800, color: "#1E293B" }}>{q.customerName}</div>
-                  {q.customerPhone && <div style={{ fontSize: "11px", color: "#64748B", marginTop: 2 }}>📞 {q.customerPhone}</div>}
-                  <div style={{ fontSize: "10px", color: "#94A3B8", marginTop: 2 }}>Date: {q.date}</div>
-                </td>
-                <td style={{ padding: "16px 18px" }}>
-                  <div style={{ fontWeight: 700, color: "#5B21B6" }}>{q.productName}</div>
-                  <div style={{ fontSize: "11px", color: "#64748B", marginTop: 2 }}>
-                    {q.brand && <span>Brand: {q.brand}</span>}
-                    {q.size && <span> · Size: {q.size}</span>}
-                    {q.model && <span> · Model: {q.model}</span>}
-                  </div>
-                </td>
-                <td style={{ padding: "16px 18px" }}>
-                  <div style={{ fontWeight: 700, color: "#4C1D95", fontSize: "12.5px" }}>👤 {q.createdBy || "—"}</div>
-                </td>
-                <td style={{ padding: "16px 18px", textAlign: "center", fontWeight: 900, fontSize: "16px", color: "#7C3AED" }}>
-                  {q.qty}
-                </td>
-                <td style={{ padding: "16px 18px", textAlign: "right", fontWeight: 700, color: "#1E293B" }}>
-                  ₹{(q.unitPrice || 0).toLocaleString()}
-                </td>
-                <td style={{ padding: "16px 18px", textAlign: "right" }}>
-                  {(() => {
-                    const disc = getQuotationDiscount(q);
-                    return (
-                      <>
-                        <div style={{ fontWeight: 900, color: "#166534", fontSize: "15px" }}>
-                          ₹{disc.finalPrice.toLocaleString()}
-                        </div>
-                        {disc.label ? <div style={{ fontSize: "11px", color: "#DC2626", fontWeight: 700 }}>{disc.label}</div> : null}
-                      </>
-                    );
-                  })()}
-                </td>
-                <td style={{ padding: "16px 18px", textAlign: "center" }}>
-                  <span
-                    style={{
-                      background: q.status === "Approved" ? "#DCFCE7" : q.status === "Sent" ? "#E0F2FE" : "#F1F5F9",
-                      color: q.status === "Approved" ? "#166534" : q.status === "Sent" ? "#0369A1" : "#475569",
-                      padding: "4px 12px",
-                      borderRadius: "999px",
-                      fontSize: "12px",
-                      fontWeight: 700
-                    }}
-                  >
-                    {q.status || "Draft"}
-                  </span>
-                </td>
-                <td style={{ padding: "16px 18px", textAlign: "right" }}>
-                  <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-                    <button
-                      onClick={() => setViewQuotation(q)}
-                      title="View Full Quotation Details"
-                      style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", borderRadius: "10px", padding: "6px 14px", color: "#4F46E5", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}
-                    >
-                      👁️ View
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filteredQuotations.length === 0 && (
-              <tr>
-                <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "#64748B", fontWeight: 600 }}>
-                  📑 No quotations found. Click "+ Create New Quotation" to add one.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Filter Pills matching screenshot */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          overflowX: "auto",
+          paddingBottom: "4px",
+          scrollbarWidth: "none"
+        }}
+      >
+        {(["All", "Accepted", "Sent", "Draft", "Expired", "Rejected"] as const).map((tab) => {
+          const isActive = filterTab === tab;
+          return (
+            <button
+              key={tab}
+              onClick={() => setFilterTab(tab)}
+              style={{
+                padding: "8px 22px",
+                borderRadius: "9999px",
+                fontSize: "13.5px",
+                fontWeight: isActive ? 700 : 600,
+                border: isActive ? "1.5px solid #818CF8" : "1px solid #E2E8F0",
+                background: isActive ? "#F5F3FF" : "#FFFFFF",
+                color: isActive ? "#6D28D9" : "#64748B",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.2s ease"
+              }}
+            >
+              {tab}
+            </button>
+          );
+        })}
       </div>
+
+      {/* List Subheading */}
+      <div
+        style={{
+          fontSize: "11px",
+          fontWeight: 800,
+          color: "#64748B",
+          letterSpacing: "0.6px",
+          textTransform: "uppercase",
+          marginTop: "4px"
+        }}
+      >
+        {filterTab.toUpperCase()} QUOTATIONS ({filteredQuotations.length})
+      </div>
+
+      {/* Empty State matching screenshot */}
+      {filteredQuotations.length === 0 ? (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "70px 20px",
+            textAlign: "center",
+            background: "#FFFFFF",
+            borderRadius: "20px",
+            border: "1px solid #F1F5F9"
+          }}
+        >
+          {/* Document icon matching screenshot */}
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "16px",
+              background: "#F1F5F9",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "16px"
+            }}
+          >
+            <svg
+              width="36"
+              height="36"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#94A3B8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="8" y1="13" x2="16" y2="13" />
+              <line x1="8" y1="17" x2="16" y2="17" />
+            </svg>
+          </div>
+          <div style={{ fontSize: "16px", fontWeight: 600, color: "#64748B", marginBottom: "6px" }}>
+            No quotations found.
+          </div>
+          <div style={{ fontSize: "13px", color: "#94A3B8" }}>
+            Tap '+ Create' to generate an estimate.
+          </div>
+        </div>
+      ) : (
+        /* Quotation Card Grid when data exists */
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "16px" }}>
+          {filteredQuotations.map((q) => {
+            const badge = getStatusBadgeStyle(q.status);
+            const disc = getQuotationDiscount(q);
+            return (
+              <div
+                key={q.id}
+                style={{
+                  background: "#FFFFFF",
+                  borderRadius: "20px",
+                  border: "1px solid #E2E8F0",
+                  padding: "20px",
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.03)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: "14px"
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
+                    <div>
+                      <div style={{ fontSize: "16px", fontWeight: 800, color: "#1E293B" }}>
+                        {q.customerName}
+                      </div>
+                      {q.customerPhone && (
+                        <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>
+                          📞 {q.customerPhone}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      style={{
+                        background: badge.bg,
+                        color: badge.color,
+                        padding: "4px 12px",
+                        borderRadius: "9999px",
+                        fontSize: "12px",
+                        fontWeight: 700
+                      }}
+                    >
+                      {badge.label}
+                    </span>
+                  </div>
+
+                  <div style={{ padding: "12px", background: "#F8FAFC", borderRadius: "12px", border: "1px solid #F1F5F9", marginBottom: "12px" }}>
+                    <div style={{ fontWeight: 700, color: "#5B21B6", fontSize: "14px" }}>
+                      {q.productName}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {q.brand && <span>Brand: <strong>{q.brand}</strong></span>}
+                      {q.size && <span>· Size: <strong>{q.size}</strong></span>}
+                      {q.model && <span>· Model: <strong>{q.model}</strong></span>}
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", paddingTop: "8px", borderTop: "1px stroke #E2E8F0" }}>
+                      <span style={{ fontSize: "12px", color: "#64748B" }}>Qty: <strong>{q.qty}</strong> × ₹{(q.unitPrice || 0).toLocaleString()}</span>
+                      <span style={{ fontSize: "15px", fontWeight: 800, color: "#166534" }}>₹{disc.finalPrice.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize: "11px", color: "#94A3B8", display: "flex", justifyContent: "space-between" }}>
+                    <span>ID: QT-{q.id.slice(-6).toUpperCase()}</span>
+                    <span>Date: {formatQuotationDate(q.date)}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", borderTop: "1px solid #F1F5F9", paddingTop: "12px", justifyContent: "flex-end" }}>
+                  <button
+                    onClick={() => setViewQuotation(q)}
+                    style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", color: "#4F46E5", borderRadius: "10px", padding: "6px 16px", fontSize: "13px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                  >
+                    👁️ View
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* View Details Modal */}
       {viewQuotation && (
@@ -9782,7 +10032,9 @@ export function QuotationForm({
   const [unitPrice, setUnitPrice] = useState(initial?.unitPrice ?? 0);
   const [discount, setDiscount] = useState(initial?.discount ?? 0);
   const [discountType, setDiscountType] = useState<"percent" | "amount">(initial?.discountType ?? "percent");
-  const [status, setStatus] = useState<"Draft" | "Sent" | "Approved" | "Closed">(initial?.status ?? "Draft");
+  const [status, setStatus] = useState<"Draft" | "Sent" | "Accepted" | "Expired" | "Rejected">(
+    (initial?.status as any) || "Draft"
+  );
   const [notes, setNotes] = useState(initial?.notes ?? "");
 
   const [isCustomSize, setIsCustomSize] = useState(false);
@@ -9901,7 +10153,7 @@ export function QuotationForm({
       discount: Number(discount),
       discountType,
       finalPrice,
-      date: initial?.date || new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      date: initial?.date ? formatQuotationDate(initial.date) : formatQuotationDate(new Date()),
       createdBy: initial?.createdBy || currentUser?.name || "Admin",
       createdById: initial?.createdById || currentUser?.employeeId || currentUser?.id || "admin",
       status,
@@ -10101,9 +10353,10 @@ export function QuotationForm({
               style={{ background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "10px", fontWeight: 700 }}
             >
               <option value="Draft">Draft</option>
-              <option value="Sent">Sent to Customer</option>
-              <option value="Approved">Approved</option>
-              <option value="Closed">Closed</option>
+              <option value="Sent">Sent</option>
+              <option value="Accepted">Accepted</option>
+              <option value="Expired">Expired</option>
+              <option value="Rejected">Rejected</option>
             </select>
           </div>
           <div className="form-group">
@@ -10146,127 +10399,244 @@ export function QuotationDetailsModal({
 }) {
   const discInfo = getQuotationDiscount(quotation);
 
+  const rawNum = quotation.id.replace(/[^0-9]/g, "");
+  const qtnNum = rawNum ? `QTN-${rawNum.slice(-3).padStart(3, "0")}` : `QTN-${quotation.id.slice(-3).toUpperCase()}`;
+
+  const modalTitle = (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div
+        style={{
+          width: "36px",
+          height: "36px",
+          borderRadius: "10px",
+          background: "#F5F3FF",
+          border: "1px solid #DDD6FE",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#7C3AED",
+          fontSize: "18px",
+          flexShrink: 0
+        }}
+      >
+        📑
+      </div>
+      <span style={{ fontSize: "20px", fontWeight: 800, color: "#1E1B4B", letterSpacing: "-0.3px" }}>
+        Quotation {qtnNum}
+      </span>
+    </div>
+  );
+
+  const getStatusColor = (stRaw?: string) => {
+    const st = String(stRaw || "").toLowerCase();
+    if (st === "approved" || st === "accepted") return "#16A34A";
+    if (st === "sent") return "#0284C7";
+    if (st === "expired" || st === "closed") return "#D97706";
+    if (st === "rejected") return "#DC2626";
+    return "#7C3AED";
+  };
+
   return (
-    <Modal title={`📑 Quotation Details — QT-${quotation.id.slice(-6).toUpperCase()}`} onClose={onClose} className="modal-lg">
-      <div style={{ padding: "4px" }}>
-        {/* Header Badge Row */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+    <Modal title={modalTitle} onClose={onClose} className="modal-compact">
+      <div style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "4px 0", maxWidth: "600px", margin: "0 auto" }}>
+        {/* Customer Information Card */}
+        <div style={{ background: "#F8FAFC", border: "1px solid #F1F5F9", borderRadius: "16px", padding: "14px 18px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
           <div>
-            <span style={{ fontSize: "12px", color: "#64748B", fontWeight: 600 }}>Quotation Date: </span>
-            <strong style={{ color: "#1E293B" }}>{quotation.date}</strong>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              CUSTOMER NAME
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#1E293B" }}>
+              {quotation.customerName || "—"}
+            </div>
           </div>
-          <span style={{
-            background: quotation.status === "Approved" ? "#DCFCE7" : quotation.status === "Sent" ? "#E0F2FE" : "#F1F5F9",
-            color: quotation.status === "Approved" ? "#166534" : quotation.status === "Sent" ? "#0369A1" : "#475569",
-            padding: "4px 14px", borderRadius: "20px", fontSize: "12px", fontWeight: 800
-          }}>
-            {quotation.status || "Draft"}
-          </span>
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              CUSTOMER PHONE
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#1E293B" }}>
+              {quotation.customerPhone || "—"}
+            </div>
+          </div>
         </div>
 
-        {/* Info Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "18px" }}>
-          {/* Creator Box */}
-          <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: "12px", padding: "14px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 800, color: "#6D28D9", textTransform: "uppercase", marginBottom: "4px" }}>
-              👤 Added / Created By
-            </div>
-            <div style={{ fontSize: "15px", fontWeight: 800, color: "#4C1D95" }}>
-              {quotation.createdBy || "—"}
-            </div>
-            {quotation.createdById && (
-              <div style={{ fontSize: "11px", color: "#6D28D9", marginTop: "2px" }}>
-                ID: {quotation.createdById}
-              </div>
+        {/* Product Information Card */}
+        <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "14px 18px" }}>
+          <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+            PRODUCT INFORMATION
+          </div>
+          <div style={{ fontSize: "18px", fontWeight: 800, color: "#1E1B4B", marginBottom: "8px" }}>
+            {quotation.productName || "—"}
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {quotation.brand && (
+              <span
+                style={{
+                  background: "#F1F5F9",
+                  color: "#475569",
+                  padding: "4px 12px",
+                  borderRadius: "9999px",
+                  fontSize: "12.5px",
+                  fontWeight: 600
+                }}
+              >
+                {quotation.brand}
+              </span>
+            )}
+            {`${quotation.size || ""} ${quotation.model || ""}`.trim() && (
+              <span
+                style={{
+                  background: "#F1F5F9",
+                  color: "#475569",
+                  padding: "4px 12px",
+                  borderRadius: "9999px",
+                  fontSize: "12.5px",
+                  fontWeight: 600
+                }}
+              >
+                {`${quotation.size || ""} ${quotation.model || ""}`.trim()}
+              </span>
             )}
           </div>
-
-          {/* Customer Box */}
-          <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "14px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 800, color: "#475569", textTransform: "uppercase", marginBottom: "4px" }}>
-              🙋 Customer Information
-            </div>
-            <div style={{ fontSize: "15px", fontWeight: 800, color: "#1E293B" }}>
-              {quotation.customerName}
-            </div>
-            {quotation.customerPhone && (
-              <div style={{ fontSize: "11px", color: "#64748B", marginTop: "2px" }}>
-                📞 Phone: {quotation.customerPhone}
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Product Details Box */}
-        <div style={{ background: "#FFF", border: "1px solid #E2E8F0", borderRadius: "12px", padding: "16px", marginBottom: "18px" }}>
-          <div style={{ fontSize: "11px", fontWeight: 800, color: "#5B21B6", textTransform: "uppercase", marginBottom: "10px" }}>
-            📦 Product Specifications
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "10px", fontSize: "13px" }}>
-            <div>
-              <span style={{ color: "#64748B", fontSize: "11px", display: "block" }}>PRODUCT NAME</span>
-              <strong style={{ color: "#1E293B", fontSize: "14px" }}>{quotation.productName}</strong>
+        {/* QTY, UNIT PRICE, DISCOUNT, FINAL TOTAL Card */}
+        <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "16px", padding: "14px 18px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              QTY
             </div>
-            <div>
-              <span style={{ color: "#64748B", fontSize: "11px", display: "block" }}>BRAND</span>
-              <strong style={{ color: "#1E293B" }}>{quotation.brand || "—"}</strong>
-            </div>
-            <div>
-              <span style={{ color: "#64748B", fontSize: "11px", display: "block" }}>SIZE / MODEL</span>
-              <strong style={{ color: "#1E293B" }}>{`${quotation.size || ""} ${quotation.model || ""}`.trim() || "—"}</strong>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#1E293B" }}>
+              {quotation.qty}
             </div>
           </div>
-        </div>
-
-        {/* Price Breakdown */}
-        <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: "12px", padding: "16px", marginBottom: "18px" }}>
-          <div style={{ fontSize: "11px", fontWeight: 800, color: "#166534", textTransform: "uppercase", marginBottom: "10px" }}>
-            💰 Pricing & Amount Details
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              UNIT PRICE
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#1E293B" }}>
+              ₹{(quotation.unitPrice || 0).toLocaleString()}
+            </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", textAlign: "center" }}>
-            <div>
-              <div style={{ fontSize: "10px", color: "#15803D", fontWeight: 700 }}>QUANTITY</div>
-              <div style={{ fontSize: "16px", fontWeight: 900, color: "#166534" }}>{quotation.qty}</div>
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              DISCOUNT
             </div>
-            <div>
-              <div style={{ fontSize: "10px", color: "#15803D", fontWeight: 700 }}>UNIT PRICE</div>
-              <div style={{ fontSize: "15px", fontWeight: 800, color: "#166534" }}>₹{(quotation.unitPrice || 0).toLocaleString()}</div>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: "#DC2626" }}>
+              ₹{discInfo.discountAmount.toLocaleString()}
             </div>
-            <div>
-              <div style={{ fontSize: "10px", color: "#DC2626", fontWeight: 700 }}>DISCOUNT</div>
-              <div style={{ fontSize: "15px", fontWeight: 800, color: "#DC2626" }}>
-                {discInfo.isPercent ? `${quotation.discount}% (₹${discInfo.discountAmount.toLocaleString()})` : `₹${discInfo.discountAmount.toLocaleString()}`}
-              </div>
+          </div>
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              FINAL TOTAL
             </div>
-            <div>
-              <div style={{ fontSize: "10px", color: "#166534", fontWeight: 800 }}>FINAL PRICE</div>
-              <div style={{ fontSize: "18px", fontWeight: 900, color: "#15803D" }}>
-                ₹{discInfo.finalPrice.toLocaleString()}
-              </div>
+            <div
+              style={{
+                background: "#DCFCE7",
+                color: "#166534",
+                padding: "6px 14px",
+                borderRadius: "9999px",
+                fontWeight: 800,
+                fontSize: "16px",
+                display: "inline-block",
+                textAlign: "center"
+              }}
+            >
+              ₹{discInfo.finalPrice.toLocaleString()}
             </div>
           </div>
         </div>
 
-        {/* Special Notes if any */}
-        {quotation.notes && (
-          <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "12px", padding: "12px 14px", marginBottom: "18px", fontSize: "12px", color: "#92400E" }}>
-            <strong>📌 Notes / Special Terms:</strong> {quotation.notes}
+        {/* STATUS & SPECIAL NOTES / TERMS Card */}
+        <div style={{ background: "#F8FAFC", border: "1px solid #F1F5F9", borderRadius: "16px", padding: "14px 18px", display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "16px" }}>
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              STATUS
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: 800, color: getStatusColor(quotation.status) }}>
+              {quotation.status || "Draft"}
+            </div>
           </div>
-        )}
+          <div>
+            <div style={{ fontSize: "11px", fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+              SPECIAL NOTES / TERMS
+            </div>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "#1E293B" }}>
+              {quotation.notes || "—"}
+            </div>
+          </div>
+        </div>
 
-        {/* Modal Action Buttons */}
-        <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginTop: "16px" }}>
-          <button onClick={onPrint} style={{ background: "#7C3AED", color: "#FFF", border: "none", borderRadius: "10px", padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
-            📄 Download PDF
+        {/* Action Buttons Row */}
+        <div style={{ display: "flex", gap: "12px", marginTop: "6px" }}>
+          <button
+            type="button"
+            onClick={onDelete}
+            style={{
+              flex: 1,
+              padding: "11px 16px",
+              borderRadius: "9999px",
+              background: "#FFF1F2",
+              color: "#E11D48",
+              border: "none",
+              fontWeight: 700,
+              fontSize: "14px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <span>🗑️</span> Delete
           </button>
-          <button onClick={onEdit} style={{ background: "#FEF3C7", color: "#D97706", border: "1px solid #FDE68A", borderRadius: "10px", padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
-            ✏️ Edit Quotation
+
+          <button
+            type="button"
+            onClick={onEdit}
+            style={{
+              flex: 1.2,
+              padding: "11px 16px",
+              borderRadius: "9999px",
+              background: "#FFFFFF",
+              color: "#1E293B",
+              border: "1px solid #E2E8F0",
+              fontWeight: 700,
+              fontSize: "14px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <span>✏️</span> Edit
           </button>
-          <button onClick={onDelete} style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid #FECACA", borderRadius: "10px", padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
-            🗑️ Delete Quotation
-          </button>
-          <button onClick={onClose} style={{ background: "#F1F5F9", color: "#475569", border: "1px solid #CBD5E1", borderRadius: "10px", padding: "8px 16px", fontWeight: 700, cursor: "pointer", fontSize: "13px" }}>
-            Close
+
+          <button
+            type="button"
+            onClick={onPrint}
+            style={{
+              flex: 1.5,
+              padding: "11px 20px",
+              borderRadius: "9999px",
+              background: "linear-gradient(135deg, #7C3AED 0%, #C084FC 100%)",
+              color: "#FFFFFF",
+              border: "none",
+              fontWeight: 700,
+              fontSize: "14px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "6px",
+              boxShadow: "0 4px 14px rgba(124, 58, 237, 0.35)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <span>📄</span> PDF
           </button>
         </div>
       </div>

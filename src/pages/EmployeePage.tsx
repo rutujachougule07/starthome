@@ -282,7 +282,7 @@ function Overview() {
 }
 
 function TasksSection() {
-  const { currentUser, tasks, setState } = useStore();
+  const { currentUser, tasks, users, setState } = useStore();
   const mine = tasks.filter((t) => t.assignedTo === currentUser!.id);
   const [proofTask, setProofTask] = useState<Task | null>(null);
   const [proofNote, setProofNote] = useState("");
@@ -361,60 +361,190 @@ function TasksSection() {
           </div>
         )}
         <div className={displayTasks.length > 0 ? "card-grid" : ""}>
-          {displayTasks.map((t) => (
-            <div key={t.id} className="data-card">
-              <div className="data-card-header">
-                <h4 className="data-card-title">{t.title}</h4>
-                <Pill status={t.status} />
-              </div>
-              <div className="data-card-body">
-                <div className="data-row"><span className="data-label">📅 Start Date</span><span className="data-value">{t.date}</span></div>
-                {t.dueDate && (
-                  <div className="data-row" style={{ marginTop: 4, background: "#FEF2F2", padding: "6px 10px", borderRadius: "8px", border: "1px solid #FEE2E2" }}>
-                    <span className="data-label" style={{ color: "#DC2626", fontWeight: 800 }}>🎯 End Date (Last Date)</span>
-                    <span className="data-value" style={{ color: "#DC2626", fontWeight: 800 }}>{t.dueDate}</span>
+          {displayTasks.map((t) => {
+            const assignedUser = users.find((u) => u.id === t.assignedTo || u.name.toLowerCase() === t.assignedToName?.toLowerCase());
+            const empCode = (assignedUser as any)?.employeeId || (assignedUser as any)?.empId || (assignedUser?.id && !assignedUser.id.startsWith("u") ? assignedUser.id : "EMP001");
+            const displayName = t.assignedToName || assignedUser?.name || currentUser?.name || "rutuja";
+            const assignedToText = `${displayName} (${empCode})`;
+
+            return (
+              <div
+                key={t.id}
+                style={{
+                  background: "#FFFFFF",
+                  borderRadius: "24px",
+                  border: "1px solid #E2E8F0",
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01)",
+                  padding: "20px 22px",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  marginBottom: "16px",
+                  position: "relative"
+                }}
+              >
+                {/* Top drag handle indicator */}
+                <div style={{ width: 36, height: 4, background: "#CBD5E1", borderRadius: 2, margin: "0 auto 14px auto" }} />
+
+                {/* Header row: Title & Badges */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px", marginBottom: "4px" }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: "18px", fontWeight: 800, color: "#1E293B", lineHeight: 1.3 }}>
+                      {t.title}
+                    </h4>
+                    <div style={{ fontSize: "13px", color: "#64748B", marginTop: "3px", fontWeight: 500 }}>
+                      Category: {t.category || "General"}
+                    </div>
                   </div>
-                )}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                    <span style={{
+                      padding: "3px 12px",
+                      borderRadius: "20px",
+                      background: "#FEF3C7",
+                      border: "1px solid #FDE68A",
+                      color: "#D97706",
+                      fontSize: "12px",
+                      fontWeight: 700
+                    }}>
+                      {t.priority || "Medium"}
+                    </span>
+                    <span style={{
+                      padding: "3px 12px",
+                      borderRadius: "20px",
+                      background: t.status === "Completed" ? "#DCFCE7" : t.status === "In Progress" ? "#EEF2FF" : "#FFEDD5",
+                      border: `1px solid ${t.status === "Completed" ? "#86EFAC" : t.status === "In Progress" ? "#C7D2FE" : "#FED7AA"}`,
+                      color: t.status === "Completed" ? "#15803D" : t.status === "In Progress" ? "#4338CA" : "#EA580C",
+                      fontSize: "12px",
+                      fontWeight: 700
+                    }}>
+                      {t.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div style={{ fontSize: "13px", color: "#475569", margin: "10px 0 14px 0", lineHeight: 1.4 }}>
+                  {t.description || "No additional description."}
+                </div>
+
+                {/* Middle light card box */}
+                <div style={{
+                  background: "#F8FAFC",
+                  border: "1px solid #E2E8F0",
+                  borderRadius: "16px",
+                  padding: "14px 16px",
+                  marginBottom: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#4F46E5", fontWeight: 700, fontSize: "14px" }}>
+                    <span style={{ fontSize: "16px" }}>👤</span>
+                    <span>Assigned To: {assignedToText}</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#64748B", fontWeight: 600 }}>
+                    <span style={{ fontSize: "15px" }}>📅</span>
+                    <span>Assigned: {t.date}</span>
+                  </div>
+                  {t.dueDate && (
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#E11D48", fontWeight: 700 }}>
+                      <span style={{ fontSize: "15px" }}>⏰</span>
+                      <span>Due: {t.dueDate}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Task Proof Attached preview if any */}
                 {(t.proofNote || t.proofUrl) && (
-                  <div style={{ marginTop: 12, background: "var(--biscuit-light)", padding: "10px", borderRadius: "8px", border: "1px dashed var(--border)" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 700, color: "var(--brown-dark)", marginBottom: "6px" }}>📎 Task Proof Attached:</div>
-                    {t.proofNote && <div style={{ fontSize: "12px", color: "var(--text-muted)", fontStyle: "italic", wordBreak: "break-all" }}>{t.proofNote}</div>}
+                  <div style={{ marginBottom: "16px", background: "#FFFBEB", padding: "10px 14px", borderRadius: "12px", border: "1px dashed #FCD34D" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "#B45309", marginBottom: "4px" }}>📎 Task Proof Attached:</div>
+                    {t.proofNote && <div style={{ fontSize: "12px", color: "#475569", fontStyle: "italic", wordBreak: "break-all" }}>{t.proofNote}</div>}
                     {t.proofUrl && (
                       <div style={{ marginTop: "6px" }}>
                         <div onClick={() => setViewingImage(t.proofUrl || null)} style={{ cursor: "pointer", display: "inline-block" }} title="Click to view full image">
-                          <img src={t.proofUrl} alt="Proof" style={{ width: 50, height: 50, objectFit: "cover", borderRadius: 4, border: "1px solid var(--border)" }} />
+                          <img src={t.proofUrl} alt="Proof" style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 6, border: "1px solid #CBD5E1" }} />
                         </div>
                       </div>
                     )}
                   </div>
                 )}
-              </div>
-              <div className="data-card-footer" style={{ justifyContent: "flex-end" }}>
-                <div className="actions-row">
-                  <button className="btn btn-ghost btn-sm" onClick={() => { setProofTask(t); setProofNote(t.proofNote || ""); setProofUrl(t.proofUrl || ""); setProofType(t.proofUrl ? "photo" : "text"); }}>Proof</button>
-                  {t.status === "Pending" && <button className="btn btn-ghost btn-sm" onClick={() => update(t.id, "In Progress")}>Start</button>}
-                  {t.status !== "Completed" && (
+
+                {/* Footer: Change Status label + Action buttons */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", paddingTop: "4px" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#64748B" }}>
+                    Change Status:
+                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                    {/* Proof Button */}
                     <button
-                      className="btn btn-success btn-sm"
-                      onClick={() => {
-                        if (!t.proofNote && !t.proofUrl) {
-                          alert("Please submit proof first before marking this task as completed.");
-                          setProofTask(t);
-                          setProofNote(t.proofNote || "");
-                          setProofUrl(t.proofUrl || "");
-                          setProofType(t.proofUrl ? "photo" : "text");
-                        } else {
-                          update(t.id, "Completed");
-                        }
+                      className="btn btn-sm"
+                      onClick={() => { setProofTask(t); setProofNote(t.proofNote || ""); setProofUrl(t.proofUrl || ""); setProofType(t.proofUrl ? "photo" : "text"); }}
+                      style={{
+                        background: "linear-gradient(135deg, #A855F7 0%, #EC4899 100%)",
+                        border: "none",
+                        borderRadius: "22px",
+                        color: "#FFFFFF",
+                        fontWeight: 700,
+                        padding: "8px 24px",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        boxShadow: "0 4px 12px rgba(168, 85, 247, 0.25)",
+                        transition: "all 0.2s ease"
                       }}
                     >
-                      Complete
+                      Proof
                     </button>
-                  )}
+
+                    {/* Completed Button */}
+                    {t.status !== "Completed" ? (
+                      <button
+                        className="btn btn-sm"
+                        onClick={() => {
+                          if (!t.proofNote && !t.proofUrl) {
+                            alert("Please submit proof first before marking this task as completed.");
+                            setProofTask(t);
+                            setProofNote(t.proofNote || "");
+                            setProofUrl(t.proofUrl || "");
+                            setProofType(t.proofUrl ? "photo" : "text");
+                          } else {
+                            update(t.id, "Completed");
+                          }
+                        }}
+                        style={{
+                          background: "linear-gradient(135deg, #8B5CF6 0%, #D946EF 100%)",
+                          border: "none",
+                          borderRadius: "22px",
+                          color: "#FFFFFF",
+                          fontWeight: 700,
+                          padding: "8px 24px",
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          boxShadow: "0 4px 12px rgba(139, 92, 246, 0.25)",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        Completed
+                      </button>
+                    ) : (
+                      <span style={{
+                        background: "#DCFCE7",
+                        border: "1px solid #86EFAC",
+                        borderRadius: "22px",
+                        color: "#15803D",
+                        fontWeight: 700,
+                        padding: "8px 20px",
+                        fontSize: "13px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px"
+                      }}>
+                        Completed ✅
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {mine.length === 0 && <div className="empty">No tasks assigned.</div>}
         </div>
       </div>
@@ -2694,7 +2824,7 @@ export function OrderDocumentModal({
 
         {/* Footer info */}
         <div style={{ textAlign: "center", fontSize: "11px", color: "#94a3b8", borderTop: "1px solid #f1f5f9", paddingTop: "12px" }}>
-          Thank you for your business! · Smart Home Systems
+          Thank you for your business! · Star Home Appliances
         </div>
       </div>
 

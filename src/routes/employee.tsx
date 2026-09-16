@@ -9,5 +9,5 @@ export const Route = createFileRoute("/employee")({
     const search = Route.useSearch();
     return <EmployeePage tab={search.tab} />;
   },
-  head: () => ({ meta: [{ title: "Employee — Smart Home Appliances" }] }),
+  head: () => ({ meta: [{ title: "Employee — Star Home Appliances" }] }),
 });

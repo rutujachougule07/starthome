@@ -16,13 +16,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Smart Inventory Suite" },
+      { title: "Star Home Appliances — Management System" },
       {
         name: "description",
         content:
           "Premium inventory, sales and team operations platform for admins, managers and employees.",
       },
-      { property: "og:title", content: "Smart Inventory Suite" },
+      { property: "og:title", content: "Star Home Appliances — Management System" },
       {
         property: "og:description",
         content:

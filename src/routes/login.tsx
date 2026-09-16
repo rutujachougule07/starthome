@@ -3,5 +3,5 @@ import { LoginPage } from "../pages/LoginPage";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
-  head: () => ({ meta: [{ title: "Login — Smart Home Appliances" }] }),
+  head: () => ({ meta: [{ title: "Login — Star Home Appliances" }] }),
 });

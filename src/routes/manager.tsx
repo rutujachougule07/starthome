@@ -9,5 +9,5 @@ export const Route = createFileRoute("/manager")({
     const search = Route.useSearch();
     return <ManagerPage tab={search.tab} />;
   },
-  head: () => ({ meta: [{ title: "Manager — Smart Home Appliances" }] }),
+  head: () => ({ meta: [{ title: "Manager — Star Home Appliances" }] }),
 });

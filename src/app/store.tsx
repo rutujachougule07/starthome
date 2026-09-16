@@ -56,10 +56,10 @@ export function getProductUnitPrice(p?: { price?: number; cost?: number; qty?: n
 }
 export interface Customer { id: string; name: string; email: string; phone: string; address: string; status: string; }
 export interface Order { id: string; customerId: string; customerName: string; productId: string; productName: string; qty: number; total: number; discount?: number; createdBy: string; status: "Pending" | "Approved" | "Rejected" | "Delivered"; date: string; assignedTo?: string; assignedToName?: string; sentToEmployee?: boolean; customerBargain?: string; docType?: "Bill" | "Order Copy" | "Estimate"; docTypes?: ("Bill" | "Order Copy" | "Estimate")[]; estimateType?: "Cash" | "Online" | "Financial"; paymentMode?: "Cash" | "Online" | "Financial"; bookingExpiryDate?: string; isIncentive?: boolean; serialNumber?: string; incentiveAmount?: number; }
-export interface Task { id: string; title: string; assignedTo: string; assignedToName: string; customerId?: string; status: "Pending" | "In Progress" | "Completed"; date: string; dueDate?: string; proofNote?: string; proofUrl?: string; }
+export interface Task { id: string; title: string; assignedTo: string; assignedToName: string; customerId?: string; status: "Pending" | "In Progress" | "Completed"; date: string; dueDate?: string; proofNote?: string; proofUrl?: string; priority?: "Low" | "Medium" | "High"; category?: string; description?: string; }
 export interface Notification { id: string; to: Role | "all"; from: string; message: string; date: string; read: boolean; }
 export interface Lead { id: string; name: string; phone: string; email?: string; source?: string; product?: string; brand?: string; gender?: "Male" | "Female" | "Other"; status: "New" | "Cold" | "Warm" | "Hot" | "Enrolled" | "Cancelled"; followUpDate?: string; notes?: string; date: string; assignedTo?: string; city?: string; address?: string; createdBy?: string; }
-export interface Quotation { id: string; customerName: string; customerPhone?: string; productId?: string; productName: string; brand?: string; size?: string; model?: string; qty: number; unitPrice: number; totalPrice: number; discount?: number; discountType?: "percent" | "amount"; finalPrice: number; date: string; createdBy: string; createdById?: string; status: "Draft" | "Sent" | "Approved" | "Closed"; notes?: string; }
+export interface Quotation { id: string; customerName: string; customerPhone?: string; productId?: string; productName: string; brand?: string; size?: string; model?: string; qty: number; unitPrice: number; totalPrice: number; discount?: number; discountType?: "percent" | "amount"; finalPrice: number; date: string; createdBy: string; createdById?: string; status: "Draft" | "Sent" | "Accepted" | "Expired" | "Rejected" | "Approved" | "Closed"; notes?: string; }
 
 interface State {
   currentUser: User | null;
@@ -354,6 +354,29 @@ const seedDatabase = async () => {
   }
 };
 
+export function formatQuotationDate(rawDate?: any): string {
+  if (!rawDate) {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    return `${day}-${month}-${now.getFullYear()}`;
+  }
+  const str = String(rawDate).trim();
+  if (/^\d{2}-\d{2}-\d{4}$/.test(str)) return str;
+
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+    return str.replace(/\//g, "-");
+  }
+
+  const dt = new Date(str);
+  if (!isNaN(dt.getTime())) {
+    const day = String(dt.getDate()).padStart(2, "0");
+    const month = String(dt.getMonth() + 1).padStart(2, "0");
+    return `${day}-${month}-${dt.getFullYear()}`;
+  }
+  return str;
+}
+
 export function normalizeQuotationDoc(d: any): Quotation {
   if (!d) {
     return {
@@ -364,7 +387,7 @@ export function normalizeQuotationDoc(d: any): Quotation {
       unitPrice: 0,
       totalPrice: 0,
       finalPrice: 0,
-      date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
+      date: formatQuotationDate(new Date()),
       createdBy: "—",
       status: "Draft"
     };
@@ -404,24 +427,22 @@ export function normalizeQuotationDoc(d: any): Quotation {
   // Date parsing (Timestamp, Date string, or millis)
   let dateStr = "";
   if (data.date) {
-    dateStr = String(data.date);
+    dateStr = formatQuotationDate(data.date);
   } else if (data.createdAt) {
     if (typeof data.createdAt.toDate === "function") {
-      dateStr = data.createdAt.toDate().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-    } else if (typeof data.createdAt === "string") {
-      dateStr = data.createdAt;
-    } else if (typeof data.createdAt === "number") {
-      dateStr = new Date(data.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+      dateStr = formatQuotationDate(data.createdAt.toDate());
+    } else {
+      dateStr = formatQuotationDate(data.createdAt);
     }
   } else if (data.timestamp) {
     if (typeof data.timestamp.toDate === "function") {
-      dateStr = data.timestamp.toDate().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-    } else if (typeof data.timestamp === "number") {
-      dateStr = new Date(data.timestamp).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+      dateStr = formatQuotationDate(data.timestamp.toDate());
+    } else {
+      dateStr = formatQuotationDate(data.timestamp);
     }
   }
   if (!dateStr) {
-    dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    dateStr = formatQuotationDate(new Date());
   }
 
   // Creator details

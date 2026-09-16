@@ -9,7 +9,7 @@ export const Route = createFileRoute("/super-admin")({
     const search = Route.useSearch();
     return <SuperAdminPage tab={search.tab} />;
   },
-  head: () => ({ meta: [{ title: "Super Admin — Smart Home Appliances" }] }),
+  head: () => ({ meta: [{ title: "Super Admin — Star Home Appliances" }] }),
 });
 
 export { NotificationsSection, ProfileSection, OrdersTable, EmployeeForm } from "../pages/SuperAdminPage";
