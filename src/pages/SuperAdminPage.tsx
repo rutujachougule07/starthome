@@ -888,7 +888,7 @@ export function EmployeeForm({
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", marginBottom: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: 14 }}>
           <div className="form-group">
             <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>MOBILE NUMBER</label>
             <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
@@ -898,19 +898,6 @@ export function EmployeeForm({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Mobile number"
-                style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#475569", fontWeight: 700 }}>EMERGENCY CONTACT</label>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: 10, padding: "2px 10px" }}>
-              <span style={{ fontSize: 13 }}>🚨</span>
-              <input
-                className="form-input"
-                value={emergencyContact}
-                onChange={(e) => setEmergencyContact(e.target.value)}
-                placeholder="Emergency contact"
                 style={{ border: "none", background: "transparent", padding: "6px 4px", color: "#1E293B", fontWeight: 600 }}
               />
             </div>

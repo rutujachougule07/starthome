@@ -157,17 +157,10 @@ export function LoginPage() {
     try {
       const role = await login(emailOrPhone, password);
       if (!role) { setError("Invalid Email/Number or Password."); return; }
-      const found = users.find(
-        (u) => u.email?.toLowerCase() === emailOrPhone.toLowerCase() ||
-               u.username?.toLowerCase() === emailOrPhone.toLowerCase() ||
-               (u.phone || "").replace(/\D/g, "").endsWith(emailOrPhone.replace(/\D/g, ""))
-      );
-      if (found) doLogin(found);
-      else {
-        if (role === "superadmin") navigate({ to: "/super-admin", search: { tab: "live" } });
-        else if (role === "manager") navigate({ to: "/manager", search: { tab: "overview" } });
-        else navigate({ to: "/employee", search: { tab: "overview" } });
-      }
+      
+      if (role === "superadmin") navigate({ to: "/super-admin", search: { tab: "live" } });
+      else if (role === "manager") navigate({ to: "/manager", search: { tab: "overview" } });
+      else navigate({ to: "/employee", search: { tab: "overview" } });
     } catch { setError("Login failed. Please try again."); }
     finally { setSigningIn(false); }
   };
