@@ -6,6 +6,7 @@ import { useStore, loadCurrentUser, User, Customer, Order, Product, getProductUn
 import { DashboardLayout, StatCard, Pill, Modal, NavItem, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, EmployeeForm, EmployeeWorkDetailsModal, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, TasksAssignSection, TaskAssignmentSection, ProductForm, SuperAdminIncentiveSection, DownloadDropdown, openPDFPreview, QuotationsSection, OrderApprovalSection, getProductUnitCost } from "./SuperAdminPage";
 import { UnifiedEmployeeCard } from "../components/UnifiedEmployeeCard";
+import { ProductBatchDetailsModal } from "../components/ProductBatchDetailsModal";
 import { Search, Download, Plus, SlidersHorizontal } from "lucide-react";
 import { db } from "./firebase";
 import { doc, setDoc, deleteDoc } from "firebase/firestore";
@@ -1313,6 +1314,7 @@ function CreateOrderModal({ initial, onSave, onClose }: { initial?: Order; onSav
 
 function ProductsAvail() {
   const { products, setState, uid } = useStore();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState<Product | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [viewingBatches, setViewingBatches] = useState<Product & { batches: Product[] } | null>(null);
@@ -1519,6 +1521,7 @@ function ProductsAvail() {
                 <th>SKU</th>
                 <th>CATEGORY</th>
                 <th>QTY</th>
+                <th>CUSTOMER COST</th>
                 <th>UNIT COST</th>
                 <th style={{ whiteSpace: "nowrap" }}>TOTAL COST</th>
                 <th>SUPPLIER</th>
@@ -1584,6 +1587,7 @@ function ProductsAvail() {
                     <td>
                       <span style={{ fontWeight: 800, fontSize: 15, color: "#1E293B" }}>{p.qty ?? p.stock ?? 0}</span>
                     </td>
+                    <td style={{ color: "#059669", fontWeight: 700 }}>₹{(p.price || 0).toLocaleString()}</td>
                     <td>₹{unitCost.toLocaleString()}</td>
                     <td style={{ fontWeight: 600 }}>₹{totalValue.toLocaleString()}</td>
                     <td>{p.supplier}</td>
@@ -1597,7 +1601,7 @@ function ProductsAvail() {
                           e.stopPropagation();
                           localStorage.setItem("product_detail_preview", JSON.stringify(p));
                           localStorage.setItem("product_detail_role", "manager");
-                          window.location.href = "/product-detail";
+                          navigate({ to: "/product-detail" });
                         }}
                         title="View Product & Batch Details"
                         style={{ background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", width: "32px", height: "32px", borderRadius: "50%", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}
@@ -1653,6 +1657,18 @@ function ProductsAvail() {
               try { localStorage.setItem(`sham_serials_${editing.id}`, JSON.stringify(d.serialNumbers)); } catch (_) { }
             }
             setEditing(null);
+          }}
+        />
+      )}
+
+      {viewingBatches && (
+        <ProductBatchDetailsModal
+          product={viewingBatches}
+          isAdmin={true}
+          onClose={() => setViewingBatches(null)}
+          onEditBatch={(b) => {
+            setEditing(b);
+            setViewingBatches(null);
           }}
         />
       )}

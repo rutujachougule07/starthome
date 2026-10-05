@@ -279,6 +279,7 @@ const syncCollection = async (
         batch.set(doc(db, "sales", newItem.id), cleanItem, { merge: true });
         batch.set(doc(db, "employee_orders", newItem.id), cleanItem, { merge: true });
         batch.set(doc(db, "sales_orders", newItem.id), cleanItem, { merge: true });
+        batch.set(doc(db, "approvals", newItem.id), cleanItem, { merge: true });
       }
       hasChanges = true;
     }
@@ -294,6 +295,7 @@ const syncCollection = async (
         batch.delete(doc(db, "sales", oldItem.id));
         batch.delete(doc(db, "employee_orders", oldItem.id));
         batch.delete(doc(db, "sales_orders", oldItem.id));
+        batch.delete(doc(db, "approvals", oldItem.id));
       }
       hasChanges = true;
     }
@@ -593,13 +595,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let ordersList2: Order[] = [];
     let ordersList3: Order[] = [];
     let ordersList4: Order[] = [];
+    let ordersList5: Order[] = [];
     let hasLoadedOrders1 = false;
 
     const mergeAndSetOrders = () => {
       const combinedMap = new Map<string, Order>();
 
-      // 1. Add items from secondary collections first
-      [...ordersList2, ...ordersList3, ...ordersList4].forEach((o) => {
+      // 1. Add items from secondary collections first (including approvals)
+      [...ordersList2, ...ordersList3, ...ordersList4, ...ordersList5].forEach((o) => {
         if (o && o.id && (o as any).isDeleted !== true && o.status !== ("Deleted" as any)) {
           if (hasLoadedOrders1 && !ordersList1.some((item) => item.id === o.id)) {
             // Item was deleted in primary "orders" collection
@@ -630,7 +633,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       // 3. Ensure any Approved / Delivered status from secondary collections is honored if primary is still Pending
       combinedMap.forEach((val, id) => {
-        const secApproved = [...ordersList2, ...ordersList3, ...ordersList4].find(
+        const secApproved = [...ordersList2, ...ordersList3, ...ordersList4, ...ordersList5].find(
           (item) => item && item.id === id && (item.status === "Approved" || item.status === "Delivered" || item.status === "Rejected")
         );
         if (secApproved && val.status === "Pending") {
@@ -715,6 +718,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }),
       onSnapshot(collection(db, "sales_orders"), (snap) => {
         ordersList4 = snap.docs.map((d) => normalizeOrderDoc({ id: d.id, ...d.data() }));
+        mergeAndSetOrders();
+      }),
+      onSnapshot(collection(db, "approvals"), (snap) => {
+        ordersList5 = snap.docs.map((d) => normalizeOrderDoc({ id: d.id, ...d.data() }));
         mergeAndSetOrders();
       }),
       onSnapshot(collection(db, "tasks"), (snap) => {

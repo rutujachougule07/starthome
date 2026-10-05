@@ -7,6 +7,7 @@ import { useStore, loadCurrentUser, Customer, Product, Order, Task, getProductUn
 import { DashboardLayout, StatCard, Pill, NavItem, Modal, BarChart } from "../app/DashboardLayout";
 import { NotificationsSection, ProfileSection, LeadsSection, DashboardLeadPipelineOverview, UpcomingFollowUps, ProductForm, BarcodeScannerModal, QuotationsSection } from "./SuperAdminPage";
 import { getAutoProductImage } from "../utils/autoProductImage";
+import { ProductBatchDetailsModal } from "../components/ProductBatchDetailsModal";
 import { doc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -53,9 +54,11 @@ export function EmployeePage({ tab = "overview" }: EmployeePageProps) {
 }
 
 function Overview() {
-  const { currentUser, tasks, orders, products } = useStore();
+  const { currentUser: storeUser, tasks, orders, products } = useStore();
+  const currentUser = storeUser || loadCurrentUser();
   const navigate = useNavigate();
-  const mine = tasks.filter((t) => t.assignedTo === currentUser!.id);
+  const userId = currentUser?.id || "";
+  const mine = tasks.filter((t) => t.assignedTo === userId);
   const goTo = (tab: string) => navigate({ to: "/employee", search: { tab } });
 
   // Punch In State per Employee
@@ -1429,6 +1432,7 @@ function ProductsSection() {
   const [categoryFilter] = useState("All");
   const [showAdd, setShowAdd] = useState(false);
   const [selectedProductForOrder, setSelectedProductForOrder] = useState<Product | null>(null);
+  const [viewingBatches, setViewingBatches] = useState<Product & { batches?: Product[] } | null>(null);
 
   const [sellingProduct, setSellingProduct] = useState<Product | null>(null);
   const [customerName, setCustomerName] = useState("");
@@ -2071,6 +2075,14 @@ function ProductsSection() {
             </button>
           </div>
         </Modal>
+      )}
+
+      {viewingBatches && (
+        <ProductBatchDetailsModal
+          product={viewingBatches}
+          isAdmin={false}
+          onClose={() => setViewingBatches(null)}
+        />
       )}
     </>
   );

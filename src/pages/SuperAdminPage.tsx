@@ -1503,6 +1503,7 @@ function EmployeesSection() {
 
 function ProductsSection() {
   const { products, setState, uid } = useStore();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState<Product | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [viewingBatches, setViewingBatches] = useState<Product & { batches: Product[] } | null>(null);
@@ -1720,6 +1721,7 @@ function ProductsSection() {
                 <th>SKU</th>
                 <th>CATEGORY</th>
                 <th>QTY</th>
+                <th>CUSTOMER COST</th>
                 <th>UNIT COST</th>
                 <th style={{ whiteSpace: "nowrap" }}>TOTAL COST</th>
                 <th>SUPPLIER</th>
@@ -1783,6 +1785,7 @@ function ProductsSection() {
                     <td>
                       <span style={{ fontWeight: 800, fontSize: 15, color: "#1E293B" }}>{p.qty ?? p.stock ?? 0}</span>
                     </td>
+                    <td style={{ color: "#059669", fontWeight: 700 }}>₹{(p.price || 0).toLocaleString()}</td>
                     <td>₹{(unitCost || 0).toLocaleString()}</td>
                     <td style={{ fontWeight: 600 }}>₹{(totalValue || 0).toLocaleString()}</td>
                     <td>{p.supplier}</td>
@@ -1796,7 +1799,7 @@ function ProductsSection() {
                           e.stopPropagation();
                           localStorage.setItem("product_detail_preview", JSON.stringify(p));
                           localStorage.setItem("product_detail_role", "superadmin");
-                          window.location.href = "/product-detail";
+                          navigate({ to: "/product-detail" });
                         }}
                         title="View Product & Batch Details"
                         style={{ background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", width: "32px", height: "32px", borderRadius: "50%", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}
@@ -2274,6 +2277,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
   const [category, setCategory] = useState(initial?.category ?? "Electronics");
   const [qty, setQty] = useState(initial?.qty ?? 0);
   const [cost, setCost] = useState(initial?.cost ?? 0);
+  const [price, setPrice] = useState(initial?.price ?? initial?.cost ?? 0);
   const [incentive, setIncentive] = useState(initial?.incentive ?? 0);
   const [supplier, setSupplier] = useState(initial?.supplier ?? "");
   const [location, setLocation] = useState<"Shop" | "Godown 1" | "Godown 2" | "Display">(initial?.location ?? "Shop");
@@ -2321,14 +2325,7 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
   });
   const [scanningIndex, setScanningIndex] = useState<number | null>(null);
   const [showSerials, setShowSerials] = useState(false);
-  const [incentivePercent, setIncentivePercent] = useState(() => {
-    if (initial && initial.cost > 0 && initial.incentive) {
-      const pct = Math.round((initial.incentive / initial.cost) * 100);
-      return pct.toString();
-    }
-    return "0";
-  });
-
+  // incentivePercent removed
   const [isCustomBrand, setIsCustomBrand] = useState(() => {
     if (initial?.brand) {
       const initialName = (initial?.name ?? "").toLowerCase();
@@ -2758,8 +2755,8 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
       qty,
       stock: qty,
       cost,
-      price: cost,
-      unitPrice: cost,
+      price: price,
+      unitPrice: price,
       incentive,
       supplier,
       location: location as any,
@@ -3096,11 +3093,21 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
                     const val = +e.target.value;
                     setCost(val);
                     setTotalCost(parseFloat((val * qty).toFixed(2)));
-                    if (incentivePercent) {
-                      const pct = parseFloat(incentivePercent) || 0;
-                      setIncentive(parseFloat(((val * pct) / 100).toFixed(2)));
-                    }
                   }}
+                  placeholder="0.00"
+                  style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800 }}>CUSTOMER COST (₹)</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
+                <span style={{ width: 28, height: 28, borderRadius: 8, background: "#F5F3FF", border: "1px solid #E9D8FD", color: "#7C3AED", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, fontWeight: 700 }}>₹</span>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={price || ""}
+                  onChange={(e) => setPrice(+e.target.value)}
                   placeholder="0.00"
                   style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
                 />
@@ -3119,10 +3126,6 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
                     setTotalCost(val);
                     const calculatedCost = qty > 0 ? parseFloat((val / qty).toFixed(2)) : 0;
                     setCost(calculatedCost);
-                    if (incentivePercent) {
-                      const pct = parseFloat(incentivePercent) || 0;
-                      setIncentive(parseFloat(((calculatedCost * pct) / 100).toFixed(2)));
-                    }
                   }}
                   placeholder="0.00"
                   style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
@@ -3132,28 +3135,19 @@ export function ProductForm({ title, initial, onSave, onClose, isIncentiveMode, 
             {!hideIncentiveFields && (
               <div className="form-group">
                 <label className="form-label" style={{ fontSize: 11, marginBottom: 3, color: "#7C3AED", fontWeight: 800, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span>INCENTIVE (%)</span>
+                  <span>INCENTIVE (₹)</span>
                   <span style={{ color: "#16a34a", fontWeight: 600, textTransform: "none" }}>Manual</span>
                 </label>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F8FAFC", border: "1px solid #F3EEFF", borderRadius: 12, padding: "2px 10px" }}>
-                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#DCFCE7", border: "1px solid #BBF7D0", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, fontWeight: 700 }}>%</span>
+                  <span style={{ width: 28, height: 28, borderRadius: 8, background: "#DCFCE7", border: "1px solid #BBF7D0", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, fontWeight: 700 }}>₹</span>
                   <input
                     type="number"
                     className="form-input"
-                    value={incentivePercent || ""}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setIncentivePercent(val);
-                      const pct = parseFloat(val) || 0;
-                      const calculatedIncentive = parseFloat(((cost * pct) / 100).toFixed(2));
-                      setIncentive(calculatedIncentive);
-                    }}
-                    placeholder="e.g. 5"
+                    value={incentive || ""}
+                    onChange={(e) => setIncentive(+e.target.value)}
+                    placeholder="e.g. 20"
                     style={{ border: "none", background: "transparent", padding: "6px 8px", color: "#1E293B", fontWeight: 600 }}
                   />
-                </div>
-                <div style={{ fontSize: 11, color: "#16a34a", fontWeight: 600, marginTop: 3 }}>
-                  Incentive Amount: ₹{incentive || 0}
                 </div>
               </div>
             )}

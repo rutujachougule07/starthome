@@ -33,8 +33,27 @@ interface ProductData extends Batch {
 
 export function ProductDetailPage() {
   const isMobile = useIsMobile();
-  const [data, setData] = useState<ProductData | null>(null);
-  const [role, setRole] = useState<string>("superadmin");
+  const [data, setData] = useState<ProductData | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("product_detail_preview");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  });
+  const [role, setRole] = useState<string>(() => {
+    if (typeof window === "undefined") return "superadmin";
+    try {
+      const r = localStorage.getItem("product_detail_role");
+      if (r) return r;
+      const userRaw = sessionStorage.getItem("sham_current_user_v2") || localStorage.getItem("sham_current_user_v2");
+      if (userRaw) {
+        const u = JSON.parse(userRaw);
+        return u.role || "superadmin";
+      }
+    } catch {}
+    return "superadmin";
+  });
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [editProductName, setEditProductName] = useState("");
   const [editProductSku, setEditProductSku] = useState("");
@@ -65,21 +84,7 @@ export function ProductDetailPage() {
   }
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("product_detail_preview");
-      if (raw) setData(JSON.parse(raw));
-
-      const r = localStorage.getItem("product_detail_role");
-      if (r) {
-        setRole(r);
-      } else {
-        const userRaw = sessionStorage.getItem("sham_current_user_v2") || localStorage.getItem("sham_current_user_v2");
-        if (userRaw) {
-          const u = JSON.parse(userRaw);
-          setRole(u.role || "superadmin");
-        }
-      }
-    } catch { /* ignore */ }
+    // Left intentionally empty as data is now initialized synchronously
   }, []);
 
   const handleBack = () => {
